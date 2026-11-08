@@ -1,0 +1,1 @@
+/* KantinSim — ui (henüz yazılmadı) */

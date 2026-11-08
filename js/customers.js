@@ -1,0 +1,1 @@
+/* KantinSim — customers (henüz yazılmadı) */

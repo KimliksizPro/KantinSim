@@ -1,0 +1,8 @@
+/* KantinSim — temel sayfa stili (çekirdek). UI stilleri css/ui.css içinde. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #120d18; touch-action: none;
+  font-family: 'Nunito', system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
+#game-root { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; }
+#game { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; display: block; cursor: default; }
+#ui { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; pointer-events: none; }
+#ui > * { pointer-events: auto; }

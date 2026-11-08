@@ -1,0 +1,279 @@
+/* KantinSim — Oyun verileri (malzemeler, tarifler, ürünler, tedarikçiler, geliştirmeler...)
+ * Sahibi: çekirdek (lead). Diğer modüller sadece OKUR.
+ */
+window.KS = window.KS || {};
+(function (KS) {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // MALZEMELER (inventory birimi = porsiyon)
+  // kind: base (ekmek türü - tabağa ilk konan), topping (üstüne eklenen),
+  //       cookable (pişirilmesi gereken), sauce (sos/çeşni), raw (yoğurma/demleme hammaddesi)
+  // perish: gece boyunca bozulan oran (buzdolabı geliştirmesiyle azalır)
+  // cost: porsiyon başı toptan maliyet (TL)  | pack: toptancı paket boyutu
+  // ---------------------------------------------------------------------------
+  const ingredients = {
+    tost_ekmegi:      { name: 'Tost Ekmeği',      kind: 'base',     cost: 6,   pack: 20, perish: 0.10, start: 30, color: '#e9c78f' },
+    yarim_ekmek:      { name: 'Yarım Ekmek',      kind: 'base',     cost: 8,   pack: 20, perish: 0.25, start: 20, color: '#d9a35c' },
+    lavas:            { name: 'Lavaş',            kind: 'base',     cost: 5,   pack: 30, perish: 0.10, start: 20, color: '#f1dcae' },
+    hamburger_ekmegi: { name: 'Hamburger Ekmeği', kind: 'base',     cost: 10,  pack: 12, perish: 0.15, start: 0,  color: '#c98a3d' },
+    kasar:            { name: 'Kaşar',            kind: 'topping',  cost: 18,  pack: 20, perish: 0.05, start: 30, color: '#f6d55c' },
+    sucuk:            { name: 'Sucuk',            kind: 'topping',  cost: 20,  pack: 20, perish: 0.05, start: 20, color: '#a8332a' },
+    cheddar:          { name: 'Cheddar',          kind: 'topping',  cost: 12,  pack: 20, perish: 0.05, start: 0,  color: '#f39c22' },
+    kofte:            { name: 'Köfte',            kind: 'cookable', cost: 35,  pack: 20, perish: 0.35, start: 15, color: '#8a4b2d', cookAt: 'izgara' },
+    domates:          { name: 'Domates',          kind: 'topping',  cost: 3,   pack: 30, perish: 0.20, start: 30, color: '#e5402f' },
+    sogan:            { name: 'Soğan',            kind: 'topping',  cost: 2,   pack: 30, perish: 0.05, start: 30, color: '#d9b8d9' },
+    marul:            { name: 'Marul',            kind: 'topping',  cost: 2,   pack: 30, perish: 0.30, start: 30, color: '#6dbb3c' },
+    tursu:            { name: 'Turşu',            kind: 'topping',  cost: 3,   pack: 30, perish: 0.0,  start: 20, color: '#9fae3a' },
+    patates:          { name: 'Patates',          kind: 'cookable', cost: 8,   pack: 25, perish: 0.05, start: 0,  color: '#f3d27a', cookAt: 'fritoz' },
+    maydanoz:         { name: 'Maydanoz',         kind: 'topping',  cost: 1,   pack: 30, perish: 0.30, start: 0,  color: '#3e9b3a' },
+    limon:            { name: 'Limon',            kind: 'sauce',    cost: 2,   pack: 30, perish: 0.05, start: 0,  color: '#f7e34b' },
+    nar_eksisi:       { name: 'Nar Ekşisi',       kind: 'sauce',    cost: 2,   pack: 40, perish: 0.0,  start: 0,  color: '#6b1626' },
+    ketcap:           { name: 'Ketçap',           kind: 'sauce',    cost: 2,   pack: 40, perish: 0.0,  start: 30, color: '#d1261b' },
+    mayonez:          { name: 'Mayonez',          kind: 'sauce',    cost: 2,   pack: 40, perish: 0.0,  start: 30, color: '#f5efd2' },
+    tuz:              { name: 'Tuz',              kind: 'sauce',    cost: 0.5, pack: 100, perish: 0.0, start: 100, color: '#ffffff' },
+    pul_biber:        { name: 'Pul Biber',        kind: 'sauce',    cost: 1,   pack: 50, perish: 0.0,  start: 20, color: '#b3261e' },
+    // Hammaddeler (kutularda görünmez; istasyonlar tüketir)
+    bulgur:           { name: 'Çiğ Köftelik Bulgur', kind: 'raw',   cost: 30,  pack: 5,  perish: 0.0,  start: 0, color: '#c9a36b', note: '1 parti çiğ köfte için 1 adet' },
+    isot:             { name: 'İsot & Baharat',      kind: 'raw',   cost: 25,  pack: 5,  perish: 0.0,  start: 0, color: '#7a1d12', note: '1 parti için 1 adet' },
+    salca:            { name: 'Biber Salçası',       kind: 'raw',   cost: 20,  pack: 5,  perish: 0.0,  start: 0, color: '#b52a1b', note: '1 parti için 1 adet' },
+    cay_yapragi:      { name: 'Çay (Demlik Başı)',   kind: 'raw',   cost: 18,  pack: 10, perish: 0.0,  start: 6, color: '#3b2314', note: '1 demlik için 1 adet' },
+    yag:              { name: 'Kızartma Yağı',       kind: 'raw',   cost: 60,  pack: 3,  perish: 0.0,  start: 1, color: '#e8c547', note: 'Fritöz yağı, ~30 porsiyonda bir değişir' },
+  };
+
+  // Malzeme kutularının (bins) 4x5 ızgaradaki sırası (soldan sağa, yukarıdan aşağı)
+  const binOrder = [
+    'tost_ekmegi', 'yarim_ekmek', 'lavas', 'hamburger_ekmegi',
+    'kasar', 'sucuk', 'cheddar', 'kofte',
+    'domates', 'sogan', 'marul', 'tursu',
+    'patates', 'maydanoz', 'limon', 'nar_eksisi',
+    'ketcap', 'mayonez', 'tuz', 'pul_biber',
+  ];
+
+  // Hazırlanmış (istasyondan çıkan) ara malzemeler — inventory'de tutulmaz, item olarak dolaşır
+  //  cigkofte: yoğurma leğeninden çıkan porsiyon, cay: semaverden doldurulan bardak içeriği
+  const prepared = {
+    cigkofte: { name: 'Çiğ Köfte', color: '#8c2a1a' },
+    cay:      { name: 'Çay',       color: '#8a2a0b' },
+  };
+
+  // Dish (tabak) tabanları: malzeme olmayan özel tabanlar
+  const dishBases = {
+    kese:   { name: 'Patates Kesesi' },
+    bardak: { name: 'İnce Belli Bardak' },
+  };
+
+  // ---------------------------------------------------------------------------
+  // TARİFLER (elle yapılanlar)
+  // base: tabak tabanı; required: mutlaka olmalı; optional: müşteri isteğine göre;
+  // defaults: müşteri özel bir şey demezse istediği opsiyoneller
+  // toast: tost makinesinde basılmalı mı
+  // ---------------------------------------------------------------------------
+  const recipes = {
+    kasarli_tost: {
+      name: 'Kaşarlı Tost', base: 'tost_ekmegi', required: ['kasar'], optional: ['domates'],
+      defaults: [], toast: true, price: 80, unlock: 1, time: 'Hızlı',
+      steps: ['Tezgahtaki tabağa tost ekmeği koy', 'Üstüne kaşar ekle', 'Tost makinesine koy, kapağı kapat', 'Altın sarısı olunca çıkar (yakma!)'],
+    },
+    karisik_tost: {
+      name: 'Karışık Tost', base: 'tost_ekmegi', required: ['kasar', 'sucuk'], optional: ['domates'],
+      defaults: [], toast: true, price: 100, unlock: 1, time: 'Hızlı',
+      steps: ['Tabağa tost ekmeği koy', 'Kaşar ve sucuk ekle', 'Tost makinesinde bas', 'Altın sarısı olunca çıkar'],
+    },
+    cay: {
+      name: 'Çay', base: 'bardak', required: ['cay'], optional: [], defaults: [],
+      toast: false, price: 15, unlock: 1, time: 'Çok hızlı',
+      steps: ['Semaverde demliği demle (çay yaprağı gerekir)', 'Demlendiğinde bardağa doldur', 'Bardağı müşteriye ver'],
+    },
+    kofte_ekmek: {
+      name: 'Köfte Ekmek', base: 'yarim_ekmek', required: ['kofte'], optional: ['domates', 'sogan', 'marul', 'tursu', 'pul_biber'],
+      defaults: ['domates', 'sogan', 'marul'], toast: false, price: 150, unlock: 1, time: 'Orta',
+      steps: ['Çiğ köfteyi ızgaraya koy', 'Bir yüzü pişince çevir', 'Tabağa yarım ekmek koy', 'Pişmiş köfteyi ve istenen garnitürleri ekle'],
+    },
+    patates: {
+      name: 'Patates Kızartması', base: 'kese', required: ['patates'], optional: ['tuz', 'ketcap', 'mayonez'],
+      defaults: ['tuz'], toast: false, price: 70, unlock: 2, time: 'Orta',
+      steps: ['Çiğ patatesi fritöz sepetine at', 'Kızarınca sepetten al (keseye konur)', 'Tezgahta tuz / sos ekle'],
+    },
+    cigkofte_durum: {
+      name: 'Çiğ Köfte Dürüm', base: 'lavas', required: ['cigkofte'], optional: ['marul', 'nar_eksisi', 'limon', 'maydanoz', 'pul_biber'],
+      defaults: ['marul', 'nar_eksisi', 'limon'], toast: false, price: 90, unlock: 3, time: 'Orta',
+      steps: ['Leğene bulgur, isot ve salça koy', 'Leğeni yoğur (tıkla/sürükle) — bir parti çok porsiyon çıkar', 'Tabağa lavaş koy, çiğ köfte ekle', 'Marul, nar ekşisi, limon ekle'],
+    },
+    hamburger: {
+      name: 'Hamburger', base: 'hamburger_ekmegi', required: ['kofte', 'cheddar'], optional: ['marul', 'domates', 'tursu', 'ketcap', 'mayonez', 'sogan'],
+      defaults: ['marul', 'domates', 'tursu', 'ketcap'], toast: false, price: 170, unlock: 4, time: 'Uzun',
+      steps: ['Köfteyi ızgarada iki yüzlü pişir', 'Tabağa hamburger ekmeği koy', 'Köfte + cheddar ekle', 'İstenen garnitür ve sosları ekle'],
+    },
+  };
+
+  // ---------------------------------------------------------------------------
+  // HAZIR ÜRÜNLER (vitrinden satılır)
+  // group: paketli (market/toptancı) | hazir (dışarıdan sipariş edilen hazır yemek — gün sonunda bozulur)
+  // buy: alış fiyatı | price: önerilen satış | supplier: nereden gelir | pack: alış paketi
+  // ---------------------------------------------------------------------------
+  const products = {
+    ayran:        { name: 'Ayran',            group: 'paketli', buy: 12, price: 25, pack: 20, supplier: 'toptanci', start: 20, unlock: 1, drink: true, color: '#f4f7fb' },
+    su:           { name: 'Su (0,5L)',        group: 'paketli', buy: 5,  price: 15, pack: 24, supplier: 'toptanci', start: 24, unlock: 1, drink: true, color: '#9fd3ff' },
+    kola:         { name: 'Kola',             group: 'paketli', buy: 25, price: 45, pack: 24, supplier: 'toptanci', start: 12, unlock: 1, drink: true, color: '#3a1410' },
+    meyve_suyu:   { name: 'Meyve Suyu',       group: 'paketli', buy: 18, price: 35, pack: 24, supplier: 'toptanci', start: 12, unlock: 1, drink: true, color: '#ff9f1c' },
+    cips:         { name: 'Cips',             group: 'paketli', buy: 20, price: 35, pack: 20, supplier: 'toptanci', start: 10, unlock: 1, color: '#ffcf33' },
+    cikolata:     { name: 'Çikolata',         group: 'paketli', buy: 18, price: 30, pack: 24, supplier: 'toptanci', start: 10, unlock: 1, color: '#5a2d14' },
+    simit:        { name: 'Simit',            group: 'hazir',   buy: 10, price: 20, pack: 10, supplier: 'firin',      start: 10, unlock: 1, color: '#b8742f' },
+    pogaca:       { name: 'Poğaça',           group: 'hazir',   buy: 12, price: 25, pack: 10, supplier: 'firin',      start: 10, unlock: 1, color: '#e2b064' },
+    et_doner:     { name: 'Et Döner Dürüm',   group: 'hazir',   buy: 140, price: 190, pack: 1, supplier: 'donerci',   start: 0, unlock: 1, color: '#8b4a22' },
+    tavuk_doner:  { name: 'Tavuk Döner Dürüm', group: 'hazir',  buy: 90,  price: 130, pack: 1, supplier: 'donerci',   start: 0, unlock: 1, color: '#d9a05b' },
+    hazir_cigkofte: { name: 'Hazır Çiğ Köfte Dürüm', group: 'hazir', buy: 55, price: 85, pack: 1, supplier: 'cigkofteci', start: 0, unlock: 1, color: '#8c2a1a' },
+    lahmacun:     { name: 'Lahmacun',         group: 'hazir',   buy: 70,  price: 100, pack: 1, supplier: 'pideci',    start: 0, unlock: 2, color: '#c0472a' },
+    kiymali_pide: { name: 'Kıymalı Pide',     group: 'hazir',   buy: 120, price: 165, pack: 1, supplier: 'pideci',    start: 0, unlock: 2, color: '#d08a3c' },
+  };
+
+  // ---------------------------------------------------------------------------
+  // TEDARİKÇİLER
+  // kind: 'toptan' (malzeme+paketli; ucuz ama yavaş), 'bakkal' (pahalı ama hızlı),
+  //       'restoran' (telefonla hazır yemek siparişi; kurye ile gelir)
+  // eta: oyun dakikası cinsinden teslim süresi (hazırlık aşamasında verilen siparişler açılışta gelir)
+  // fee: sabit nakliye/kurye ücreti | mult: fiyat çarpanı | minOrder: minimum sepet tutarı
+  // ---------------------------------------------------------------------------
+  const suppliers = {
+    toptanci:   { name: 'Toptancı Hali',       kind: 'toptan',   eta: 60, fee: 50, mult: 1.0,  minOrder: 0,   unlock: 1, icon: '🚚', desc: 'Ucuz ama geç gelir. Sabah hazırlıkta verirsen açılışta teslim.' },
+    bakkal:     { name: 'Bakkal Mehmet Amca',  kind: 'bakkal',   eta: 8,  fee: 0,  mult: 1.35, minOrder: 0,   unlock: 1, icon: '🏪', desc: 'Köşedeki bakkal. Pahalı ama hemen getirir.' },
+    firin:      { name: 'Fırıncı Hasan Usta',  kind: 'restoran', eta: 20, fee: 0,  mult: 1.0,  minOrder: 100, unlock: 1, icon: '🥯', desc: 'Taze simit ve poğaça.', items: ['simit', 'pogaca'] },
+    donerci:    { name: 'Dönerci Ahmet Usta',  kind: 'restoran', eta: 30, fee: 40, mult: 1.0,  minOrder: 300, unlock: 1, icon: '🌯', desc: 'Yaprak döner dürüm. Gün sonunda bozulur!', items: ['et_doner', 'tavuk_doner'] },
+    cigkofteci: { name: 'Çiğköfteci Ali',      kind: 'restoran', eta: 25, fee: 30, mult: 1.0,  minOrder: 200, unlock: 1, icon: '🌶️', desc: 'Hazır sarılmış çiğ köfte dürüm.', items: ['hazir_cigkofte'] },
+    pideci:     { name: 'Karadeniz Pide Salonu', kind: 'restoran', eta: 40, fee: 40, mult: 1.0, minOrder: 300, unlock: 2, icon: '🫓', desc: 'Lahmacun ve kıymalı pide.', items: ['lahmacun', 'kiymali_pide'] },
+  };
+
+  // ---------------------------------------------------------------------------
+  // GELİŞTİRMELER — levels[0] başlangıç seviyesidir (bedava). Modüller KS.upgVal(id, alan) ile okur.
+  // ---------------------------------------------------------------------------
+  const upgrades = {
+    tost:     { name: 'Tost Makinesi', levels: [
+      { name: 'Tekli Tost Makinesi', slots: 2, speed: 1.0, cost: 0 },
+      { name: 'Çift Tost Makinesi', slots: 4, speed: 1.0, cost: 2500 },
+      { name: 'Endüstriyel Tost Makinesi', slots: 4, speed: 1.5, cost: 6000 } ] },
+    izgara:   { name: 'Izgara', levels: [
+      { name: 'Küçük Izgara', slots: 4, speed: 1.0, cost: 0 },
+      { name: 'Geniş Izgara', slots: 6, speed: 1.0, cost: 3000 },
+      { name: 'Döküm Profesyonel Izgara', slots: 8, speed: 1.3, cost: 7000 } ] },
+    fritoz:   { name: 'Fritöz', levels: [
+      { name: 'Tek Hazneli Fritöz', baskets: 1, speed: 1.0, cost: 0 },
+      { name: 'Çift Hazneli Fritöz', baskets: 2, speed: 1.0, cost: 3500 },
+      { name: 'Turbo Fritöz', baskets: 2, speed: 1.5, cost: 6500 } ] },
+    semaver:  { name: 'Semaver', levels: [
+      { name: 'Çaydanlık', glasses: 10, brewTime: 25, cost: 0 },
+      { name: 'Semaver', glasses: 20, brewTime: 18, cost: 2000 },
+      { name: 'Elektrikli Çay Kazanı', glasses: 35, brewTime: 12, cost: 4500 } ] },
+    tezgah:   { name: 'Hazırlık Tezgahı', levels: [
+      { name: 'Dar Tezgah', plates: 2, cost: 0 },
+      { name: 'Geniş Tezgah', plates: 3, cost: 1800 } ] },
+    bekleme:  { name: 'Sıcak Dolap', levels: [
+      { name: 'Bekleme Rafı', slots: 2, keepWarm: false, cost: 0 },
+      { name: 'Isıtmalı Sıcak Dolap', slots: 4, keepWarm: true, cost: 2200 } ] },
+    yogurma:  { name: 'Çiğ Köfte Leğeni', levels: [
+      { name: 'Küçük Leğen', batch: 8, effort: 1.0, cost: 0 },
+      { name: 'Büyük Bakır Leğen', batch: 14, effort: 0.8, cost: 1500 },
+      { name: 'Yoğurma Makinesi', batch: 20, effort: 0.35, cost: 5000 } ] },
+    buzdolabi: { name: 'Buzdolabı', levels: [
+      { name: 'Ev Tipi Buzdolabı', perishMult: 1.0, cost: 0 },
+      { name: 'Endüstriyel Buzdolabı', perishMult: 0.5, cost: 3000 },
+      { name: 'Soğuk Oda', perishMult: 0.15, cost: 7000 } ] },
+    kasa:     { name: 'Kasa', levels: [
+      { name: 'Elle Hesap', payTime: 2.0, demand: 1.0, cost: 0 },
+      { name: 'Yazar Kasa', payTime: 1.0, demand: 1.0, cost: 1500 },
+      { name: 'Temassız POS', payTime: 0.4, demand: 1.08, cost: 3500 } ] },
+    dekor:    { name: 'Dekorasyon', levels: [
+      { name: 'Eski Kantin', patience: 1.0, demand: 1.0, cost: 0 },
+      { name: 'Yeni Boya & Menü Panosu', patience: 1.1, demand: 1.05, cost: 2500 },
+      { name: 'Oturma Alanı & Saksılar', patience: 1.2, demand: 1.15, cost: 6000 } ] },
+  };
+
+  // ---------------------------------------------------------------------------
+  // PERSONEL — günlük yevmiye öder, gün sonunda düşülür
+  // ---------------------------------------------------------------------------
+  const staff = {
+    cirak:      { name: 'Çırak Emre (Çaycı)', wage: 350, unlock: 2, desc: 'Demliği kendisi tazeler, boş bardakları doldurur.' },
+    temizlikci: { name: 'Temizlikçi Fatma Abla', wage: 300, unlock: 2, desc: 'Tezgahı düzenli siler, kirlilik daha yavaş artar.' },
+    kasiyer:    { name: 'Kasiyer Kerem', wage: 400, unlock: 3, desc: 'Ödemeleri hızlandırır; müşteriler %15 daha sabırlı.' },
+  };
+
+  // ---------------------------------------------------------------------------
+  // OKUL ZİL PROGRAMI — dakika (gün başlangıcından itibaren; 480 = 08:00)
+  // rate: rep 3 iken oyun dakikası başına beklenen müşteri | speed: oyun dakikası başına gerçek saniye
+  // ---------------------------------------------------------------------------
+  const periods = [
+    { from: 480, to: 510, type: 'sabah',    label: 'Sabah (Ders Öncesi)', rate: 0.16, speed: 1.4 },
+    { from: 510, to: 550, type: 'ders',     label: '1. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 550, to: 560, type: 'teneffus', label: 'Teneffüs',  rate: 0.55, speed: 2.4 },
+    { from: 560, to: 600, type: 'ders',     label: '2. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 600, to: 610, type: 'teneffus', label: 'Teneffüs',  rate: 0.55, speed: 2.4 },
+    { from: 610, to: 650, type: 'ders',     label: '3. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 650, to: 660, type: 'teneffus', label: 'Teneffüs',  rate: 0.55, speed: 2.4 },
+    { from: 660, to: 700, type: 'ders',     label: '4. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 700, to: 750, type: 'ogle',     label: 'Öğle Arası', rate: 0.42, speed: 2.0 },
+    { from: 750, to: 790, type: 'ders',     label: '5. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 790, to: 800, type: 'teneffus', label: 'Teneffüs',  rate: 0.55, speed: 2.4 },
+    { from: 800, to: 840, type: 'ders',     label: '6. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 840, to: 850, type: 'teneffus', label: 'Teneffüs',  rate: 0.55, speed: 2.4 },
+    { from: 850, to: 890, type: 'ders',     label: '7. Ders',   rate: 0.03, speed: 0.35 },
+    { from: 890, to: 920, type: 'cikis',    label: 'Okul Çıkışı', rate: 0.22, speed: 1.4 },
+    { from: 920, to: 1020, type: 'aksam',   label: 'Etüt Saati', rate: 0.04, speed: 0.4 },
+  ];
+  const OPEN_MIN = 480, CLOSE_MIN = 1020;
+
+  const weekdays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
+
+  // ---------------------------------------------------------------------------
+  // HAVA DURUMU & GÜNLÜK OLAYLAR — müşteri modülü uygular
+  // prefs: ürün/tarif id'lerine talep çarpanı
+  // ---------------------------------------------------------------------------
+  const weathers = {
+    gunesli:  { name: 'Güneşli',  icon: '☀️', weight: 4, demand: 1.0,  prefs: { kola: 1.5, su: 1.5, meyve_suyu: 1.3, ayran: 1.3, cay: 0.8 } },
+    bulutlu:  { name: 'Bulutlu',  icon: '⛅', weight: 3, demand: 1.0,  prefs: {} },
+    yagmurlu: { name: 'Yağmurlu', icon: '🌧️', weight: 2, demand: 1.15, prefs: { cay: 2.0, kasarli_tost: 1.3, karisik_tost: 1.3, kola: 0.6, su: 0.6 } },
+    soguk:    { name: 'Soğuk',    icon: '❄️', weight: 1, demand: 1.05, prefs: { cay: 2.5, pogaca: 1.4, simit: 1.3, kola: 0.5, ayran: 0.6 } },
+    sicak:    { name: 'Çok Sıcak', icon: '🔥', weight: 1, demand: 0.95, prefs: { su: 2.2, ayran: 2.0, kola: 1.8, cay: 0.4, patates: 0.8 } },
+  };
+
+  const events = {
+    yok:          { name: 'Normal Gün', weight: 10, desc: 'Sıradan bir okul günü.', demand: 1.0 },
+    mufettis:     { name: 'Sağlık Müfettişi', weight: 1.4, desc: 'Bugün bir sağlık müfettişi gelebilir. Tezgah temiz olsun!', demand: 1.0, inspector: true },
+    veli:         { name: 'Veli Toplantısı', weight: 1.2, desc: 'Okulda veli toplantısı var: daha çok yetişkin müşteri, çay ve tost talebi.', demand: 1.25, adultRatio: 0.5, prefs: { cay: 1.8, kasarli_tost: 1.3 } },
+    mac:          { name: 'Okullar Arası Maç', weight: 1.2, desc: 'Spor günü! İçecek ve atıştırmalık talebi patlıyor.', demand: 1.3, prefs: { su: 2, kola: 1.8, ayran: 1.5, cips: 1.8 } },
+    sinav:        { name: 'Sınav Haftası', weight: 1.0, desc: 'Öğrenciler gergin ve aceleci: sabır az, çay talebi yüksek.', demand: 1.1, patience: 0.8, prefs: { cay: 1.6, cikolata: 1.6 } },
+    elektrik:     { name: 'Elektrik Kesintisi', weight: 0.8, desc: '11:00 - 11:40 arası elektrik kesik! Tost makinesi ve fritöz çalışmaz.', demand: 1.0, powerCut: [660, 700] },
+    burs:         { name: 'Harçlık Günü', weight: 0.8, desc: 'Ay başı! Öğrencilerin cebi dolu, bahşişler bol.', demand: 1.15, tip: 1.6 },
+  };
+
+  // ---------------------------------------------------------------------------
+  // MÜŞTERİ TİPLERİ — müşteri modülü kullanır
+  // ---------------------------------------------------------------------------
+  const customerTypes = {
+    ogrenci:  { name: 'Öğrenci',  weight: 10, patience: 1.0,  budget: 160, tipMult: 0.6, adult: false, maxItems: 2 },
+    ogretmen: { name: 'Öğretmen', weight: 2.2, patience: 1.2, budget: 320, tipMult: 1.2, adult: true,  maxItems: 3 },
+    hizmetli: { name: 'Hizmetli', weight: 1.0, patience: 1.3, budget: 200, tipMult: 0.8, adult: true,  maxItems: 2 },
+    mudur:    { name: 'Müdür Bey', weight: 0.25, patience: 0.9, budget: 500, tipMult: 2.5, adult: true, maxItems: 3, vip: true },
+    veli:     { name: 'Veli',     weight: 0,   patience: 1.0, budget: 300, tipMult: 1.3, adult: true,  maxItems: 3 },
+    mufettis: { name: 'Sağlık Müfettişi', weight: 0, patience: 1.5, budget: 0, tipMult: 0, adult: true, maxItems: 0, inspector: true },
+  };
+
+  // ---------------------------------------------------------------------------
+  // SEVİYELER (toplam XP eşiği)
+  // ---------------------------------------------------------------------------
+  const levels = [0, 120, 350, 700, 1200, 1900, 2800, 4000, 5500, 7500, 10000];
+
+  // Sabit giderler
+  const costs = {
+    rent: 600,              // günlük kira (okul ihalesi)
+    utilityBase: 120,       // elektrik + su + tüp
+    utilityPerUpgrade: 25,  // her geliştirme seviyesi için ek elektrik
+    startMoney: 3000,
+    bankruptcy: -1500,      // bunun altına düşerse iflas
+    inspectorFine: 1500,
+  };
+
+  KS.DATA = {
+    ingredients, binOrder, prepared, dishBases, recipes, products, suppliers, upgrades, staff,
+    periods, OPEN_MIN, CLOSE_MIN, weekdays, weathers, events, customerTypes, levels, costs,
+  };
+})(window.KS);

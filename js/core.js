@@ -353,6 +353,7 @@ window.KS = window.KS || {};
       const s = KS.state;
       s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN; s.paused = false; s.power = true;
       lastPeriod = null;
+      if (KS.held) KS.returnHeld();
       KS.bus.emit('prepStart', s.today);
       KS.save();
     },
@@ -368,6 +369,7 @@ window.KS = window.KS || {};
     endDay() {
       const s = KS.state, D = KS.DATA;
       if (s.phase === 'summary') return;
+      KS.returnHeld && KS.returnHeld();
       KS.hooks.forceCustomersLeave();
       // sabit giderler
       KS.spend(D.costs.rent, 'kira', true);

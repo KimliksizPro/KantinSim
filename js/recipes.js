@@ -45,6 +45,7 @@
       const a = item.cookA || 0, b = item.cookB || 0;
       L.cook = (a + b) / 2;
       L.q = Math.min(cookQuality(a), cookQuality(b));
+      if (item.q != null) L.q = Math.min(L.q, item.q);
       L.cookA = a; L.cookB = b;
     } else if (item.cook != null) {
       L.cook = item.cook;
@@ -170,6 +171,7 @@
   function itemName(item) {
     if (!item) return '';
     if (item.type === 'product') return nameOf(item.id);
+    if (item.type === 'tool') return item.id === 'bez' ? 'Temizlik Bezi' : item.id;
     if (item.type === 'ing') {
       const base = nameOf(item.id);
       if (item.id === 'kofte') {
@@ -191,6 +193,7 @@
   function itemDescribe(item) {
     if (!item) return '';
     const lines = [itemName(item)];
+    if (item.type === 'tool' && item.id === 'bez') lines.push('Kirlerin üzerinden geçirerek sil');
     if (item.type === 'dish') {
       if (item.layers.length) lines.push('İçinde: ' + item.layers.map(l => nameOf(l.id).toLowerCase() + (l.cook != null ? ' (' + cookLabel(l.cook).toLowerCase() + ')' : '')).join(', '));
       if (item.toast > 0.05) lines.push('Tost: ' + cookLabel(item.toast));

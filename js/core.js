@@ -597,6 +597,7 @@ window.KS = window.KS || {};
       if (!KS.inputEnabled()) { pressed = null; return; }
       const h = KS.held;
       if (h) {
+        pressed = null;
         if (!h.moved && !h.sticky) { h.sticky = true; return; } // dokun-taşı modu
         if (!h.sticky || h.moved) dropAt(pt);
         return;

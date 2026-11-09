@@ -1385,23 +1385,1278 @@
   function drawWorkspace(ctx, t) {
     try {
       regionLayer(ctx, 'wsShadow', { x: 0, y: 422, w: 1600, h: 478 }, paintStationShadows);
-      // kirlilik: tezgah kenarlarında lekeler
-      const cl = KS.state && isFinite(KS.state.cleanliness) ? KS.state.cleanliness : 100;
-      if (cl < 80) {
-        const n = Math.min(14, Math.floor((80 - cl) / 5) + 1);
-        const spots = [[357, 520], [811, 560], [1086, 600], [1334, 470], [358, 760], [811, 820], [1086, 760], [1334, 850], [600, 638], [960, 638], [1210, 688], [1470, 728], [180, 895], [1000, 895]];
-        for (let i = 0; i < n; i++) {
-          const p = spots[i];
-          sprite(ctx, 'stain' + (i % 4), p[0], p[1], 34, (g) => {
-            const R = rng(900 + (i % 4));
-            for (let j = 0; j < 5; j++) { ell(g, (R() - 0.5) * 14, (R() - 0.5) * 10, 3 + R() * 6, 2 + R() * 4, R() * 3); g.fillStyle = rgba(j % 2 ? '#6a4a20' : '#8a5a2a', 0.35); g.fill(); }
-          });
-        }
-      }
     } catch (e) { /* yok */ }
   }
 
   Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace });
   Object.assign(Art._h, { skyAt, WINS, OPEN });
 })(window.KS);
-/* @@ART-PART-3@@ */
+/* ===== Art bölüm 3: malzemeler (drawIngredient) ve hazır ürünler (drawProduct) =====
+ * Her çizim 100x100 birimlik kutuda (merkez 0,0; yaklaşık -48..48) tasarlanır ve size/100 ile ölçeklenir. */
+(function (KS) {
+  'use strict';
+  const Art = KS.Art, H = Art._h;
+  const { TAU, FONT_D, FONT_T, clamp, rr, ell, circ, shade, mix, rgba, ramp, lin, rad, rng, hashStr, sprite } = H;
+
+  const OUT = 2.2; // kontur kalınlığı (100 birimde)
+  function outline(g, col, lw) { g.strokeStyle = col; g.lineWidth = lw || OUT; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); }
+  function gloss(g, x, y, rx, ry, rot, a) { ell(g, x, y, rx, ry, rot); g.fillStyle = 'rgba(255,255,255,' + (a == null ? 0.55 : a) + ')'; g.fill(); }
+  // kenarı dalgalı/düzensiz daire yolu
+  function blobPath(g, cx, cy, rx, ry, seed, amp, n) {
+    const R = rng(seed); n = n || 22; amp = amp == null ? 0.06 : amp;
+    const pts = [];
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, k = 1 + (R() - 0.5) * 2 * amp; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+    g.beginPath();
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n];
+      const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+      if (i === 0) g.moveTo(mx, my); else g.quadraticCurveTo(p[0], p[1], mx, my);
+    }
+    const p = pts[0], q = pts[1]; g.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
+    g.closePath();
+  }
+
+  // ---------------------------------------------------------------------------
+  // PİŞME RENKLERİ
+  // ---------------------------------------------------------------------------
+  const MEAT = [[0, '#e07f86'], [0.3, '#c9786a'], [0.6, '#a55a3c'], [1.0, '#7a4224'], [1.25, '#5a301a'], [1.5, '#33201a'], [2, '#1b120e']];
+  const FRY = [[0, '#f5e6b8'], [0.45, '#f4d77e'], [0.85, '#f0b638'], [1.15, '#e09a26'], [1.4, '#b06a1e'], [1.7, '#5a3416'], [2.2, '#2a1a10']];
+  const TOAST = [[0, '#f8ecd0'], [0.45, '#f3dca2'], [1.0, '#e0a54c'], [1.25, '#b9742e'], [1.5, '#6a3e1c'], [1.8, '#2e1c12'], [2.2, '#1a120c']];
+  const CRUST = [[0, '#d9a465'], [0.45, '#cf8f48'], [1.0, '#b06a28'], [1.3, '#7a4418'], [1.6, '#3a2212'], [2.2, '#150e0a']];
+  H.MEAT = MEAT; H.FRY = FRY; H.TOAST = TOAST; H.CRUST = CRUST;
+
+  // ---------------------------------------------------------------------------
+  // PARÇA ÇİZİCİLER (dish katmanlarında da kullanılır)
+  // ---------------------------------------------------------------------------
+  // ekmek dilimi silüeti
+  function breadPath(g, w, h) {
+    const x0 = -w / 2, x1 = w / 2, yb = h / 2, yt = -h / 2, r = w * 0.09;
+    g.beginPath();
+    g.moveTo(x0 + r, yb); g.lineTo(x1 - r, yb); g.quadraticCurveTo(x1, yb, x1, yb - r);
+    g.lineTo(x1 - w * 0.02, yt + h * 0.36);
+    g.bezierCurveTo(x1 + w * 0.1, yt + h * 0.06, x1 - w * 0.12, yt - h * 0.06, w * 0.08, yt + h * 0.04);
+    g.quadraticCurveTo(0, yt + h * 0.07, -w * 0.08, yt + h * 0.04);
+    g.bezierCurveTo(x0 + w * 0.12, yt - h * 0.06, x0 - w * 0.1, yt + h * 0.06, x0 + w * 0.02, yt + h * 0.36);
+    g.lineTo(x0, yb - r); g.quadraticCurveTo(x0, yb, x0 + r, yb);
+    g.closePath();
+  }
+  function breadSlice(g, w, h, toast, seed) {
+    toast = toast || 0;
+    const crust = ramp(CRUST, toast), crumb = ramp(TOAST, toast);
+    breadPath(g, w, h);
+    g.fillStyle = lin(g, 0, -h / 2, 0, h / 2, [[0, shade(crust, 0.08)], [1, shade(crust, -0.12)]]); g.fill();
+    outline(g, shade(crust, -0.45));
+    g.save(); g.scale(0.86, 0.86); g.translate(0, h * 0.02);
+    breadPath(g, w, h);
+    g.fillStyle = rad(g, -w * 0.15, -h * 0.2, 2, w * 0.7, [[0, shade(crumb, 0.12)], [1, shade(crumb, -0.06)]]); g.fill();
+    g.clip();
+    const R = rng(seed || 11);
+    for (let i = 0; i < 36; i++) { ell(g, (R() - 0.5) * w * 0.85, (R() - 0.5) * h * 0.85, 0.8 + R() * 1.8, 0.6 + R() * 1.2, R() * 3); g.fillStyle = rgba(shade(crumb, -0.35), 0.28); g.fill(); }
+    if (toast > 0.15) {
+      // tost makinesi ızgara çizgileri
+      const a = clamp((toast - 0.15) / 0.8, 0, 1) * 0.55;
+      g.strokeStyle = rgba(shade(crumb, -0.6), a); g.lineWidth = w * 0.06; g.lineCap = 'round';
+      g.beginPath();
+      for (let i = -4; i <= 4; i++) { g.moveTo(-w * 0.6 + i * w * 0.2, h * 0.6); g.lineTo(w * 0.1 + i * w * 0.2, -h * 0.6); }
+      g.stroke();
+    }
+    g.restore();
+    if (toast < 1.4) gloss(g, -w * 0.2, -h * 0.28, w * 0.14, h * 0.05, -0.4, 0.3);
+  }
+  function tomatoSlice(g, x, y, r, rot) {
+    g.save(); g.translate(x, y); g.rotate(rot || 0);
+    circ(g, 0, 0, r); g.fillStyle = '#d42f24'; g.fill(); outline(g, '#8a1a12', r * 0.08);
+    circ(g, 0, 0, r * 0.86); g.fillStyle = rad(g, -r * 0.2, -r * 0.2, 0, r, [[0, '#ff7a5c'], [1, '#e8402f']]); g.fill();
+    for (let i = 0; i < 4; i++) {
+      const a = i * TAU / 4 + 0.4;
+      ell(g, Math.cos(a) * r * 0.45, Math.sin(a) * r * 0.45, r * 0.26, r * 0.18, a); g.fillStyle = '#ffab86'; g.fill();
+      for (let j = -1; j <= 1; j++) { ell(g, Math.cos(a) * r * 0.45 + Math.cos(a + 1.57) * j * r * 0.1, Math.sin(a) * r * 0.45 + Math.sin(a + 1.57) * j * r * 0.1, r * 0.05, r * 0.035, a); g.fillStyle = '#f7e6a6'; g.fill(); }
+    }
+    circ(g, 0, 0, r * 0.16); g.fillStyle = '#ffc2a8'; g.fill();
+    gloss(g, -r * 0.4, -r * 0.45, r * 0.25, r * 0.1, -0.6, 0.45);
+    g.restore();
+  }
+  function sucukSlice(g, x, y, r, seed) {
+    circ(g, x, y, r); g.fillStyle = '#5e140e'; g.fill(); outline(g, '#3a0a06', r * 0.1);
+    circ(g, x, y, r * 0.84); g.fillStyle = rad(g, x - r * 0.25, y - r * 0.25, 0, r, [[0, '#d0503c'], [1, '#9a2a1e']]); g.fill();
+    const R = rng(seed || 5);
+    for (let i = 0; i < 7; i++) { const a = R() * TAU, d = R() * r * 0.65; ell(g, x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.09 + R() * r * 0.06, r * 0.07, R() * 3); g.fillStyle = 'rgba(255,215,195,0.85)'; g.fill(); }
+    for (let i = 0; i < 6; i++) { const a = R() * TAU, d = R() * r * 0.7; circ(g, x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.05); g.fillStyle = 'rgba(60,10,5,0.6)'; g.fill(); }
+    gloss(g, x - r * 0.35, y - r * 0.4, r * 0.3, r * 0.12, -0.6, 0.4);
+  }
+  function onionRing(g, x, y, r, full) {
+    if (full) {
+      circ(g, x, y, r); g.fillStyle = '#f7eef6'; g.fill();
+      for (let i = 4; i >= 1; i--) { circ(g, x, y, r * i / 4.3); g.strokeStyle = i === 4 ? '#9c5aa0' : 'rgba(176,120,184,0.6)'; g.lineWidth = i === 4 ? r * 0.13 : r * 0.05; g.stroke(); }
+      circ(g, x, y, r); outline(g, '#6e3a72', r * 0.06);
+    } else {
+      circ(g, x, y, r); g.strokeStyle = '#7a4080'; g.lineWidth = r * 0.34; g.stroke();
+      circ(g, x, y, r); g.strokeStyle = '#b77abf'; g.lineWidth = r * 0.24; g.stroke();
+      circ(g, x, y, r - r * 0.06); g.strokeStyle = '#f8eef8'; g.lineWidth = r * 0.1; g.stroke();
+    }
+    gloss(g, x - r * 0.5, y - r * 0.55, r * 0.22, r * 0.08, -0.7, 0.6);
+  }
+  function lettuceLeaf(g, x, y, s, rot, seed) {
+    g.save(); g.translate(x, y); g.rotate(rot || 0); g.scale(s, s);
+    const R = rng(seed || 3), n = 26, pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU;
+      const base = 1 - 0.22 * Math.max(0, Math.sin(a)); // alt taraf daha dar
+      const k = base * (1 + (i % 2 ? 0.1 : -0.05) + (R() - 0.5) * 0.08);
+      pts.push([Math.cos(a) * 30 * k, Math.sin(a) * 22 * k - 2]);
+    }
+    g.beginPath();
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; if (i === 0) g.moveTo(mx, my); else g.quadraticCurveTo(p[0], p[1], mx, my); }
+    g.quadraticCurveTo(pts[0][0], pts[0][1], (pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+    g.closePath();
+    g.fillStyle = rad(g, -4, 2, 2, 36, [[0, '#d8f29a'], [0.5, '#8fd04f'], [1, '#4e9a2c']]); g.fill();
+    outline(g, '#3a7a22', 1.6);
+    g.strokeStyle = 'rgba(240,255,210,0.85)'; g.lineWidth = 2.2;
+    g.beginPath(); g.moveTo(-26, 4); g.quadraticCurveTo(0, -2, 26, -6); g.stroke();
+    g.lineWidth = 1.1;
+    g.beginPath();
+    for (let i = -2; i <= 2; i++) { const bx = i * 9, by = -1 - i * 0.6; g.moveTo(bx, by); g.lineTo(bx + 5, by - 12); g.moveTo(bx, by); g.lineTo(bx + 4, by + 11); }
+    g.stroke();
+    g.restore();
+  }
+  function pickleSlice(g, x, y, r) {
+    circ(g, x, y, r); g.fillStyle = '#5f7f24'; g.fill(); outline(g, '#3e5512', r * 0.1);
+    circ(g, x, y, r * 0.8); g.fillStyle = rad(g, x, y, 0, r, [[0, '#e3ea9a'], [1, '#a9bd4a']]); g.fill();
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; ell(g, x + Math.cos(a) * r * 0.38, y + Math.sin(a) * r * 0.38, r * 0.1, r * 0.06, a); g.fillStyle = '#f7f4d0'; g.fill(); }
+    gloss(g, x - r * 0.35, y - r * 0.4, r * 0.25, r * 0.1, -0.6, 0.5);
+  }
+  function cheeseSlice(g, x, y, w, h, rot, col, peel) {
+    g.save(); g.translate(x, y); g.rotate(rot || 0);
+    rr(g, -w / 2, -h / 2, w, h, w * 0.08);
+    g.fillStyle = lin(g, -w / 2, -h / 2, w / 2, h / 2, [[0, shade(col, 0.22)], [1, shade(col, -0.06)]]); g.fill();
+    outline(g, shade(col, -0.35), 1.8);
+    if (peel) {
+      g.beginPath(); g.moveTo(w / 2 - w * 0.3, h / 2); g.quadraticCurveTo(w / 2 - w * 0.12, h / 2 - h * 0.12, w / 2, h / 2 - h * 0.3);
+      g.lineTo(w / 2 - w * 0.06, h / 2 - w * 0.02); g.closePath();
+      g.fillStyle = shade(col, 0.35); g.fill(); outline(g, shade(col, -0.3), 1.2);
+    }
+    gloss(g, -w * 0.2, -h * 0.28, w * 0.2, h * 0.06, -0.3, 0.45);
+    g.restore();
+  }
+  // köfte (üstten): top = üst yüz pişmesi, side = alt yüz (kenar) pişmesi
+  function kofte(g, x, y, rx, ry, top, side, seed) {
+    const ctop = ramp(MEAT, top), cside = ramp(MEAT, side);
+    blobPath(g, x, y + ry * 0.22, rx, ry, (seed || 9) + 1, 0.05);
+    g.fillStyle = shade(cside, -0.18); g.fill(); outline(g, shade(cside, -0.55), 1.8);
+    blobPath(g, x, y, rx * 0.97, ry * 0.93, seed || 9, 0.05);
+    g.fillStyle = rad(g, x - rx * 0.3, y - ry * 0.35, 1, rx * 1.1, [[0, shade(ctop, 0.18)], [1, shade(ctop, -0.1)]]); g.fill();
+    outline(g, shade(ctop, -0.5), 1.4);
+    g.save(); blobPath(g, x, y, rx * 0.97, ry * 0.93, seed || 9, 0.05); g.clip();
+    const R = rng((seed || 9) * 7);
+    for (let i = 0; i < 40; i++) {
+      const px = x + (R() - 0.5) * rx * 1.9, py = y + (R() - 0.5) * ry * 1.9;
+      circ(g, px, py, 0.6 + R() * 1.4);
+      g.fillStyle = top < 0.3 && R() < 0.5 ? 'rgba(255,235,230,0.65)' : rgba(shade(ctop, R() < 0.5 ? -0.35 : 0.2), 0.55); g.fill();
+    }
+    if (top > 0.35) {
+      const a = clamp((top - 0.35) / 0.6, 0, 1) * 0.75;
+      g.strokeStyle = rgba(top > 1.5 ? '#000000' : '#2a140a', a); g.lineWidth = ry * 0.2; g.lineCap = 'round';
+      g.beginPath();
+      for (let i = -2; i <= 2; i++) { g.moveTo(x + i * rx * 0.42 - rx * 0.35, y + ry * 0.9); g.lineTo(x + i * rx * 0.42 + rx * 0.35, y - ry * 0.9); }
+      g.stroke();
+    }
+    if (top > 1.55) {
+      g.strokeStyle = 'rgba(255,120,40,0.35)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x - rx * 0.5, y); g.lineTo(x - rx * 0.1, y - ry * 0.2); g.lineTo(x + rx * 0.3, y + ry * 0.1); g.stroke();
+    }
+    g.restore();
+    if (top < 1.5) gloss(g, x - rx * 0.35, y - ry * 0.45, rx * 0.25, ry * 0.12, -0.3, top < 0.3 ? 0.4 : 0.28);
+  }
+  function fry(g, x, y, w, l, rot, cook, seed) {
+    const c = ramp(FRY, cook);
+    g.save(); g.translate(x, y); g.rotate(rot);
+    rr(g, -w / 2, -l / 2, w, l, w * 0.3);
+    g.fillStyle = lin(g, -w / 2, 0, w / 2, 0, [[0, shade(c, 0.22)], [0.6, c], [1, shade(c, -0.22)]]); g.fill();
+    outline(g, shade(c, -0.45), 1.1);
+    if (cook > 0.6) { rr(g, -w / 2, -l / 2, w, l * 0.18, w * 0.3); g.fillStyle = rgba(shade(c, -0.3), 0.6); g.fill(); }
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(-w * 0.28, -l * 0.4, w * 0.18, l * 0.7);
+    g.restore();
+  }
+  function cigkoftePiece(g, x, y, s, rot, seed) {
+    g.save(); g.translate(x, y); g.rotate(rot || 0); g.scale(s, s);
+    blobPath(g, 0, 0, 24, 10.5, seed || 17, 0.05, 18);
+    g.fillStyle = lin(g, 0, -11, 0, 11, [[0, '#b2442a'], [0.6, '#8c2a1a'], [1, '#62180e']]); g.fill();
+    outline(g, '#4a0f08', 1.6);
+    const R = rng((seed || 17) * 3);
+    for (let i = 0; i < 26; i++) { circ(g, (R() - 0.5) * 42, (R() - 0.5) * 16, 0.5 + R() * 0.9); g.fillStyle = R() < 0.5 ? 'rgba(230,170,120,0.55)' : 'rgba(50,10,5,0.5)'; g.fill(); }
+    g.strokeStyle = 'rgba(60,12,6,0.6)'; g.lineWidth = 2.2;
+    for (let i = -1.5; i <= 1.5; i += 1) { g.beginPath(); g.moveTo(i * 10 - 2, -9); g.quadraticCurveTo(i * 10 + 3, 0, i * 10 - 1, 9); g.stroke(); }
+    g.strokeStyle = 'rgba(255,190,150,0.35)'; g.lineWidth = 1.2;
+    for (let i = -1.5; i <= 1.5; i += 1) { g.beginPath(); g.moveTo(i * 10 + 1, -8); g.quadraticCurveTo(i * 10 + 6, 0, i * 10 + 2, 8); g.stroke(); }
+    gloss(g, -8, -6, 7, 2, -0.1, 0.35);
+    g.restore();
+  }
+  function parsleySprig(g, x, y, s, rot) {
+    g.save(); g.translate(x, y); g.rotate(rot || 0); g.scale(s, s);
+    g.strokeStyle = '#4f8f2a'; g.lineWidth = 2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(0, 26); g.quadraticCurveTo(-2, 8, -10, -8); g.moveTo(0, 26); g.quadraticCurveTo(2, 4, 8, -12); g.moveTo(0, 26); g.lineTo(0, -16); g.stroke();
+    const tufts = [[-10, -10], [8, -14], [0, -18], [-14, -2], [14, -4]];
+    for (const t of tufts) {
+      for (let i = 0; i < 5; i++) { const a = i * TAU / 5; circ(g, t[0] + Math.cos(a) * 4.2, t[1] + Math.sin(a) * 4.2, 3.6); g.fillStyle = '#2f8a32'; g.fill(); }
+      circ(g, t[0], t[1], 4.4); g.fillStyle = '#48a83e'; g.fill();
+      circ(g, t[0] - 1.2, t[1] - 1.5, 1.6); g.fillStyle = '#86d36a'; g.fill();
+    }
+    g.restore();
+  }
+  function lemonSlice(g, x, y, r, half) {
+    g.save(); g.translate(x, y);
+    if (half) { g.beginPath(); g.arc(0, 0, r, Math.PI, 0); g.closePath(); } else circ(g, 0, 0, r);
+    g.fillStyle = '#f2c81e'; g.fill(); outline(g, '#b8901a', r * 0.07);
+    if (half) { g.beginPath(); g.arc(0, 0, r * 0.82, Math.PI, 0); g.closePath(); } else circ(g, 0, 0, r * 0.82);
+    g.fillStyle = '#fffbe8'; g.fill();
+    const n = 8, a0 = half ? Math.PI : 0, span = half ? Math.PI : TAU, cnt = half ? 4 : n;
+    for (let i = 0; i < cnt; i++) {
+      const a1 = a0 + i * span / cnt + 0.07, a2 = a0 + (i + 1) * span / cnt - 0.07;
+      g.beginPath(); g.moveTo(Math.cos((a1 + a2) / 2) * r * 0.1, Math.sin((a1 + a2) / 2) * r * 0.1); g.arc(0, 0, r * 0.74, a1, a2); g.closePath();
+      g.fillStyle = rad(g, 0, 0, 0, r * 0.75, [[0, '#fff8c0'], [1, '#f7e15a']]); g.fill();
+    }
+    g.restore();
+  }
+  function squeezeBottle(g, body, cap, labelFn) {
+    // gövde
+    g.beginPath();
+    g.moveTo(-17, -22); g.quadraticCurveTo(-21, 6, -18, 36); g.quadraticCurveTo(-17, 44, -8, 44); g.lineTo(8, 44); g.quadraticCurveTo(17, 44, 18, 36); g.quadraticCurveTo(21, 6, 17, -22);
+    g.quadraticCurveTo(12, -30, 0, -30); g.quadraticCurveTo(-12, -30, -17, -22); g.closePath();
+    g.fillStyle = lin(g, -20, 0, 20, 0, [[0, shade(body, -0.25)], [0.3, shade(body, 0.2)], [0.55, body], [1, shade(body, -0.35)]]); g.fill();
+    outline(g, shade(body, -0.55));
+    // kapak
+    rr(g, -12, -38, 24, 12, 3); g.fillStyle = lin(g, -12, 0, 12, 0, [[0, shade(cap, -0.2)], [0.4, shade(cap, 0.3)], [1, shade(cap, -0.3)]]); g.fill(); outline(g, shade(cap, -0.5), 1.6);
+    g.beginPath(); g.moveTo(-5, -38); g.lineTo(-2, -48); g.lineTo(2, -48); g.lineTo(5, -38); g.closePath(); g.fillStyle = shade(cap, 0.1); g.fill(); outline(g, shade(cap, -0.5), 1.4);
+    // etiket
+    rr(g, -14, -6, 28, 26, 4); g.fillStyle = '#fffaf0'; g.fill(); outline(g, 'rgba(0,0,0,0.2)', 1);
+    if (labelFn) labelFn();
+    g.fillStyle = 'rgba(255,255,255,0.45)'; rr(g, -13, -22, 4, 58, 2); g.fill();
+  }
+  function shaker(g, fillCol, capCol, holes, flakes) {
+    g.beginPath(); g.moveTo(-18, -16); g.lineTo(18, -16); g.lineTo(15, 42); g.quadraticCurveTo(0, 46, -15, 42); g.closePath();
+    g.fillStyle = 'rgba(220,235,245,0.45)'; g.fill();
+    g.save(); g.clip();
+    g.fillStyle = lin(g, 0, -2, 0, 44, [[0, shade(fillCol, 0.1)], [1, shade(fillCol, -0.12)]]); g.fillRect(-20, -2, 40, 50);
+    if (flakes) { const R = rng(31); for (let i = 0; i < 70; i++) { g.fillStyle = R() < 0.5 ? '#e0462e' : R() < 0.5 ? '#8a1a10' : '#f7c25a'; g.fillRect(-16 + R() * 32, R() * 44, 2 + R() * 2.5, 1.5 + R() * 1.5); } }
+    else { const R = rng(32); for (let i = 0; i < 50; i++) { g.fillStyle = 'rgba(190,200,210,0.7)'; g.fillRect(-16 + R() * 32, R() * 44, 1.4, 1.4); } }
+    g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(-14, -14, 5, 56);
+    g.restore();
+    g.beginPath(); g.moveTo(-18, -16); g.lineTo(18, -16); g.lineTo(15, 42); g.quadraticCurveTo(0, 46, -15, 42); g.closePath();
+    outline(g, 'rgba(90,110,130,0.7)', 1.8);
+    // kapak
+    g.beginPath(); g.moveTo(-19, -14); g.lineTo(-19, -26); g.quadraticCurveTo(0, -46, 19, -26); g.lineTo(19, -14); g.closePath();
+    g.fillStyle = lin(g, -19, 0, 19, 0, [[0, shade(capCol, -0.3)], [0.35, shade(capCol, 0.45)], [1, shade(capCol, -0.35)]]); g.fill(); outline(g, shade(capCol, -0.55), 1.8);
+    g.fillStyle = 'rgba(30,30,40,0.7)';
+    for (const h of holes) { circ(g, h[0], h[1], 1.6); g.fill(); }
+  }
+  function bowl(g, rimCol, bodyCol, heapCol, heapFn) {
+    ell(g, 0, 10, 40, 12); g.fillStyle = shade(bodyCol, -0.35); g.fill();
+    // yığın
+    g.beginPath(); g.moveTo(-36, 8); g.quadraticCurveTo(-24, -26, 0, -28); g.quadraticCurveTo(24, -26, 36, 8); g.closePath();
+    g.fillStyle = rad(g, -8, -16, 2, 44, [[0, shade(heapCol, 0.2)], [1, shade(heapCol, -0.2)]]); g.fill();
+    if (heapFn) { g.save(); g.clip(); heapFn(); g.restore(); }
+    // kase gövdesi
+    g.beginPath(); g.moveTo(-42, 8); g.quadraticCurveTo(-40, 40, 0, 42); g.quadraticCurveTo(40, 40, 42, 8); g.closePath();
+    g.fillStyle = lin(g, -42, 0, 42, 0, [[0, shade(bodyCol, -0.15)], [0.35, shade(bodyCol, 0.3)], [1, shade(bodyCol, -0.25)]]); g.fill();
+    outline(g, shade(bodyCol, -0.5));
+    ell(g, 0, 8, 42, 5); g.strokeStyle = rimCol; g.lineWidth = 3; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.4)'; ell(g, -22, 22, 8, 4, 0.4); g.fill();
+  }
+  function jar(g, fillCol, lidCol, labelFn) {
+    rr(g, -24, -20, 48, 62, 10);
+    g.fillStyle = lin(g, -24, 0, 24, 0, [[0, shade(fillCol, -0.25)], [0.35, shade(fillCol, 0.15)], [1, shade(fillCol, -0.35)]]); g.fill();
+    outline(g, shade(fillCol, -0.55));
+    rr(g, -27, -34, 54, 16, 4); g.fillStyle = lin(g, 0, -34, 0, -18, [[0, shade(lidCol, 0.35)], [1, shade(lidCol, -0.25)]]); g.fill(); outline(g, shade(lidCol, -0.55), 1.8);
+    g.strokeStyle = 'rgba(0,0,0,0.2)'; g.lineWidth = 1; g.beginPath(); for (let i = -22; i <= 22; i += 4) { g.moveTo(i, -32); g.lineTo(i, -20); } g.stroke();
+    if (labelFn) labelFn();
+    g.fillStyle = 'rgba(255,255,255,0.4)'; rr(g, -19, -16, 6, 52, 3); g.fill();
+  }
+  function pepper(g, x, y, s, col) {
+    g.save(); g.translate(x, y); g.scale(s, s);
+    g.beginPath(); g.moveTo(-3, -10); g.quadraticCurveTo(8, -8, 6, 6); g.quadraticCurveTo(3, 14, -4, 16); g.quadraticCurveTo(-1, 6, -6, -6); g.closePath();
+    g.fillStyle = col || '#d8301c'; g.fill();
+    g.fillStyle = '#4f9a2a'; rr(g, -5, -14, 6, 5, 2); g.fill();
+    g.restore();
+  }
+
+  // ---------------------------------------------------------------------------
+  // MALZEMELER
+  // ---------------------------------------------------------------------------
+  const ING = {
+    tost_ekmegi(g) {
+      g.save(); g.translate(7, -5); g.rotate(0.12); breadSlice(g, 66, 70, 0, 12); g.restore();
+      g.save(); g.translate(-5, 5); g.rotate(-0.06); breadSlice(g, 70, 74, 0, 11); g.restore();
+    },
+    yarim_ekmek(g) {
+      g.save(); g.rotate(-0.22);
+      // gövde
+      g.beginPath(); g.moveTo(-40, -18); g.bezierCurveTo(-10, -28, 30, -26, 44, -8); g.bezierCurveTo(50, 4, 44, 20, 30, 22); g.lineTo(-40, 22); g.closePath();
+      g.fillStyle = lin(g, 0, -26, 0, 22, [[0, '#e7ad5e'], [0.55, '#c98638'], [1, '#9a5e22']]); g.fill();
+      outline(g, '#6e3c12');
+      // çizikler
+      g.strokeStyle = 'rgba(255,225,160,0.85)'; g.lineWidth = 3.4; g.lineCap = 'round';
+      g.beginPath(); for (const sx of [-24, -6, 12, 28]) { g.moveTo(sx - 6, -12); g.quadraticCurveTo(sx, -20, sx + 7, -19); } g.stroke();
+      g.strokeStyle = 'rgba(120,60,15,0.5)'; g.lineWidth = 1.2;
+      g.beginPath(); for (const sx of [-24, -6, 12, 28]) { g.moveTo(sx - 6, -10); g.quadraticCurveTo(sx, -17.5, sx + 7, -16.5); } g.stroke();
+      // kesik yüz
+      ell(g, -40, 2, 9, 20); g.fillStyle = rad(g, -42, -2, 1, 20, [[0, '#fff3d6'], [1, '#efd49a']]); g.fill(); outline(g, '#b07a3a', 1.8);
+      const R = rng(4); for (let i = 0; i < 12; i++) { ell(g, -40 + (R() - 0.5) * 9, 2 + (R() - 0.5) * 28, 0.9, 1.4); g.fillStyle = 'rgba(180,130,60,0.45)'; g.fill(); }
+      gloss(g, 6, -18, 18, 3, -0.08, 0.35);
+      g.restore();
+    },
+    lavas(g) {
+      blobPath(g, 4, 4, 42, 40, 61, 0.05); g.fillStyle = '#e2c88e'; g.fill(); outline(g, '#a88450', 1.6);
+      blobPath(g, -3, -3, 42, 40, 62, 0.05);
+      g.fillStyle = rad(g, -12, -12, 4, 50, [[0, '#fbefd0'], [1, '#ecd39c']]); g.fill(); outline(g, '#b08e58', 1.8);
+      g.save(); g.clip();
+      const R = rng(63);
+      for (let i = 0; i < 22; i++) { const a = R() * TAU, d = R() * 34; ell(g, -3 + Math.cos(a) * d, -3 + Math.sin(a) * d, 2 + R() * 4, 1.5 + R() * 3, R() * 3); g.fillStyle = R() < 0.6 ? 'rgba(200,150,80,0.45)' : 'rgba(120,70,30,0.45)'; g.fill(); }
+      // katlanma
+      g.beginPath(); g.moveTo(10, -44); g.quadraticCurveTo(24, -10, 44, 2); g.lineTo(50, -50); g.closePath(); g.fillStyle = 'rgba(160,120,60,0.18)'; g.fill();
+      g.restore();
+    },
+    hamburger_ekmegi(g) {
+      // alt
+      rr(g, -38, 12, 76, 22, 10); g.fillStyle = lin(g, 0, 12, 0, 34, [[0, '#f1d6a2'], [0.3, '#d99a4c'], [1, '#a8662a']]); g.fill(); outline(g, '#7a4614');
+      g.fillStyle = '#f6e3bb'; rr(g, -36, 12, 72, 6, 3); g.fill();
+      // üst kubbe
+      g.beginPath(); g.moveTo(-42, 4); g.bezierCurveTo(-42, -38, 42, -38, 42, 4); g.quadraticCurveTo(42, 8, 36, 8); g.lineTo(-36, 8); g.quadraticCurveTo(-42, 8, -42, 4); g.closePath();
+      g.fillStyle = rad(g, -12, -20, 2, 54, [[0, '#f0b86a'], [0.5, '#d48a3a'], [1, '#a35e22']]); g.fill(); outline(g, '#7a4614');
+      const R = rng(81);
+      for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 62, y = -6 - R() * 20 + Math.abs(x) * 0.25; ell(g, x, y, 2.6, 1.3, R() * 3); g.fillStyle = '#fff6dc'; g.fill(); g.strokeStyle = 'rgba(160,110,40,0.5)'; g.lineWidth = 0.6; g.stroke(); }
+      gloss(g, -14, -18, 14, 5, -0.3, 0.4);
+    },
+    kasar(g) {
+      cheeseSlice(g, 6, 6, 60, 56, 0.12, '#f3d264');
+      cheeseSlice(g, -4, -4, 60, 56, -0.08, '#f8dc72');
+    },
+    sucuk(g) {
+      // halka sucuk ucu
+      g.save(); g.rotate(-0.3);
+      rr(g, -40, -36, 50, 20, 10); g.fillStyle = lin(g, 0, -36, 0, -16, [[0, '#a8352a'], [1, '#5e140e']]); g.fill(); outline(g, '#3a0a06');
+      g.strokeStyle = '#e8d8b0'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(-40, -26); g.lineTo(-46, -30); g.stroke();
+      g.restore();
+      sucukSlice(g, -16, 10, 14, 1); sucukSlice(g, 10, 2, 14, 2); sucukSlice(g, 26, 22, 13, 3); sucukSlice(g, 0, 26, 13, 4);
+    },
+    cheddar(g) {
+      cheeseSlice(g, 4, 5, 60, 58, 0.1, '#f39a22');
+      cheeseSlice(g, -3, -3, 60, 58, -0.1, '#f7a933', true);
+    },
+    kofte(g, o) {
+      const c = o.cook || 0;
+      const top = o.cookB != null ? o.cookB : c, side = o.cookA != null ? o.cookA : c;
+      kofte(g, 0, -2, 38, 24, top, side, 9);
+    },
+    domates(g) {
+      // bütün domates
+      circ(g, 14, -12, 26); g.fillStyle = rad(g, 6, -20, 2, 32, [[0, '#ff7a62'], [0.6, '#e2382a'], [1, '#a81e14']]); g.fill(); outline(g, '#7a140c');
+      g.fillStyle = '#3f8a2a';
+      for (let i = 0; i < 5; i++) { const a = i * TAU / 5 - Math.PI / 2; ell(g, 14 + Math.cos(a) * 6, -34 + Math.sin(a) * 3, 6, 2.2, a); g.fill(); }
+      gloss(g, 4, -22, 7, 4, -0.5, 0.6);
+      tomatoSlice(g, -12, 14, 25, 0.3);
+    },
+    sogan(g) {
+      onionRing(g, 12, -10, 25, true);
+      onionRing(g, -14, 14, 20, false);
+    },
+    marul(g) {
+      lettuceLeaf(g, 6, -6, 1.15, 0.5, 5);
+      lettuceLeaf(g, -8, 8, 1.2, -0.25, 3);
+    },
+    tursu(g) {
+      g.save(); g.rotate(-0.6);
+      rr(g, -42, -14, 74, 26, 13); g.fillStyle = lin(g, 0, -14, 0, 12, [[0, '#9ab845'], [0.5, '#6f8f2a'], [1, '#4a6418']]); g.fill(); outline(g, '#34480e');
+      const R = rng(7); for (let i = 0; i < 18; i++) { circ(g, -36 + R() * 64, -10 + R() * 18, 1.4); g.fillStyle = 'rgba(220,240,150,0.6)'; g.fill(); }
+      gloss(g, -14, -8, 18, 3, 0, 0.45);
+      g.restore();
+      pickleSlice(g, 20, 22, 14); pickleSlice(g, -2, 30, 12);
+    },
+    patates(g, o) {
+      const c = o.cook || 0;
+      const R = rng(21);
+      for (let i = 0; i < 8; i++) {
+        const rot = -0.5 + i * 0.13 + (R() - 0.5) * 0.1;
+        fry(g, -20 + i * 6, 4 + (R() - 0.5) * 6, 9.5, 66 - R() * 14, rot, c, i);
+      }
+    },
+    maydanoz(g) {
+      parsleySprig(g, -6, 2, 1.25, -0.3);
+      parsleySprig(g, 10, 6, 1.1, 0.35);
+    },
+    limon(g) {
+      // dilim + kama
+      lemonSlice(g, -10, 8, 28, false);
+      g.save(); g.translate(18, -16); g.rotate(0.5); lemonSlice(g, 0, 0, 24, true); g.restore();
+    },
+    nar_eksisi(g) {
+      g.beginPath(); g.moveTo(-6, -30); g.lineTo(-6, -18); g.quadraticCurveTo(-20, -12, -20, 4); g.lineTo(-20, 38); g.quadraticCurveTo(-20, 44, -14, 44); g.lineTo(14, 44); g.quadraticCurveTo(20, 44, 20, 38); g.lineTo(20, 4); g.quadraticCurveTo(20, -12, 6, -18); g.lineTo(6, -30); g.closePath();
+      g.fillStyle = lin(g, -20, 0, 20, 0, [[0, '#3a0812'], [0.35, '#8a1a2c'], [0.6, '#5a0f1f'], [1, '#2a050c']]); g.fill(); outline(g, '#1e0408');
+      rr(g, -7.5, -42, 15, 13, 3); g.fillStyle = lin(g, -8, 0, 8, 0, [[0, '#8a6a1a'], [0.4, '#f2d36a'], [1, '#7a5a10']]); g.fill(); outline(g, '#5a4008', 1.4);
+      rr(g, -17, 6, 34, 26, 4); g.fillStyle = '#fbf3df'; g.fill(); outline(g, 'rgba(0,0,0,0.25)', 1);
+      circ(g, 0, 20, 8); g.fillStyle = rad(g, -2, 17, 1, 9, [[0, '#ff6a6a'], [1, '#b81a2a']]); g.fill();
+      g.fillStyle = '#b81a2a'; g.beginPath(); g.moveTo(-3, 12); g.lineTo(-1, 9); g.lineTo(0, 12); g.lineTo(1, 9); g.lineTo(3, 12); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.35)'; rr(g, -15, -10, 4, 46, 2); g.fill();
+    },
+    ketcap(g) {
+      squeezeBottle(g, '#e0302a', '#f6f6f2', () => { tomatoSlice(g, 0, 7, 8, 0); });
+    },
+    mayonez(g) {
+      squeezeBottle(g, '#f5ecc8', '#f2c445', () => {
+        ell(g, 0, 8, 7, 9); g.fillStyle = '#ffffff'; g.fill(); outline(g, 'rgba(0,0,0,0.25)', 1);
+        circ(g, 0, 10, 4); g.fillStyle = '#ffc42e'; g.fill();
+      });
+    },
+    tuz(g) { shaker(g, '#ffffff', '#c9d0d8', [[-6, -26], [0, -30], [6, -26], [-3, -21], [3, -21]], false); },
+    pul_biber(g) {
+      bowl(g, '#3f6fb0', '#f6f4ef', '#c7301e', () => {
+        const R = rng(41);
+        for (let i = 0; i < 90; i++) { g.fillStyle = R() < 0.55 ? '#e0462e' : R() < 0.5 ? '#7a140c' : '#f2a640'; g.save(); g.translate(-34 + R() * 68, -28 + R() * 36); g.rotate(R() * 3); g.fillRect(-1.6, -1, 3.2 + R() * 1.5, 2); g.restore(); }
+      });
+    },
+    bulgur(g) {
+      // çuval
+      g.beginPath(); g.moveTo(-30, -18); g.quadraticCurveTo(-40, 20, -32, 42); g.lineTo(32, 42); g.quadraticCurveTo(40, 20, 30, -18); g.closePath();
+      g.fillStyle = lin(g, -36, 0, 36, 0, [[0, '#b8915a'], [0.4, '#e2c290'], [1, '#a8804a']]); g.fill(); outline(g, '#6e5028');
+      g.save(); g.clip(); g.strokeStyle = 'rgba(110,80,40,0.25)'; g.lineWidth = 1;
+      g.beginPath(); for (let i = -40; i < 44; i += 4) { g.moveTo(-40, i); g.lineTo(40, i); g.moveTo(i, -20); g.lineTo(i, 44); } g.stroke(); g.restore();
+      // ağız
+      ell(g, 0, -18, 31, 9); g.fillStyle = '#8a6a3a'; g.fill(); outline(g, '#6e5028', 1.8);
+      g.beginPath(); g.moveTo(-26, -18); g.quadraticCurveTo(0, -40, 26, -18); g.closePath(); g.fillStyle = rad(g, -4, -26, 1, 30, [[0, '#e6c48a'], [1, '#b8904e']]); g.fill();
+      const R = rng(43);
+      for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 50; const y = -19 - R() * (16 - Math.abs(x) * 0.5); ell(g, x, y, 1.3, 0.8, R() * 3); g.fillStyle = R() < 0.5 ? '#8a6a3a' : '#f2dcaa'; g.fill(); }
+      // etiket
+      rr(g, -16, 6, 32, 18, 3); g.fillStyle = '#fbf6e8'; g.fill(); outline(g, 'rgba(90,60,20,0.4)', 1);
+      g.fillStyle = '#c4421f'; g.font = '900 8px ' + FONT_T; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BULGUR', 0, 15.5);
+      for (let i = 0; i < 7; i++) { ell(g, -20 + R() * 40, 44 + R() * 4, 1.4, 0.9, R() * 3); g.fillStyle = '#c9a36b'; g.fill(); }
+    },
+    isot(g) {
+      bowl(g, '#5a3418', '#a8703a', '#6e1a0e', () => {
+        const R = rng(44);
+        for (let i = 0; i < 120; i++) { circ(g, -34 + R() * 68, -28 + R() * 36, 0.8 + R() * 1.2); g.fillStyle = R() < 0.5 ? '#3a0a04' : R() < 0.6 ? '#9a2a16' : '#c45a2a'; g.fill(); }
+      });
+      // tahta kasenin halkaları
+      g.strokeStyle = 'rgba(60,30,10,0.35)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(-36, 22); g.quadraticCurveTo(0, 34, 36, 22); g.moveTo(-30, 32); g.quadraticCurveTo(0, 42, 30, 32); g.stroke();
+      pepper(g, 30, -30, 1.1, '#9a1a0e');
+    },
+    salca(g) {
+      jar(g, '#b52a1b', '#d23a2a', () => {
+        rr(g, -20, 2, 40, 24, 4); g.fillStyle = '#fbf3df'; g.fill(); outline(g, 'rgba(0,0,0,0.2)', 1);
+        pepper(g, -6, 14, 0.75, '#d8301c'); pepper(g, 7, 14, 0.75, '#b81e10');
+      });
+    },
+    cay_yapragi(g) {
+      // paket kutusu (3/4)
+      g.beginPath(); g.moveTo(-28, -30); g.lineTo(18, -30); g.lineTo(30, -38); g.lineTo(-16, -38); g.closePath(); g.fillStyle = '#e88a3a'; g.fill(); outline(g, '#7a3010', 1.8);
+      g.beginPath(); g.moveTo(18, -30); g.lineTo(30, -38); g.lineTo(30, 32); g.lineTo(18, 40); g.closePath(); g.fillStyle = '#8a2a10'; g.fill(); outline(g, '#5a1a08', 1.8);
+      rr(g, -28, -30, 46, 70, 2); g.fillStyle = lin(g, -28, 0, 18, 0, [[0, '#d24a24'], [1, '#b03418']]); g.fill(); outline(g, '#6a200c', 1.8);
+      // ince belli bardak çizimi
+      g.save(); g.translate(-5, 4); g.scale(0.4, 0.4); Art._h.teaGlass && Art._h.teaGlass(g, 1, 0.95, false); g.restore();
+      // yapraklar
+      const leaf = (x, y, r) => { g.save(); g.translate(x, y); g.rotate(r); ell(g, 0, 0, 8, 3.6); g.fillStyle = lin(g, 0, -4, 0, 4, [[0, '#7cc85a'], [1, '#2f7a2a']]); g.fill(); g.strokeStyle = '#1f5a1a'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-7, 0); g.lineTo(7, 0); g.stroke(); g.restore(); };
+      leaf(-18, -18, -0.6); leaf(-12, -22, 0.4); leaf(8, -20, -0.3);
+      rr(g, -24, 26, 38, 10, 2); g.fillStyle = '#fbe3a0'; g.fill();
+      g.fillStyle = '#7a2a10'; g.font = '900 8px ' + FONT_T; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ÇAY', -5, 31.5);
+      // dökülmüş yapraklar
+      const R = rng(52); for (let i = 0; i < 10; i++) { ell(g, -30 + R() * 36, 42 + R() * 5, 1.8, 0.9, R() * 3); g.fillStyle = '#3b2314'; g.fill(); }
+    },
+    yag(g) {
+      g.beginPath(); g.moveTo(-24, -14); g.quadraticCurveTo(-26, 30, -22, 42); g.lineTo(26, 42); g.quadraticCurveTo(30, 30, 28, -14); g.quadraticCurveTo(26, -28, 6, -30); g.lineTo(-4, -30); g.quadraticCurveTo(-22, -28, -24, -14); g.closePath();
+      g.fillStyle = lin(g, -26, 0, 28, 0, [[0, 'rgba(200,150,20,0.95)'], [0.35, 'rgba(255,220,90,0.95)'], [1, 'rgba(180,130,10,0.95)']]); g.fill(); outline(g, '#8a6208');
+      // sap
+      g.beginPath(); g.moveTo(10, -26); g.quadraticCurveTo(30, -32, 26, -6); g.strokeStyle = 'rgba(200,160,40,0.95)'; g.lineWidth = 6; g.stroke(); g.strokeStyle = '#8a6208'; g.lineWidth = 1.2; g.stroke();
+      rr(g, -8, -42, 16, 13, 3); g.fillStyle = lin(g, -8, 0, 8, 0, [[0, '#1f7a3a'], [0.4, '#4fc46a'], [1, '#156028']]); g.fill(); outline(g, '#0e4a1e', 1.6);
+      rr(g, -20, 4, 42, 24, 4); g.fillStyle = '#fbf8ec'; g.fill(); outline(g, 'rgba(0,0,0,0.2)', 1);
+      g.fillStyle = '#f2b81e'; circ(g, -8, 16, 6); g.fill(); g.fillStyle = '#4fae5a'; ell(g, 4, 13, 6, 2.5, -0.4); g.fill(); ell(g, 10, 18, 5, 2, 0.4); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.45)'; rr(g, -19, -16, 5, 54, 2.5); g.fill();
+    },
+    cigkofte(g) {
+      cigkoftePiece(g, -8, -16, 1.05, -0.2, 17);
+      cigkoftePiece(g, 10, 2, 1.05, 0.15, 18);
+      cigkoftePiece(g, -6, 22, 1.0, -0.05, 19);
+    },
+    cay(g) { Art._h.teaGlass && Art._h.teaGlass(g, 0.85, 1, true); },
+  };
+  // yığın halinde (count) çizilebilen malzemeler
+  const STACKABLE = { tost_ekmegi: 1, yarim_ekmek: 1, lavas: 1, hamburger_ekmegi: 1, kasar: 1, sucuk: 1, cheddar: 1, kofte: 1, domates: 1, sogan: 1, marul: 1, tursu: 1, patates: 1, maydanoz: 1, limon: 1, cigkofte: 1 };
+
+  function colorOf(id) {
+    const D = KS.DATA || {};
+    return (D.ingredients && D.ingredients[id] && D.ingredients[id].color) || (D.prepared && D.prepared[id] && D.prepared[id].color) ||
+      (D.products && D.products[id] && D.products[id].color) || '#c8b8a0';
+  }
+  function nameOf(id) {
+    try { return (KS.Recipes && KS.Recipes.nameOf(id)) || id; } catch (e) { return id; }
+  }
+  function fallbackIcon(g, id) {
+    const c = colorOf(id);
+    blobPath(g, 0, 0, 38, 34, hashStr(id), 0.08);
+    g.fillStyle = rad(g, -12, -12, 2, 48, [[0, shade(c, 0.35)], [1, shade(c, -0.15)]]); g.fill(); outline(g, shade(c, -0.5));
+    gloss(g, -14, -16, 12, 5, -0.5, 0.45);
+    const n = String(nameOf(id) || '?');
+    g.font = '900 26px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 4; g.strokeStyle = shade(c, -0.5); g.strokeText(n.charAt(0).toLocaleUpperCase('tr-TR'), 0, 3);
+    g.fillStyle = '#fff'; g.fillText(n.charAt(0).toLocaleUpperCase('tr-TR'), 0, 3);
+  }
+  function q2(v) { return v == null || !isFinite(v) ? '-' : (Math.round(v * 40) / 40).toFixed(3); }
+
+  function drawIngredient(ctx, id, x, y, size, o) {
+    try {
+      size = size || 60; o = o || {};
+      const fn = ING[id];
+      const cnt = o.count != null && STACKABLE[id] ? (o.count >= 6 ? 3 : o.count >= 2 ? 2 : 1) : 1;
+      const key = 'ing:' + id + ':' + q2(o.cook) + ':' + q2(o.cookA) + ':' + q2(o.cookB) + ':' + cnt;
+      sprite(ctx, key, x, y, size * 1.3, (g) => {
+        g.scale(size / 100, size / 100);
+        const draw = () => { if (fn) fn(g, o); else fallbackIcon(g, id); };
+        if (cnt >= 3) { g.save(); g.translate(-12, -10); g.scale(0.86, 0.86); draw(); g.restore(); g.fillStyle = 'rgba(0,0,0,0.12)'; }
+        if (cnt >= 2) { g.save(); g.translate(10, -8); g.scale(0.9, 0.9); draw(); g.restore(); }
+        draw();
+      }, true);
+    } catch (e) { /* yok */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // HAZIR ÜRÜNLER
+  // ---------------------------------------------------------------------------
+  function wrapDurum(g, paper, stripe, fillFn) {
+    g.save(); g.rotate(-0.42);
+    // lavaş üst kısım (açık uç)
+    g.beginPath(); g.moveTo(-17, -10); g.lineTo(-17, -34); g.quadraticCurveTo(-8, -44, 0, -40); g.quadraticCurveTo(10, -46, 17, -34); g.lineTo(17, -10); g.closePath();
+    g.fillStyle = lin(g, -17, 0, 17, 0, [[0, '#d9b678'], [0.4, '#f7e4b4'], [1, '#c9a060']]); g.fill(); outline(g, '#8a6a3a', 1.8);
+    // dolgu
+    ell(g, 0, -36, 14, 6.5); g.fillStyle = '#5a3018'; g.fill();
+    g.save(); ell(g, 0, -36, 14, 6.5); g.clip(); fillFn(); g.restore();
+    // kağıt
+    g.beginPath(); g.moveTo(-19, -16); g.lineTo(19, -24); g.lineTo(19, 40); g.quadraticCurveTo(0, 46, -19, 40); g.closePath();
+    g.fillStyle = lin(g, -19, 0, 19, 0, [[0, shade(paper, -0.15)], [0.4, shade(paper, 0.2)], [1, shade(paper, -0.2)]]); g.fill();
+    g.save(); g.clip();
+    g.strokeStyle = stripe; g.lineWidth = 3.5;
+    g.beginPath(); for (let i = -40; i < 60; i += 10) { g.moveTo(-20, i); g.lineTo(20, i - 8); } g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(-12, -30, 5, 70);
+    g.restore();
+    g.beginPath(); g.moveTo(-19, -16); g.lineTo(19, -24); g.lineTo(19, 40); g.quadraticCurveTo(0, 46, -19, 40); g.closePath();
+    outline(g, shade(paper, -0.5), 1.8);
+    // kağıt kıvrımı
+    g.beginPath(); g.moveTo(-19, -16); g.lineTo(-8, -10); g.lineTo(19, -24); g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 1.2; g.stroke();
+    g.restore();
+  }
+  function donerFill(meat) {
+    return (g) => {
+      const R = rng(meat === '#e2b46a' ? 3 : 4);
+      for (let i = 0; i < 14; i++) { ell(g, (R() - 0.5) * 26, -36 + (R() - 0.5) * 10, 3 + R() * 3, 1.6 + R() * 1.5, R() * 3); g.fillStyle = shade(meat, (R() - 0.5) * 0.4); g.fill(); }
+      for (let i = 0; i < 4; i++) { ell(g, (R() - 0.5) * 22, -36 + (R() - 0.5) * 8, 2.6, 1.5, R() * 3); g.fillStyle = '#e8402f'; g.fill(); }
+      for (let i = 0; i < 5; i++) { ell(g, (R() - 0.5) * 24, -36 + (R() - 0.5) * 8, 2.4, 1.2, R() * 3); g.fillStyle = '#5cb03a'; g.fill(); }
+    };
+  }
+  const PROD = {
+    ayran(g) {
+      g.beginPath(); g.moveTo(-28, -26); g.lineTo(28, -26); g.lineTo(22, 40); g.quadraticCurveTo(0, 44, -22, 40); g.closePath();
+      g.fillStyle = lin(g, -28, 0, 28, 0, [[0, '#d6dee8'], [0.35, '#ffffff'], [1, '#c8d2de']]); g.fill(); outline(g, '#8a9aae');
+      g.save(); g.clip();
+      g.fillStyle = lin(g, 0, 0, 0, 26, [[0, '#3a80e0'], [1, '#1f5ab8']]); g.fillRect(-30, 0, 60, 24);
+      g.strokeStyle = '#ffffff'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(-30, 8); g.bezierCurveTo(-14, 0, -6, 16, 6, 8); g.bezierCurveTo(16, 2, 22, 12, 30, 6); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(-20, -24, 5, 66);
+      g.restore();
+      g.fillStyle = '#1f5ab8'; g.font = '900 10px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AYRAN', 0, -12);
+      // folyo kapak
+      ell(g, 0, -27, 31, 8); g.fillStyle = lin(g, -30, -30, 30, -22, [[0, '#9aa8b8'], [0.3, '#f4f8fc'], [0.6, '#b9c6d4'], [1, '#e8eef4']]); g.fill(); outline(g, '#6a7a8e', 1.6);
+      ell(g, 0, -27, 22, 5); g.strokeStyle = 'rgba(40,110,210,0.8)'; g.lineWidth = 1.6; g.stroke();
+      g.beginPath(); g.moveTo(26, -30); g.lineTo(38, -36); g.lineTo(36, -26); g.closePath(); g.fillStyle = '#d8e0ea'; g.fill(); outline(g, '#6a7a8e', 1.2);
+    },
+    su(g) {
+      const body = () => { g.beginPath(); g.moveTo(-8, -36); g.lineTo(-8, -30); g.quadraticCurveTo(-18, -24, -18, -12); g.lineTo(-18, 40); g.quadraticCurveTo(-18, 46, -12, 46); g.lineTo(12, 46); g.quadraticCurveTo(18, 46, 18, 40); g.lineTo(18, -12); g.quadraticCurveTo(18, -24, 8, -30); g.lineTo(8, -36); g.closePath(); };
+      body(); g.fillStyle = lin(g, -18, 0, 18, 0, [[0, 'rgba(120,190,240,0.75)'], [0.35, 'rgba(225,245,255,0.85)'], [1, 'rgba(90,160,220,0.8)']]); g.fill(); outline(g, '#4a8ac0');
+      g.save(); body(); g.clip();
+      g.fillStyle = 'rgba(120,200,255,0.3)'; g.fillRect(-20, -8, 40, 56);
+      g.strokeStyle = 'rgba(70,130,190,0.35)'; g.lineWidth = 1.2; g.beginPath(); for (const yy of [-6, 34, 40]) { g.moveTo(-18, yy); g.lineTo(18, yy); } g.stroke();
+      g.fillStyle = lin(g, 0, 4, 0, 28, [[0, '#2f7fd8'], [1, '#1d5aa8']]); g.fillRect(-20, 4, 40, 24);
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.moveTo(-10, 22); g.lineTo(-3, 10); g.lineTo(2, 17); g.lineTo(6, 12); g.lineTo(12, 22); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(-13, -20, 4, 64);
+      g.restore();
+      rr(g, -9, -46, 18, 11, 2.5); g.fillStyle = lin(g, -9, 0, 9, 0, [[0, '#1d5aa8'], [0.4, '#5aa8f0'], [1, '#174a90']]); g.fill(); outline(g, '#0e3870', 1.6);
+      g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 0.8; g.beginPath(); for (let i = -6; i <= 6; i += 3) { g.moveTo(i, -45); g.lineTo(i, -36); } g.stroke();
+    },
+    kola(g) {
+      rr(g, -21, -38, 42, 82, 8);
+      g.fillStyle = lin(g, -21, 0, 21, 0, [[0, '#4a0c08'], [0.3, '#b8261c'], [0.5, '#8e1a12'], [1, '#3a0806']]); g.fill(); outline(g, '#2a0604');
+      g.save(); rr(g, -21, -38, 42, 82, 8); g.clip();
+      g.fillStyle = '#f6efe6'; g.beginPath(); g.moveTo(-22, 14); g.bezierCurveTo(-8, 2, 6, 26, 22, 8); g.lineTo(22, 16); g.bezierCurveTo(6, 34, -8, 10, -22, 22); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.75)';
+      for (const b of [[-10, -14, 3], [-2, -22, 2], [6, -12, 2.5], [10, -24, 1.6], [-8, -26, 1.4]]) { circ(g, b[0], b[1], b[2]); g.fill(); }
+      g.fillStyle = '#ffffff'; g.font = '900 12px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('KOLA', 0, -2);
+      g.fillStyle = 'rgba(255,255,255,0.32)'; g.fillRect(-13, -36, 5, 78);
+      g.restore();
+      ell(g, 0, -38, 18, 5); g.fillStyle = lin(g, -18, 0, 18, 0, [[0, '#8a949e'], [0.5, '#f2f5f8'], [1, '#7a848e']]); g.fill(); outline(g, '#4a525a', 1.4);
+      rr(g, -5, -41, 10, 5, 2); g.strokeStyle = '#6a737c'; g.lineWidth = 1.4; g.stroke();
+      rr(g, -20, 36, 40, 8, 3); g.fillStyle = 'rgba(200,205,210,0.9)'; g.fill();
+    },
+    meyve_suyu(g) {
+      g.beginPath(); g.moveTo(-24, -26); g.lineTo(12, -26); g.lineTo(24, -34); g.lineTo(-12, -34); g.closePath(); g.fillStyle = '#ffd08a'; g.fill(); outline(g, '#a85a10', 1.6);
+      g.beginPath(); g.moveTo(12, -26); g.lineTo(24, -34); g.lineTo(24, 34); g.lineTo(12, 42); g.closePath(); g.fillStyle = '#d06a12'; g.fill(); outline(g, '#8a420a', 1.6);
+      rr(g, -24, -26, 36, 68, 2); g.fillStyle = lin(g, -24, 0, 12, 0, [[0, '#ffb43a'], [1, '#f28a12']]); g.fill(); outline(g, '#8a420a', 1.8);
+      circ(g, -6, 10, 12); g.fillStyle = rad(g, -9, 6, 1, 13, [[0, '#ffd27a'], [1, '#f07a0a']]); g.fill(); outline(g, '#b8500a', 1.2);
+      g.fillStyle = '#4fae3a'; ell(g, 0, -3, 6, 2.5, -0.5); g.fill();
+      g.strokeStyle = 'rgba(255,240,200,0.7)'; g.lineWidth = 0.8; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; g.beginPath(); g.moveTo(-6, 10); g.lineTo(-6 + Math.cos(a) * 9, 10 + Math.sin(a) * 9); g.stroke(); }
+      rr(g, -20, 28, 28, 9, 2); g.fillStyle = '#ffffff'; g.fill();
+      g.fillStyle = '#e8641a'; g.font = '900 7px ' + FONT_T; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('MEYVE', -6, 32.5);
+      // pipet
+      g.save(); g.translate(2, -30); g.rotate(0.25);
+      rr(g, -2.5, -22, 5, 24, 2); g.fillStyle = '#ffffff'; g.fill(); outline(g, '#c84a3a', 1);
+      g.fillStyle = '#e8443a'; for (let i = -20; i < 2; i += 6) g.fillRect(-2.5, i, 5, 2.5);
+      g.restore();
+    },
+    cips(g) {
+      g.beginPath(); g.moveTo(-30, -36);
+      for (let i = 0; i <= 10; i++) g.lineTo(-30 + i * 6, -36 - (i % 2 ? 4 : 0));
+      g.quadraticCurveTo(38, 0, 30, 38);
+      for (let i = 10; i >= 0; i--) g.lineTo(-30 + i * 6, 38 + (i % 2 ? 4 : 0));
+      g.quadraticCurveTo(-38, 0, -30, -36); g.closePath();
+      g.fillStyle = lin(g, -34, 0, 34, 0, [[0, '#e8a810'], [0.35, '#ffe066'], [0.7, '#ffcf33'], [1, '#d89a0a']]); g.fill(); outline(g, '#9a6a04');
+      g.save(); g.clip();
+      g.fillStyle = '#e8443a'; H.starPath(g, 0, 4, 26, 18, 12, 0); g.fill();
+      ell(g, 0, 6, 15, 10, -0.3); g.fillStyle = rad(g, -4, 2, 1, 16, [[0, '#ffe9a0'], [1, '#e8b040']]); g.fill(); outline(g, '#b07a10', 1.2);
+      g.fillStyle = 'rgba(200,120,20,0.6)'; circ(g, -3, 4, 1.3); g.fill(); circ(g, 4, 9, 1.3); g.fill();
+      g.fillStyle = '#c42a1a'; g.font = '900 11px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CİPS', 0, -22);
+      g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(-22, -34, 6, 70);
+      g.restore();
+      g.strokeStyle = 'rgba(120,80,0,0.4)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-28, -30); g.lineTo(28, -30); g.moveTo(-28, 32); g.lineTo(28, 32); g.stroke();
+    },
+    cikolata(g) {
+      g.save(); g.rotate(-0.35);
+      // çikolata (açık uç)
+      rr(g, -16, -44, 32, 30, 3); g.fillStyle = lin(g, -16, 0, 16, 0, [[0, '#4a2210'], [0.4, '#7a3e1e'], [1, '#3a180a']]); g.fill(); outline(g, '#2a1006');
+      g.strokeStyle = 'rgba(30,10,4,0.6)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, -44); g.lineTo(0, -14); g.moveTo(-16, -30); g.lineTo(16, -30); g.stroke();
+      g.strokeStyle = 'rgba(200,140,100,0.35)'; g.beginPath(); g.moveTo(1.5, -44); g.lineTo(1.5, -14); g.moveTo(-16, -28.5); g.lineTo(16, -28.5); g.stroke();
+      // folyo
+      g.beginPath(); g.moveTo(-17, -16); g.lineTo(-12, -22); g.lineTo(-6, -17); g.lineTo(0, -23); g.lineTo(6, -17); g.lineTo(12, -22); g.lineTo(17, -16); g.lineTo(17, -10); g.lineTo(-17, -10); g.closePath();
+      g.fillStyle = lin(g, -17, 0, 17, 0, [[0, '#a0a8b0'], [0.4, '#f4f6f8'], [1, '#8a929a']]); g.fill(); outline(g, '#5a6268', 1.2);
+      // ambalaj
+      rr(g, -18, -12, 36, 56, 3); g.fillStyle = lin(g, -18, 0, 18, 0, [[0, '#5a1f6a'], [0.4, '#8a3aa0'], [1, '#4a185a']]); g.fill(); outline(g, '#2e0a3a');
+      g.fillStyle = '#f2c84b'; rr(g, -18, 8, 36, 12, 0); g.fill();
+      g.fillStyle = '#5a1f6a'; g.font = '900 8px ' + FONT_T; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ÇİKOLATA', 0, 14.5);
+      ell(g, 0, 30, 9, 6); g.fillStyle = '#6a3018'; g.fill(); g.strokeStyle = '#f2c84b'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(-12, -10, 4, 52);
+      g.restore();
+    },
+    simit(g) {
+      const ro = 42, ri = 17;
+      g.beginPath(); g.arc(0, 0, ro, 0, TAU); g.arc(0, 0, ri, 0, TAU, true);
+      g.fillStyle = rad(g, 0, 0, ri, ro, [[0, '#9a5418'], [0.45, '#d08a3a'], [0.75, '#b8692a'], [1, '#7a4012']]); g.fill('evenodd');
+      g.strokeStyle = '#5a2c08'; g.lineWidth = 2.2; g.beginPath(); g.arc(0, 0, ro, 0, TAU); g.stroke(); g.beginPath(); g.arc(0, 0, ri, 0, TAU); g.stroke();
+      // burgu
+      g.strokeStyle = 'rgba(90,40,8,0.45)'; g.lineWidth = 2;
+      for (let i = 0; i < 14; i++) { const a = i * TAU / 14; g.beginPath(); g.moveTo(Math.cos(a) * (ri + 3), Math.sin(a) * (ri + 3)); g.quadraticCurveTo(Math.cos(a + 0.25) * 30, Math.sin(a + 0.25) * 30, Math.cos(a + 0.12) * (ro - 3), Math.sin(a + 0.12) * (ro - 3)); g.stroke(); }
+      g.strokeStyle = 'rgba(255,220,160,0.35)'; g.lineWidth = 1.5;
+      for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + 0.12; g.beginPath(); g.moveTo(Math.cos(a) * (ri + 4), Math.sin(a) * (ri + 4)); g.quadraticCurveTo(Math.cos(a + 0.25) * 31, Math.sin(a + 0.25) * 31, Math.cos(a + 0.12) * (ro - 4), Math.sin(a + 0.12) * (ro - 4)); g.stroke(); }
+      // susam
+      const R = rng(71);
+      for (let i = 0; i < 70; i++) {
+        const a = R() * TAU, d = ri + 3 + R() * (ro - ri - 6);
+        ell(g, Math.cos(a) * d, Math.sin(a) * d, 2.2, 1.1, a + 1.57 + (R() - 0.5));
+        g.fillStyle = R() < 0.8 ? '#fff1c8' : '#e8c47a'; g.fill();
+      }
+      g.beginPath(); g.arc(0, 0, ro - 6, Math.PI * 1.1, Math.PI * 1.5); g.strokeStyle = 'rgba(255,240,200,0.5)'; g.lineWidth = 4; g.stroke();
+    },
+    pogaca(g) {
+      ell(g, 0, 22, 40, 10); g.fillStyle = '#b0702a'; g.fill();
+      g.beginPath(); g.moveTo(-40, 20); g.bezierCurveTo(-42, -34, 42, -34, 40, 20); g.quadraticCurveTo(0, 30, -40, 20); g.closePath();
+      g.fillStyle = rad(g, -10, -14, 2, 50, [[0, '#f6c878'], [0.5, '#e2a050'], [1, '#b0702a']]); g.fill(); outline(g, '#7a4614');
+      g.strokeStyle = 'rgba(140,80,20,0.4)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-30, 12); g.quadraticCurveTo(0, 20, 30, 12); g.stroke();
+      const R = rng(72);
+      for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 50, y = -14 + R() * 18 + Math.abs(x) * 0.15; ell(g, x, y, 1.8, 0.9, R() * 3); g.fillStyle = '#1a1410'; g.fill(); }
+      gloss(g, -12, -14, 16, 6, -0.3, 0.55);
+      gloss(g, 14, -6, 6, 3, -0.3, 0.3);
+    },
+    et_doner(g) { wrapDurum(g, '#fbfaf6', 'rgba(210,50,40,0.75)', () => donerFill('#8b4a22')(g)); },
+    tavuk_doner(g) { wrapDurum(g, '#fff4d6', 'rgba(240,150,20,0.8)', () => donerFill('#e2b46a')(g)); },
+    hazir_cigkofte(g) {
+      wrapDurum(g, '#f6fbf2', 'rgba(60,150,60,0.75)', () => {
+        const R = rng(8);
+        for (let i = 0; i < 10; i++) { ell(g, (R() - 0.5) * 24, -36 + (R() - 0.5) * 9, 3.5, 2.2, R() * 3); g.fillStyle = R() < 0.6 ? '#8c2a1a' : '#6a1a0e'; g.fill(); }
+        for (let i = 0; i < 6; i++) { ell(g, (R() - 0.5) * 24, -36 + (R() - 0.5) * 8, 3, 1.4, R() * 3); g.fillStyle = '#6dbb3c'; g.fill(); }
+      });
+    },
+    lahmacun(g) {
+      blobPath(g, 0, 2, 46, 40, 91, 0.05); g.fillStyle = '#c98a48'; g.fill(); outline(g, '#7a4618');
+      blobPath(g, 0, 0, 44, 38, 92, 0.06); g.fillStyle = rad(g, -10, -10, 2, 50, [[0, '#f0c27e'], [1, '#d99a52']]); g.fill();
+      blobPath(g, 0, 0, 38, 32, 93, 0.08); g.fillStyle = rad(g, -8, -8, 2, 40, [[0, '#d0583a'], [1, '#a83a22']]); g.fill();
+      g.save(); g.clip();
+      const R = rng(94);
+      for (let i = 0; i < 70; i++) { circ(g, (R() - 0.5) * 76, (R() - 0.5) * 64, 1 + R() * 1.8); g.fillStyle = R() < 0.5 ? '#7a2010' : '#e0784a'; g.fill(); }
+      for (let i = 0; i < 10; i++) { ell(g, (R() - 0.5) * 60, (R() - 0.5) * 50, 2.6, 1.3, R() * 3); g.fillStyle = '#3e9b3a'; g.fill(); }
+      g.restore();
+      for (let i = 0; i < 10; i++) { const a = i * TAU / 10; circ(g, Math.cos(a) * 41, Math.sin(a) * 35, 2.4); g.fillStyle = 'rgba(120,60,20,0.5)'; g.fill(); }
+      g.save(); g.translate(30, 26); g.rotate(-0.6); lemonSlice(g, 0, 0, 13, true); g.restore();
+      parsleySprig(g, -28, 24, 0.55, 0.5);
+    },
+    kiymali_pide(g) {
+      g.save(); g.rotate(-0.15);
+      g.beginPath(); g.moveTo(-50, 0); g.bezierCurveTo(-30, -26, 30, -26, 50, 0); g.bezierCurveTo(30, 26, -30, 26, -50, 0); g.closePath();
+      g.fillStyle = lin(g, 0, -22, 0, 22, [[0, '#f0be6e'], [0.5, '#d8963e'], [1, '#a8662a']]); g.fill(); outline(g, '#7a4614');
+      g.beginPath(); g.moveTo(-38, 0); g.bezierCurveTo(-22, -15, 22, -15, 38, 0); g.bezierCurveTo(22, 15, -22, 15, -38, 0); g.closePath();
+      g.fillStyle = rad(g, -6, -4, 2, 36, [[0, '#b0502a'], [1, '#7a3216']]); g.fill();
+      g.save(); g.clip();
+      const R = rng(95);
+      for (let i = 0; i < 60; i++) { circ(g, (R() - 0.5) * 72, (R() - 0.5) * 26, 1 + R() * 1.6); g.fillStyle = R() < 0.5 ? '#5a2010' : '#d0683a'; g.fill(); }
+      for (let i = 0; i < 6; i++) { ell(g, (R() - 0.5) * 56, (R() - 0.5) * 18, 3, 1.5, R() * 3); g.fillStyle = '#4fa83a'; g.fill(); }
+      for (let i = 0; i < 4; i++) { ell(g, (R() - 0.5) * 50, (R() - 0.5) * 14, 2.6, 1.6, R() * 3); g.fillStyle = '#e8402f'; g.fill(); }
+      g.fillStyle = 'rgba(255,220,120,0.25)'; ell(g, -8, -4, 16, 4, -0.1); g.fill();
+      g.restore();
+      g.strokeStyle = 'rgba(90,40,10,0.55)'; g.lineWidth = 1.5;
+      g.beginPath(); for (const sx of [-22, -6, 10, 26]) { g.moveTo(sx, -18); g.lineTo(sx + 2, 18); } g.stroke();
+      gloss(g, -16, -15, 14, 3, -0.1, 0.45);
+      g.restore();
+    },
+  };
+  function fallbackProduct(g, id) {
+    const c = colorOf(id);
+    rr(g, -26, -36, 52, 76, 8);
+    g.fillStyle = lin(g, -26, 0, 26, 0, [[0, shade(c, -0.2)], [0.4, shade(c, 0.25)], [1, shade(c, -0.25)]]); g.fill(); outline(g, shade(c, -0.5));
+    rr(g, -20, -8, 40, 20, 4); g.fillStyle = '#fffaf0'; g.fill();
+    const n = String(nameOf(id) || '?');
+    g.fillStyle = shade(c, -0.4); g.font = '900 10px ' + FONT_T; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n.slice(0, 8).toLocaleUpperCase('tr-TR'), 0, 2, 38);
+    g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(-18, -32, 5, 68);
+  }
+  function drawProduct(ctx, id, x, y, size) {
+    try {
+      size = size || 60;
+      const fn = PROD[id];
+      sprite(ctx, 'prod:' + id, x, y, size * 1.3, (g) => {
+        g.scale(size / 100, size / 100);
+        if (fn) fn(g); else fallbackProduct(g, id);
+      }, true);
+    } catch (e) { /* yok */ }
+  }
+
+  Object.assign(Art, { drawIngredient, drawProduct });
+  Object.assign(Art._h, { outline, gloss, blobPath, breadPath, breadSlice, tomatoSlice, sucukSlice, onionRing, lettuceLeaf, pickleSlice, cheeseSlice,
+    kofte, fry, cigkoftePiece, parsleySprig, lemonSlice, pepper, colorOf, ING, PROD, q2 });
+})(window.KS);
+/* ===== Art bölüm 4: tabak yemekleri (dish), çay bardağı, bez ve drawItem ===== */
+(function (KS) {
+  'use strict';
+  const Art = KS.Art, H = Art._h;
+  const { TAU, FONT_D, clamp, rr, ell, circ, shade, mix, rgba, ramp, lin, rad, rng, hashStr, sprite, outline, gloss, blobPath,
+    breadSlice, tomatoSlice, sucukSlice, onionRing, lettuceLeaf, pickleSlice, cheeseSlice, kofte, fry, cigkoftePiece, parsleySprig, lemonSlice,
+    colorOf, ING, MEAT, FRY, q2 } = H;
+
+  // ---------------------------------------------------------------------------
+  // ÇAY BARDAĞI (ince belli) — 100 birim kutu, merkez 0,0
+  // ---------------------------------------------------------------------------
+  function glassPath(g) {
+    g.beginPath();
+    g.moveTo(-17, -34);
+    g.bezierCurveTo(-16, -18, -10, -12, -10.5, -2);
+    g.bezierCurveTo(-11, 6, -16, 10, -15.5, 20);
+    g.quadraticCurveTo(-15, 28, -12, 30);
+    g.lineTo(12, 30);
+    g.quadraticCurveTo(15, 28, 15.5, 20);
+    g.bezierCurveTo(16, 10, 11, 6, 10.5, -2);
+    g.bezierCurveTo(10, -12, 16, -18, 17, -34);
+    g.closePath();
+  }
+  // level: 0..1 (çay seviyesi), q: demlik kalitesi (renk), saucer: tabak
+  function teaGlass(g, level, q, saucer) {
+    level = clamp(level == null ? 0.88 : level, 0, 1);
+    q = q == null ? 1 : q;
+    if (saucer) {
+      ell(g, 0, 36, 38, 10); g.fillStyle = 'rgba(0,0,0,0.18)'; g.fill();
+      ell(g, 0, 33, 38, 10); g.fillStyle = lin(g, 0, 23, 0, 43, [[0, '#ffffff'], [1, '#d9dde4']]); g.fill();
+      outline(g, '#9aa2ae', 1.6);
+      ell(g, 0, 32, 32, 7.5); g.strokeStyle = '#c9a23a'; g.lineWidth = 1.6; g.stroke();
+      ell(g, 0, 32, 20, 4.5); g.fillStyle = 'rgba(160,170,185,0.35)'; g.fill();
+      // kaşık + şeker
+      g.save(); g.translate(24, 28); g.rotate(-0.25);
+      rr(g, -1.2, -10, 2.4, 16, 1.2); g.fillStyle = lin(g, -2, 0, 2, 0, [[0, '#8a949e'], [0.5, '#f4f6f8'], [1, '#7a848e']]); g.fill();
+      ell(g, 0, -12, 3, 4.5); g.fill(); g.restore();
+      rr(g, -30, 24, 9, 8, 1.5); g.fillStyle = '#ffffff'; g.fill(); outline(g, 'rgba(0,0,0,0.2)', 0.8);
+    }
+    // çay
+    if (level > 0.02) {
+      const ly = 30 - 62 * level;
+      const tea = ramp([[0, '#e8a050'], [0.5, '#c4501c'], [0.85, '#a82a0e'], [1, '#9a2408']], q);
+      g.save(); glassPath(g); g.clip();
+      g.fillStyle = lin(g, -16, 0, 16, 0, [[0, shade(tea, -0.35)], [0.35, shade(tea, 0.15)], [0.6, tea], [1, shade(tea, -0.4)]]);
+      g.fillRect(-20, ly, 40, 70);
+      ell(g, 0, ly, 18, 2.6); g.fillStyle = shade(tea, 0.3); g.fill();
+      g.fillStyle = 'rgba(255,200,140,0.35)'; ell(g, -6, 16, 3, 8); g.fill();
+      g.restore();
+    }
+    // cam
+    glassPath(g); g.fillStyle = 'rgba(230,240,250,0.16)'; g.fill();
+    outline(g, 'rgba(120,140,160,0.85)', 1.6);
+    ell(g, 0, -34, 17, 3); g.strokeStyle = 'rgba(160,175,190,0.9)'; g.lineWidth = 1.4; g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 2.2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-12, -28); g.bezierCurveTo(-11, -16, -7, -12, -7.5, -4); g.stroke();
+    g.beginPath(); g.moveTo(-11, 10); g.quadraticCurveTo(-13, 18, -11, 24); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(11, -26); g.bezierCurveTo(10, -16, 7, -12, 7, -4); g.stroke();
+    ell(g, 0, 30, 12, 2.2); g.fillStyle = 'rgba(200,215,230,0.6)'; g.fill();
+  }
+  H.teaGlass = teaGlass;
+
+  // ---------------------------------------------------------------------------
+  // SOS / BAHARAT YARDIMCILARI
+  // ---------------------------------------------------------------------------
+  const SAUCE = { ketcap: '#d1261b', mayonez: '#f7f0d4', nar_eksisi: '#5e0f1e' };
+  function drizzle(g, col, x0, x1, yc, amp, n, lw, seed) {
+    const R = rng(seed || 1);
+    const pts = [];
+    for (let i = 0; i <= n; i++) pts.push([x0 + (x1 - x0) * i / n + (R() - 0.5) * 3, yc + (i % 2 ? -amp : amp) + (R() - 0.5) * 3]);
+    const path = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) { const p = pts[i - 1], q = pts[i]; g.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); } g.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]); };
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    path(); g.strokeStyle = shade(col, -0.45); g.lineWidth = lw + 1.6; g.stroke();
+    path(); g.strokeStyle = col; g.lineWidth = lw; g.stroke();
+    g.save(); g.translate(-lw * 0.18, -lw * 0.22); path(); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = lw * 0.28; g.stroke(); g.restore();
+  }
+  function sprinkle(g, kind, cx, cy, rx, ry, seed, n) {
+    const R = rng(seed || 2); n = n || 26;
+    for (let i = 0; i < n; i++) {
+      const a = R() * TAU, d = Math.sqrt(R());
+      const x = cx + Math.cos(a) * rx * d, y = cy + Math.sin(a) * ry * d;
+      if (kind === 'tuz') { g.fillStyle = 'rgba(255,255,255,0.95)'; g.fillRect(x, y, 1.6, 1.6); g.fillStyle = 'rgba(150,160,170,0.5)'; g.fillRect(x + 1.6, y + 1.2, 0.6, 0.6); }
+      else if (kind === 'pul_biber') { g.save(); g.translate(x, y); g.rotate(R() * 3); g.fillStyle = R() < 0.6 ? '#d8361e' : R() < 0.5 ? '#8a1a0e' : '#f2a640'; g.fillRect(-1.6, -0.9, 3.2, 1.8); g.restore(); }
+      else if (kind === 'maydanoz') { ell(g, x, y, 2.4, 1.5, R() * 3); g.fillStyle = R() < 0.5 ? '#2f8a32' : '#5cb84a'; g.fill(); }
+      else if (kind === 'limon') { ell(g, x, y, 1.8, 2.4, 0); g.fillStyle = 'rgba(255,240,120,0.85)'; g.fill(); g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(x - 0.6, y - 1.2, 0.8, 0.8); }
+      else { circ(g, x, y, 1.2); g.fillStyle = colorOf(kind); g.fill(); }
+    }
+  }
+  const SPICE = { tuz: 1, pul_biber: 1 };
+
+  // ---------------------------------------------------------------------------
+  // ÜSTTEN GÖRÜNÜM KATMANLARI (açık tost, açık lavaş)
+  // ---------------------------------------------------------------------------
+  function topLayer(g, L, idx, cx, cy, Rr, seed) {
+    const id = L.id, R = rng(seed + idx * 31);
+    const jx = () => cx + (R() - 0.5) * Rr * 0.5, jy = () => cy + (R() - 0.5) * Rr * 0.5;
+    switch (id) {
+      case 'kasar': cheeseSlice(g, jx() * 0.4 + cx * 0.6, jy() * 0.4 + cy * 0.6, Rr * 1.55, Rr * 1.45, (R() - 0.5) * 0.3, '#f8dc72'); break;
+      case 'cheddar': cheeseSlice(g, jx() * 0.4 + cx * 0.6, jy() * 0.4 + cy * 0.6, Rr * 1.5, Rr * 1.45, (R() - 0.5) * 0.4, '#f7a933'); break;
+      case 'sucuk': { const pts = [[-0.5, -0.45], [0.45, -0.4], [0, 0.05], [-0.5, 0.5], [0.48, 0.5]]; pts.forEach((p, i) => sucukSlice(g, cx + p[0] * Rr + (R() - 0.5) * 4, cy + p[1] * Rr + (R() - 0.5) * 4, Rr * 0.3, seed + i)); break; }
+      case 'domates': { const pts = [[-0.42, -0.3], [0.42, -0.2], [0, 0.42]]; pts.forEach(p => tomatoSlice(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.4, R() * 3)); break; }
+      case 'kofte': { const c = L.cook || 0; const top = L.cookB != null ? Math.max(L.cookA || 0, L.cookB) : c; kofte(g, cx - Rr * 0.35, cy, Rr * 0.42, Rr * 0.28, top, top, 9); kofte(g, cx + Rr * 0.38, cy + Rr * 0.1, Rr * 0.42, Rr * 0.28, top, top, 10); break; }
+      case 'marul': lettuceLeaf(g, jx(), jy(), Rr / 34, (R() - 0.5) * 1.5, seed + idx); break;
+      case 'sogan': { const pts = [[-0.4, -0.35], [0.4, -0.3], [-0.2, 0.35], [0.35, 0.4]]; pts.forEach(p => onionRing(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.22, false)); break; }
+      case 'tursu': { const pts = [[-0.45, 0], [0, -0.4], [0.45, 0.05], [0, 0.42]]; pts.forEach(p => pickleSlice(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.2)); break; }
+      case 'cigkofte': cigkoftePiece(g, cx, cy - Rr * 0.25, Rr / 30, (R() - 0.5) * 0.6, seed + idx); cigkoftePiece(g, cx + 2, cy + Rr * 0.25, Rr / 30, (R() - 0.5) * 0.6, seed + idx + 1); break;
+      case 'patates': for (let i = 0; i < 6; i++) fry(g, cx + (R() - 0.5) * Rr, cy + (R() - 0.5) * Rr * 0.8, Rr * 0.16, Rr * 0.9, R() * 3, L.cook == null ? 1 : L.cook, i); break;
+      case 'maydanoz': sprinkle(g, 'maydanoz', cx, cy, Rr * 0.9, Rr * 0.8, seed + idx, 30); parsleySprig(g, jx(), jy(), Rr / 70, R() * 2); break;
+      case 'limon': g.save(); g.translate(cx + Rr * 0.5, cy - Rr * 0.5); g.rotate(0.6); lemonSlice(g, 0, 0, Rr * 0.32, true); g.restore(); sprinkle(g, 'limon', cx, cy, Rr * 0.8, Rr * 0.7, seed + idx, 10); break;
+      case 'tuz': case 'pul_biber': sprinkle(g, id, cx, cy, Rr * 0.95, Rr * 0.9, seed + idx, id === 'tuz' ? 34 : 40); break;
+      case 'ketcap': case 'mayonez': case 'nar_eksisi':
+        for (let k = 0; k < 2; k++) drizzle(g, SAUCE[id], cx - Rr * 0.85, cx + Rr * 0.85, cy - Rr * 0.3 + k * Rr * 0.6 + (R() - 0.5) * 4, Rr * 0.16, 7, id === 'nar_eksisi' ? 2.6 : 3.4, seed + idx + k);
+        break;
+      default: {
+        const fn = ING[id];
+        g.save(); g.translate(jx(), jy()); g.scale(Rr / 70, Rr / 70);
+        if (fn) fn(g, L); else { circ(g, 0, 0, 30); g.fillStyle = colorOf(id); g.fill(); outline(g, shade(colorOf(id), -0.5)); }
+        g.restore();
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // YANDAN GÖRÜNÜM BANTLARI (ekmek arası, hamburger)
+  // ---------------------------------------------------------------------------
+  const THICK = { kofte: 12, kasar: 4, cheddar: 4, sucuk: 6, domates: 6, sogan: 4, marul: 7, tursu: 5, cigkofte: 9, patates: 7, maydanoz: 3, limon: 2, ketcap: 2, mayonez: 2, nar_eksisi: 2, tuz: 0, pul_biber: 0 };
+  function sideBand(g, L, x0, x1, yb, th, wide, seed) {
+    // yb = bandın alt çizgisi; bant yb-th .. yb
+    const id = L.id, w = x1 - x0, cx = (x0 + x1) / 2, yc = yb - th / 2, R = rng(seed);
+    switch (id) {
+      case 'kofte': {
+        const c = L.cook != null ? L.cook : 1;
+        const col = ramp(MEAT, c);
+        if (wide) {
+          rr(g, x0 - 3, yb - th, w + 6, th, th * 0.45);
+          g.fillStyle = lin(g, 0, yb - th, 0, yb, [[0, shade(col, 0.15)], [1, shade(col, -0.3)]]); g.fill(); outline(g, shade(col, -0.55), 1.6);
+          for (let i = 0; i < 30; i++) { circ(g, x0 + R() * w, yb - th + 2 + R() * (th - 4), 0.8 + R()); g.fillStyle = rgba(shade(col, R() < 0.5 ? -0.4 : 0.25), 0.6); g.fill(); }
+          if (c > 0.35) { g.strokeStyle = rgba('#1a0c06', clamp((c - 0.35) / 0.6, 0, 1) * 0.5); g.lineWidth = 1.6; g.beginPath(); g.moveTo(x0 + 2, yb - th + 2.5); g.lineTo(x1 - 2, yb - th + 2.5); g.stroke(); }
+          gloss(g, cx - w * 0.2, yb - th + 2.5, w * 0.18, 1.2, 0, 0.3);
+        } else {
+          const n = 3, rx = w / (n * 2) + 2;
+          for (let i = 0; i < n; i++) {
+            const x = x0 + rx - 2 + i * (w - 2 * rx + 4) / (n - 1);
+            ell(g, x, yc, rx, th / 2 + 1, 0);
+            g.fillStyle = rad(g, x - rx * 0.3, yc - th * 0.3, 1, rx * 1.2, [[0, shade(col, 0.2)], [1, shade(col, -0.25)]]); g.fill(); outline(g, shade(col, -0.55), 1.4);
+            if (c > 0.35) { g.strokeStyle = rgba('#1a0c06', clamp((c - 0.35) / 0.6, 0, 1) * 0.55); g.lineWidth = 2; g.beginPath(); for (let k = -1; k <= 1; k++) { g.moveTo(x + k * rx * 0.5 - 3, yc + th * 0.35); g.lineTo(x + k * rx * 0.5 + 3, yc - th * 0.35); } g.stroke(); }
+            gloss(g, x - rx * 0.3, yc - th * 0.25, rx * 0.35, 1.3, 0, 0.3);
+          }
+        }
+        break;
+      }
+      case 'kasar': case 'cheddar': {
+        const col = id === 'kasar' ? '#f6d55c' : '#f39a22';
+        g.beginPath(); g.moveTo(x0 - 4, yb - th);
+        g.lineTo(x1 + 4, yb - th); g.lineTo(x1 + 4, yb);
+        const drips = wide ? [[0.9, 7], [0.62, 4], [0.3, 9], [0.08, 5]] : [[0.85, 5], [0.5, 7], [0.15, 4]];
+        for (const d of drips) { const dx = x0 + w * d[0]; g.lineTo(dx + 4, yb); g.quadraticCurveTo(dx + 3, yb + d[1], dx, yb + d[1]); g.quadraticCurveTo(dx - 3, yb + d[1], dx - 4, yb); }
+        g.lineTo(x0 - 4, yb); g.closePath();
+        g.fillStyle = lin(g, 0, yb - th, 0, yb + 8, [[0, shade(col, 0.3)], [1, shade(col, -0.1)]]); g.fill(); outline(g, shade(col, -0.4), 1.2);
+        break;
+      }
+      case 'sucuk': {
+        const n = Math.max(3, Math.round(w / 15));
+        for (let i = 0; i < n; i++) { const x = x0 + 6 + i * (w - 12) / (n - 1); ell(g, x, yc, 8, th / 2 + 0.5, 0); g.fillStyle = lin(g, 0, yc - th / 2, 0, yc + th / 2, [[0, '#c8452e'], [1, '#7a1a10']]); g.fill(); outline(g, '#3a0a06', 1); }
+        break;
+      }
+      case 'domates': {
+        const n = Math.max(2, Math.round(w / 26));
+        for (let i = 0; i < n; i++) {
+          const sx = x0 - 3 + i * (w + 6) / n, sw = (w + 6) / n + 2;
+          rr(g, sx, yb - th, sw, th, th / 2); g.fillStyle = '#d42f24'; g.fill(); outline(g, '#8a1a12', 1.1);
+          rr(g, sx + 2, yb - th + 1.5, sw - 4, th - 3, (th - 3) / 2); g.fillStyle = '#ff7a5c'; g.fill();
+          for (let k = 0; k < 3; k++) { circ(g, sx + 4 + k * (sw - 8) / 2, yc, 1); g.fillStyle = '#f7e6a6'; g.fill(); }
+        }
+        break;
+      }
+      case 'sogan': {
+        g.lineCap = 'round';
+        for (let i = 0; i < 4; i++) {
+          const x = x0 + 4 + i * (w - 8) / 3 + (R() - 0.5) * 4;
+          ell(g, x, yc, 9, th / 2 + 1); g.strokeStyle = '#9c5aa0'; g.lineWidth = 2.4; g.stroke();
+          ell(g, x, yc, 9, th / 2 + 1); g.strokeStyle = '#f2e2f2'; g.lineWidth = 1; g.stroke();
+        }
+        break;
+      }
+      case 'marul': {
+        g.beginPath(); g.moveTo(x0 - 7, yb);
+        const n = 12;
+        for (let i = 0; i <= n; i++) { const x = x0 - 7 + (w + 14) * i / n; g.quadraticCurveTo(x - (w + 14) / n / 2, yb - th - 3 - (i % 2 ? 4 : 0), x, yb - th + (i % 2 ? 0 : 2)); }
+        g.lineTo(x1 + 7, yb + 2); g.quadraticCurveTo(cx, yb + 5, x0 - 7, yb + 2); g.closePath();
+        g.fillStyle = lin(g, 0, yb - th - 4, 0, yb + 3, [[0, '#a8de62'], [1, '#4e9a2c']]); g.fill(); outline(g, '#3a7a22', 1.2);
+        g.strokeStyle = 'rgba(240,255,210,0.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, yb - 2); g.quadraticCurveTo(cx, yb - th, x1, yb - 2); g.stroke();
+        break;
+      }
+      case 'tursu': {
+        const n = Math.max(3, Math.round(w / 17));
+        for (let i = 0; i < n; i++) { const x = x0 + 6 + i * (w - 12) / (n - 1); ell(g, x, yc, 7, th / 2 + 0.5); g.fillStyle = lin(g, 0, yc - th / 2, 0, yc + th / 2, [[0, '#c9d870'], [1, '#6f8f2a']]); g.fill(); outline(g, '#3e5512', 1); }
+        break;
+      }
+      case 'cigkofte': {
+        rr(g, x0 - 1, yb - th, w + 2, th, th / 2);
+        g.fillStyle = lin(g, 0, yb - th, 0, yb, [[0, '#b2442a'], [1, '#62180e']]); g.fill(); outline(g, '#4a0f08', 1.3);
+        g.strokeStyle = 'rgba(60,12,6,0.6)'; g.lineWidth = 1.4;
+        g.beginPath(); for (let x = x0 + 8; x < x1 - 4; x += 10) { g.moveTo(x, yb - th + 1.5); g.quadraticCurveTo(x + 3, yc, x, yb - 1.5); } g.stroke();
+        break;
+      }
+      case 'patates': {
+        for (let i = 0; i < 4; i++) { fry(g, cx + (i - 1.5) * 4, yc + (R() - 0.5) * 3, th * 0.8, w * 0.95, Math.PI / 2 + (R() - 0.5) * 0.15, L.cook == null ? 1 : L.cook, i); }
+        break;
+      }
+      case 'ketcap': case 'mayonez': case 'nar_eksisi': {
+        const col = SAUCE[id];
+        drizzle(g, col, x0 + 2, x1 - 2, yb - 1, 2.2, 8, id === 'nar_eksisi' ? 2.2 : 3, seed);
+        for (let k = 0; k < 3; k++) { const x = x0 + w * (0.2 + k * 0.3); g.beginPath(); g.moveTo(x - 2.4, yb); g.quadraticCurveTo(x, yb + 7, x + 2.4, yb); g.fillStyle = col; g.fill(); }
+        break;
+      }
+      case 'maydanoz': sprinkle(g, 'maydanoz', cx, yb - 1, w / 2, 3, seed, 22); break;
+      case 'limon': sprinkle(g, 'limon', cx, yb - 2, w / 2, 3, seed, 9); break;
+      case 'tuz': case 'pul_biber': sprinkle(g, id, cx, yb - 1, w / 2, 2.5, seed, 24); break;
+      default: {
+        const col = colorOf(id);
+        rr(g, x0, yb - th, w, th, th / 2); g.fillStyle = lin(g, 0, yb - th, 0, yb, [[0, shade(col, 0.25)], [1, shade(col, -0.2)]]); g.fill(); outline(g, shade(col, -0.5), 1.1);
+      }
+    }
+  }
+  function stackHeights(layers, maxH) {
+    const hs = layers.map(L => (THICK[L.id] != null ? THICK[L.id] : 5));
+    const tot = hs.reduce((a, b) => a + b, 0);
+    const f = tot > maxH ? maxH / tot : 1;
+    return { hs: hs.map(h => h * f), tot: tot * f };
+  }
+
+  // ---------------------------------------------------------------------------
+  // YEMEK TABANLARI
+  // ---------------------------------------------------------------------------
+  const DISH = {
+    tost_ekmegi(g, it) {
+      const layers = it.layers || [], toast = it.toast || 0;
+      if (toast < 0.05) {
+        breadSlice(g, 86, 88, 0, 11);
+        layers.forEach((L, i) => topLayer(g, L, i, 0, 6, 26, 101));
+        return;
+      }
+      // kapalı tost (preslenmiş)
+      const has = id => layers.some(L => L.id === id);
+      const melt = clamp(toast, 0, 1.2);
+      // kenardan taşan iç malzemeler
+      const peek = [];
+      for (const L of layers) { if (!peek.includes(L.id)) peek.push(L.id); }
+      peek.forEach((id, i) => {
+        if (id === 'kasar') return;
+        const col = id === 'sucuk' ? '#a8332a' : id === 'domates' ? '#e5402f' : id === 'cheddar' ? '#f39a22' : colorOf(id);
+        const spots = [[-44, 10 + i * 6], [44, -4 + i * 7], [-20 + i * 14, 46]];
+        for (const s of spots) { ell(g, s[0], s[1], 6, 4.5, 0); g.fillStyle = col; g.fill(); outline(g, shade(col, -0.45), 1); }
+      });
+      // alt dilim (kalınlık)
+      g.save(); g.translate(2, 5); breadSlice(g, 86, 88, Math.max(0, toast * 0.9), 12); g.restore();
+      // erimiş kaşar katmanı
+      if (has('kasar') || has('cheddar')) {
+        const col = has('kasar') ? (toast > 1.5 ? '#c49a3a' : '#f7d24a') : '#f39a22';
+        g.beginPath(); g.moveTo(-44, 38); g.lineTo(44, 38);
+        g.lineTo(44, 40 + melt * 4); g.quadraticCurveTo(40, 40 + melt * 12, 36, 40 + melt * 4);
+        g.lineTo(10, 41); g.quadraticCurveTo(6, 42 + melt * 14, 0, 41);
+        g.lineTo(-24, 41 + melt * 3); g.quadraticCurveTo(-28, 42 + melt * 10, -32, 41); g.lineTo(-44, 40); g.closePath();
+        g.fillStyle = lin(g, 0, 36, 0, 54, [[0, shade(col, 0.25)], [1, shade(col, -0.1)]]); g.fill(); outline(g, shade(col, -0.35), 1.1);
+        // yan taşma
+        g.beginPath(); g.moveTo(43, -6); g.quadraticCurveTo(46 + melt * 5, 0, 43, 8 + melt * 6); g.lineTo(41, 10); g.closePath(); g.fillStyle = col; g.fill();
+        g.beginPath(); g.moveTo(-43, -2); g.quadraticCurveTo(-46 - melt * 5, 6, -43, 14 + melt * 4); g.lineTo(-41, 12); g.closePath(); g.fill();
+      }
+      // üst dilim
+      breadSlice(g, 86, 88, toast, 11);
+      // eriyip üstten akan damla
+      if ((has('kasar') || has('cheddar')) && toast > 0.4 && toast < 1.6) {
+        const col = has('kasar') ? '#f7d24a' : '#f39a22';
+        g.beginPath(); g.moveTo(14, 37); g.quadraticCurveTo(16, 46 + melt * 6, 20, 37); g.fillStyle = col; g.fill();
+        gloss(g, 16, 40, 1.2, 2.5, 0, 0.6);
+      }
+    },
+    yarim_ekmek(g, it) {
+      const layers = it.layers || [];
+      const { hs, tot } = stackHeights(layers, 40);
+      const base = 14 + tot * 0.35;
+      const lidY = base - tot - 4;
+      // üst yarı (kapak, arkada)
+      g.beginPath(); g.moveTo(-50, lidY + 4); g.bezierCurveTo(-46, lidY - 26, 40, lidY - 30, 50, lidY - 2); g.quadraticCurveTo(52, lidY + 4, 44, lidY + 6); g.lineTo(-44, lidY + 8); g.closePath();
+      g.fillStyle = lin(g, 0, lidY - 26, 0, lidY + 6, [[0, '#e8ae60'], [0.6, '#c98638'], [1, '#a8662a']]); g.fill(); outline(g, '#6e3c12');
+      g.strokeStyle = 'rgba(255,225,160,0.8)'; g.lineWidth = 3; g.lineCap = 'round';
+      g.beginPath(); for (const sx of [-28, -8, 12, 30]) { g.moveTo(sx - 6, lidY - 10); g.quadraticCurveTo(sx, lidY - 18, sx + 7, lidY - 17); } g.stroke();
+      ell(g, 0, lidY + 5, 45, 5); g.fillStyle = '#f6e2b2'; g.fill();
+      // alt yarı iç yüzü
+      ell(g, 0, base, 46, 7); g.fillStyle = rad(g, -10, base - 2, 2, 46, [[0, '#fff3d6'], [1, '#ecd09a']]); g.fill(); outline(g, '#c49a5a', 1.2);
+      // dolgu
+      let y = base + 2;
+      layers.forEach((L, i) => { sideBand(g, L, -40, 40, y, hs[i], false, 200 + i * 13); y -= hs[i]; });
+      // alt kabuk (ön)
+      g.beginPath(); g.moveTo(-50, base - 1); g.quadraticCurveTo(-52, base + 20, -40, base + 22); g.lineTo(40, base + 22); g.quadraticCurveTo(52, base + 20, 50, base - 1);
+      g.quadraticCurveTo(0, base + 8, -50, base - 1); g.closePath();
+      g.fillStyle = lin(g, 0, base, 0, base + 22, [[0, '#d99a4c'], [1, '#9a5e22']]); g.fill(); outline(g, '#6e3c12');
+      g.strokeStyle = 'rgba(255,230,180,0.6)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-46, base + 1); g.quadraticCurveTo(0, base + 9, 46, base + 1); g.stroke();
+      gloss(g, -18, base + 12, 14, 2.5, 0, 0.3);
+    },
+    hamburger_ekmegi(g, it) {
+      const layers = it.layers || [];
+      const { hs, tot } = stackHeights(layers, 46);
+      const by = (tot + 12) / 2 - 4;
+      // alt ekmek
+      rr(g, -42, by, 84, 18, 9); g.fillStyle = lin(g, 0, by, 0, by + 18, [[0, '#e8b86a'], [0.4, '#d48a3a'], [1, '#a35e22']]); g.fill(); outline(g, '#7a4614');
+      rr(g, -40, by, 80, 5, 2.5); g.fillStyle = '#f6e3bb'; g.fill();
+      let y = by + 1;
+      layers.forEach((L, i) => { sideBand(g, L, -40, 40, y, hs[i], true, 300 + i * 17); y -= hs[i]; });
+      // üst ekmek
+      const ty = y + 1;
+      g.beginPath(); g.moveTo(-44, ty); g.bezierCurveTo(-44, ty - 40, 44, ty - 40, 44, ty); g.quadraticCurveTo(44, ty + 4, 38, ty + 4); g.lineTo(-38, ty + 4); g.quadraticCurveTo(-44, ty + 4, -44, ty); g.closePath();
+      g.fillStyle = rad(g, -12, ty - 24, 2, 56, [[0, '#f2bb6c'], [0.5, '#d48a3a'], [1, '#a35e22']]); g.fill(); outline(g, '#7a4614');
+      const R = rng(81);
+      for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 64, yy = ty - 8 - R() * 20 + Math.abs(x) * 0.28; ell(g, x, yy, 2.6, 1.3, R() * 3); g.fillStyle = '#fff6dc'; g.fill(); }
+      gloss(g, -14, ty - 22, 14, 5, -0.3, 0.45);
+    },
+    lavas(g, it) {
+      const layers = it.layers || [];
+      const rolled = layers.some(L => L.id === 'cigkofte');
+      if (!rolled) {
+        blobPath(g, 2, 3, 47, 44, 61, 0.05); g.fillStyle = '#e2c88e'; g.fill();
+        blobPath(g, 0, 0, 47, 44, 62, 0.05); g.fillStyle = rad(g, -12, -12, 4, 52, [[0, '#fbefd0'], [1, '#ecd39c']]); g.fill(); outline(g, '#b08e58', 1.8);
+        g.save(); g.clip(); const R = rng(63);
+        for (let i = 0; i < 20; i++) { const a = R() * TAU, d = R() * 40; ell(g, Math.cos(a) * d, Math.sin(a) * d, 2 + R() * 4, 1.5 + R() * 3, R() * 3); g.fillStyle = R() < 0.6 ? 'rgba(200,150,80,0.45)' : 'rgba(120,70,30,0.4)'; g.fill(); }
+        g.restore();
+        layers.forEach((L, i) => topLayer(g, L, i, 0, 0, 27, 401));
+        return;
+      }
+      // sarılmış dürüm
+      g.save(); g.rotate(-0.42);
+      const body = () => { g.beginPath(); g.moveTo(-44, -12); g.quadraticCurveTo(-52, 0, -44, 12); g.lineTo(-30, 17); g.lineTo(34, 17); g.lineTo(34, -17); g.lineTo(-30, -17); g.closePath(); };
+      body(); g.fillStyle = lin(g, 0, -17, 0, 17, [[0, '#f8e8c0'], [0.45, '#f1dcae'], [1, '#c9a464']]); g.fill(); outline(g, '#9a7a44', 1.8);
+      g.save(); body(); g.clip();
+      const R = rng(64);
+      for (let i = 0; i < 16; i++) { ell(g, -40 + R() * 74, (R() - 0.5) * 30, 2 + R() * 3, 1.4 + R() * 2, R() * 3); g.fillStyle = R() < 0.6 ? 'rgba(200,150,80,0.45)' : 'rgba(120,70,30,0.35)'; g.fill(); }
+      g.strokeStyle = 'rgba(150,110,60,0.55)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(-20, -17); g.quadraticCurveTo(-12, 0, -24, 17); g.moveTo(8, -17); g.quadraticCurveTo(16, 0, 4, 17); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(-40, -12, 74, 4);
+      g.restore();
+      // açık uç (iç malzemeler)
+      ell(g, 34, 0, 9, 17); g.fillStyle = '#e8d29e'; g.fill(); outline(g, '#9a7a44', 1.6);
+      ell(g, 34, 0, 7, 14); g.fillStyle = '#8c2a1a'; g.fill();
+      g.save(); ell(g, 34, 0, 7, 14); g.clip();
+      const R2 = rng(65);
+      for (let i = 0; i < 18; i++) { circ(g, 34 + (R2() - 0.5) * 12, (R2() - 0.5) * 26, 0.8 + R2()); g.fillStyle = R2() < 0.5 ? '#5a1208' : '#c0503a'; g.fill(); }
+      layers.forEach((L, i) => {
+        if (L.id === 'marul') { for (let k = 0; k < 4; k++) { ell(g, 34 + (k % 2 ? 4 : -4), -10 + k * 7, 3.5, 2.5, 0.5); g.fillStyle = '#6dbb3c'; g.fill(); } }
+        else if (L.id === 'maydanoz') sprinkle(g, 'maydanoz', 34, 0, 6, 12, 500 + i, 10);
+        else if (L.id === 'pul_biber') sprinkle(g, 'pul_biber', 34, 0, 6, 12, 500 + i, 12);
+        else if (L.id === 'limon') sprinkle(g, 'limon', 34, 0, 6, 12, 500 + i, 6);
+        else if (L.id === 'nar_eksisi') { ell(g, 33, -2, 3.5, 8, 0.2); g.fillStyle = 'rgba(94,15,30,0.85)'; g.fill(); gloss(g, 32, -5, 1, 3, 0.2, 0.6); }
+        else if (L.id === 'domates') { ell(g, 35, 5, 3, 3); g.fillStyle = '#e5402f'; g.fill(); }
+        else if (L.id === 'ketcap' || L.id === 'mayonez') { ell(g, 34, 4, 3, 5); g.fillStyle = SAUCE[L.id]; g.fill(); }
+        else if (L.id !== 'cigkofte') { circ(g, 34, (i % 3 - 1) * 8, 2.5); g.fillStyle = colorOf(L.id); g.fill(); }
+      });
+      g.restore();
+      // dışarı taşan marul yaprağı
+      if (layers.some(L => L.id === 'marul')) {
+        g.beginPath(); g.moveTo(38, -16); g.quadraticCurveTo(48, -22, 46, -10); g.quadraticCurveTo(50, -4, 42, -2); g.closePath(); g.fillStyle = '#7cc84a'; g.fill(); outline(g, '#3a7a22', 1);
+      }
+      g.restore();
+      // limon kaması yanda
+      if (layers.some(L => L.id === 'limon')) { g.save(); g.translate(-30, 30); g.rotate(-0.3); lemonSlice(g, 0, 0, 11, true); g.restore(); }
+    },
+    kese(g, it) {
+      const layers = it.layers || [];
+      const pats = layers.filter(L => L.id === 'patates');
+      const cook = pats.length ? pats.reduce((a, L) => a + (L.cook == null ? 1 : L.cook), 0) / pats.length : 1;
+      // kesenin arkası
+      g.beginPath(); g.moveTo(-30, -10); g.lineTo(30, -10); g.lineTo(26, -4); g.lineTo(-26, -4); g.closePath(); g.fillStyle = '#8a5a2a'; g.fill();
+      // patatesler
+      if (pats.length) {
+        const n = 9 + Math.min(3, pats.length - 1) * 3, R = rng(77);
+        for (let i = 0; i < n; i++) {
+          const t = i / (n - 1), x = -22 + t * 44 + (R() - 0.5) * 5;
+          fry(g, x, -20 - R() * 8, 9, 46 + R() * 10, (t - 0.5) * 0.7 + (R() - 0.5) * 0.25, cook, i);
+        }
+        layers.forEach((L, i) => {
+          if (L.id === 'tuz') sprinkle(g, 'tuz', 0, -34, 22, 12, 600 + i, 40);
+          else if (L.id === 'pul_biber') sprinkle(g, 'pul_biber', 0, -34, 22, 12, 600 + i, 30);
+          else if (L.id === 'ketcap' || L.id === 'mayonez') drizzle(g, SAUCE[L.id], -20, 20, -36 + (L.id === 'mayonez' ? 8 : 0), 5, 6, 3.6, 610 + i);
+          else if (L.id !== 'patates') { const fn = ING[L.id]; if (fn) { g.save(); g.translate(16, -40); g.scale(0.3, 0.3); fn(g, L); g.restore(); } }
+        });
+      }
+      // kese önü
+      g.beginPath(); g.moveTo(-32, -10); g.lineTo(32, -10); g.lineTo(25, 46); g.lineTo(-25, 46); g.closePath();
+      g.fillStyle = lin(g, -32, 0, 32, 0, [[0, '#b97f45'], [0.35, '#e0b07a'], [0.7, '#d29c62'], [1, '#a46a34']]); g.fill(); outline(g, '#6e4418');
+      g.save(); g.clip();
+      g.fillStyle = '#d8402f'; g.fillRect(-34, 4, 68, 10);
+      g.fillStyle = '#ffffff'; for (let x = -32; x < 34; x += 10) { circ(g, x, 9, 2.2); g.fill(); }
+      g.strokeStyle = 'rgba(110,70,30,0.3)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-12, -10); g.lineTo(-10, 46); g.moveTo(14, -10); g.lineTo(11, 46); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(-24, -10, 6, 56);
+      g.restore();
+      // tırtıklı ağız
+      g.beginPath(); g.moveTo(-32, -10); for (let i = 0; i <= 16; i++) g.lineTo(-32 + i * 4, -10 + (i % 2 ? -3 : 0)); g.lineTo(32, -6); g.lineTo(-32, -6); g.closePath();
+      g.fillStyle = '#e8c08a'; g.fill(); outline(g, '#6e4418', 1.2);
+      // kalp damgası
+      g.save(); g.translate(0, 28); g.scale(0.16, 0.16); H.ICONS.heart(g); g.restore();
+    },
+    bardak(g, it) {
+      const cay = (it.layers || []).find(L => L.id === 'cay');
+      g.save(); g.scale(1.28, 1.28); g.translate(0, -4);
+      teaGlass(g, cay ? 0.9 : 0, cay ? (cay.q == null ? 1 : cay.q) : 1, true);
+      g.restore();
+    },
+  };
+  function dishFallback(g, it) {
+    // bilinmeyen taban: beyaz tabak + katmanlar üstten
+    ell(g, 0, 4, 46, 40); g.fillStyle = lin(g, 0, -36, 0, 44, [[0, '#ffffff'], [1, '#d9dde4']]); g.fill(); outline(g, '#9aa2ae', 1.6);
+    ell(g, 0, 2, 34, 28); g.strokeStyle = 'rgba(150,160,175,0.4)'; g.lineWidth = 1.5; g.stroke();
+    (it.layers || []).forEach((L, i) => topLayer(g, L, i, 0, 2, 22, 700));
+  }
+  function dishKey(it) {
+    let k = 'dish:' + it.id + ':' + q2(it.toast);
+    for (const L of (it.layers || [])) k += '|' + L.id + (L.cook != null ? ':' + q2(L.cook) : '') + (L.cookA != null ? ':' + q2(L.cookA) + ':' + q2(L.cookB) : '') + (L.id === 'cay' && L.q != null ? ':' + q2(L.q) : '');
+    return k;
+  }
+
+  // ---------------------------------------------------------------------------
+  // BEZ (temizlik)
+  // ---------------------------------------------------------------------------
+  function bez(g) {
+    // mavi bez (katlanmış)
+    g.save(); g.rotate(0.12);
+    g.beginPath(); g.moveTo(-40, -6); g.quadraticCurveTo(-20, -18, 0, -12); g.quadraticCurveTo(22, -20, 42, -8); g.lineTo(38, 30); g.quadraticCurveTo(10, 38, -36, 30); g.closePath();
+    g.fillStyle = lin(g, 0, -18, 0, 34, [[0, '#7cc0f2'], [1, '#2f7ac8']]); g.fill(); outline(g, '#1f5a98');
+    g.save(); g.clip(); g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 1;
+    g.beginPath(); for (let i = -40; i < 44; i += 5) { g.moveTo(i, -20); g.lineTo(i + 6, 36); } g.stroke(); g.restore();
+    g.strokeStyle = 'rgba(20,60,110,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-36, 12); g.quadraticCurveTo(0, 20, 38, 10); g.stroke();
+    g.restore();
+    // sarı sünger + yeşil sert yüz
+    g.save(); g.translate(-2, -10); g.rotate(-0.15);
+    rr(g, -26, -4, 52, 10, 4); g.fillStyle = lin(g, 0, -4, 0, 6, [[0, '#4fb85a'], [1, '#2a7a34']]); g.fill(); outline(g, '#1f5a28', 1.6);
+    rr(g, -26, -22, 52, 20, 6); g.fillStyle = lin(g, 0, -22, 0, -2, [[0, '#ffe680'], [1, '#f2c21e']]); g.fill(); outline(g, '#b8901a', 1.6);
+    const R = rng(5); for (let i = 0; i < 26; i++) { circ(g, -22 + R() * 44, -19 + R() * 14, 0.7 + R() * 1.1); g.fillStyle = 'rgba(190,140,10,0.5)'; g.fill(); }
+    gloss(g, -10, -18, 10, 2.5, 0, 0.5);
+    g.restore();
+    // köpük
+    for (const b of [[22, -26, 5], [30, -20, 3.5], [16, -32, 3]]) { circ(g, b[0], b[1], b[2]); g.fillStyle = 'rgba(255,255,255,0.85)'; g.fill(); g.strokeStyle = 'rgba(120,170,220,0.6)'; g.lineWidth = 0.8; g.stroke(); }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DİNAMİK EFEKTLER (buhar / duman) — dışarıdan da kullanılabilir
+  // ---------------------------------------------------------------------------
+  function drawSteam(ctx, x, y, t, scale, opts) {
+    try {
+      opts = opts || {}; scale = scale || 1; t = t == null ? (KS.time || 0) : t;
+      const n = opts.count || 3, col = opts.color || '255,255,255', a0 = opts.alpha != null ? opts.alpha : 0.5;
+      ctx.save(); ctx.lineCap = 'round';
+      for (let i = 0; i < n; i++) {
+        const ph = ((t * 0.6 + i / n) % 1);
+        const yy = y - ph * 34 * scale, xx = x + (i - (n - 1) / 2) * 9 * scale + Math.sin(t * 2 + i * 2 + ph * 5) * 4 * scale;
+        const a = Math.sin(ph * Math.PI) * a0;
+        ctx.strokeStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')'; ctx.lineWidth = (4 + ph * 4) * scale;
+        ctx.beginPath(); ctx.moveTo(xx, yy + 8 * scale); ctx.quadraticCurveTo(xx + 5 * scale * Math.sin(t * 3 + i), yy, xx, yy - 8 * scale); ctx.stroke();
+      }
+      ctx.restore();
+    } catch (e) { /* yok */ }
+  }
+  function drawSmoke(ctx, x, y, t, scale) {
+    try {
+      scale = scale || 1; t = t == null ? (KS.time || 0) : t;
+      ctx.save();
+      for (let i = 0; i < 4; i++) {
+        const ph = (t * 0.45 + i / 4) % 1;
+        const r = (6 + ph * 14) * scale, a = Math.sin(ph * Math.PI) * 0.45;
+        circ(ctx, x + Math.sin(t * 1.5 + i * 1.7) * 8 * scale, y - ph * 46 * scale, r);
+        ctx.fillStyle = 'rgba(70,66,72,' + a.toFixed(3) + ')'; ctx.fill();
+      }
+      ctx.restore();
+    } catch (e) { /* yok */ }
+  }
+  function drawPlate(ctx, x, y, w) {
+    try {
+      w = w || 110;
+      sprite(ctx, 'plate', x, y, w * 1.12, (g) => {
+        const s = w / 110; g.scale(s, s);
+        ell(g, 0, 6, 55, 34); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fill();
+        ell(g, 0, 0, 55, 34); g.fillStyle = lin(g, 0, -34, 0, 34, [[0, '#ffffff'], [1, '#dfe3ea']]); g.fill(); outline(g, '#a7afbb', 1.6);
+        ell(g, 0, 2, 40, 23); g.fillStyle = lin(g, 0, -20, 0, 26, [[0, '#e8ecf2'], [1, '#ffffff']]); g.fill();
+        ell(g, 0, 0, 50, 30.5); g.strokeStyle = 'rgba(60,110,190,0.55)'; g.lineWidth = 1.4; g.stroke();
+        gloss(g, -26, -18, 14, 3.5, -0.3, 0.8);
+      });
+    } catch (e) { /* yok */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // drawItem — HERHANGİ bir item (merkez x,y; ~100px genişlik @scale 1)
+  // ---------------------------------------------------------------------------
+  function drawItem(ctx, item, x, y, scale, opts) {
+    if (!item) return;
+    scale = scale == null ? 1 : scale;
+    opts = opts || {};
+    ctx.save();
+    try {
+      ctx.translate(x, y); if (scale !== 1) ctx.scale(scale, scale);
+      const t = KS.time || 0;
+      if (item.type === 'ing') {
+        Art.drawIngredient(ctx, item.id, 0, 0, 82, { cook: item.cook, cookA: item.cookA, cookB: item.cookB });
+        if (item.id === 'kofte') { const c = Math.max(item.cookA || 0, item.cookB || 0); if (c > 1.5) drawSmoke(ctx, 0, -14, t, 0.7); }
+        if (item.id === 'cay') drawSteam(ctx, 0, -38, t, 0.8);
+      } else if (item.type === 'product') {
+        Art.drawProduct(ctx, item.id, 0, 0, 86);
+      } else if (item.type === 'tool') {
+        sprite(ctx, 'tool:' + item.id, 0, 0, 120, (g) => { if (item.id === 'bez') bez(g); else { rr(g, -30, -20, 60, 40, 8); g.fillStyle = '#9aa4ae'; g.fill(); outline(g, '#4a525a'); } }, true);
+      } else if (item.type === 'dish') {
+        if (opts.plate) drawPlate(ctx, 0, 14, 112);
+        const fn = DISH[item.id] || dishFallback;
+        sprite(ctx, dishKey(item), 0, 0, 132, (g) => fn(g, item), true);
+        if (item.id === 'bardak' && (item.layers || []).some(L => L.id === 'cay')) drawSteam(ctx, 0, -52, t, 0.9);
+        if (item.id === 'tost_ekmegi' && (item.toast || 0) >= 1.5) drawSmoke(ctx, 0, -30, t, 1);
+        if (item.id === 'kese' && (item.layers || []).some(L => L.id === 'patates' && (L.cook || 0) >= 1.6)) drawSmoke(ctx, 0, -50, t, 0.8);
+      } else {
+        sprite(ctx, 'unknown-item', 0, 0, 100, (g) => H.ICONS.unknown(g), true);
+      }
+    } catch (e) { /* yok */ }
+    ctx.restore();
+  }
+
+  Object.assign(Art, { drawItem, drawPlate, drawSteam, drawSmoke });
+  Object.assign(Art._h, { drizzle, sprinkle, topLayer, sideBand, DISH });
+})(window.KS);
+/* @@ART-PART-5@@ */

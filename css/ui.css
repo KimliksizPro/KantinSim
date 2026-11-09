@@ -442,8 +442,8 @@
 @keyframes ks-drop { from { opacity: 0; transform: translateY(-80px) scale(.8); } }
 .mm-badge { font-size: 64px; line-height: 1; margin-bottom: -8px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .35)); animation: ks-pulse 2.4s ease-in-out infinite; }
 .mm-title { font: 800 148px/1 var(--f-head); letter-spacing: -2px; padding-top: 10px; }
-.mm-title .k { color: #ffd84a; text-shadow: 0 4px 0 #e98a00, 0 8px 0 #a3480e, 0 16px 26px rgba(0, 0, 0, .5); -webkit-text-stroke: 2px #fff3c4; }
-.mm-title .s { color: #ff7a45; text-shadow: 0 4px 0 #d34a1c, 0 8px 0 #8e2a0b, 0 16px 26px rgba(0, 0, 0, .5); -webkit-text-stroke: 2px #ffd9c4; }
+.mm-title .k { color: #ffd84a; text-shadow: 0 4px 0 #e98a00, 0 8px 0 #a3480e, 0 16px 26px rgba(0, 0, 0, .5); }
+.mm-title .s { color: #ff7a45; text-shadow: 0 4px 0 #d34a1c, 0 8px 0 #8e2a0b, 0 16px 26px rgba(0, 0, 0, .5); }
 .mm-sub { font: 800 28px var(--f-head); color: #fff; letter-spacing: 3px; background: rgba(0, 0, 0, .28); padding: 6px 26px 2px; border-radius: 20px; margin-top: 12px;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); text-transform: uppercase; }
 .mm-btns { display: flex; flex-direction: column; gap: 14px; width: 380px; animation: ks-rise .6s .2s both; }

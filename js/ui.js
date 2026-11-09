@@ -1403,10 +1403,15 @@
   // EĞİTİM (ilk gün)
   // ---------------------------------------------------------------------------
   function binRect(id) {
+    try { const P = KS.Stations && KS.Stations.prep; const r = P && P.binRect && P.binRect(id); if (r && r.w) return r; } catch (e) { /* */ }
     const L = KS.layout || {}, b = L.bins || { x: 12, y: 432, w: 340, h: 458, cols: 4, rows: 5 };
     const idx = Math.max(0, (D().binOrder || []).indexOf(id));
     const cols = b.cols || 4, rows = b.rows || 5, cw = b.w / cols, ch = b.h / rows;
     return { x: b.x + (idx % cols) * cw, y: b.y + Math.floor(idx / cols) * ch, w: cw, h: ch };
+  }
+  function plateRect(i) {
+    try { const P = KS.Stations && KS.Stations.prep; const r = P && P.plateRect && P.plateRect(i); if (r && r.w) return r; } catch (e) { /* */ }
+    return lay('tezgah', null);
   }
   function slotRect(i) {
     const sl = KS.layout && KS.layout.customerSlots && KS.layout.customerSlots[i];
@@ -1415,7 +1420,7 @@
   function lay(k, fb) { return (KS.layout && KS.layout[k]) || fb; }
   const TUT_STEPS = [
     { text: '👋 <b>Müşteri geldi!</b> Başının üstündeki konuşma balonunda ne istediğini görürsün.', target: () => slotRect(0), side: 'right' },
-    { text: '🍞 Malzeme kutusundan <b>tost ekmeğini</b> alıp aşağıdaki tezgahta bir <b>tabağa</b> sürükle.', target: () => binRect('tost_ekmegi'), side: 'right', pick: it => it.id === 'tost_ekmegi' },
+    { text: '🍞 Malzeme kutusundan <b>tost ekmeğini</b> alıp aşağıdaki tezgahta bir <b>tabağa</b> sürükle.', target: () => binRect('tost_ekmegi'), side: 'right', extra: () => plateRect(0), pick: it => it.id === 'tost_ekmegi' },
     { text: '🧀 Şimdi <b>kaşarı</b> aynı tabaktaki ekmeğin üstüne bırak.', target: () => binRect('kasar'), side: 'right', pick: it => it.id === 'kasar' },
     { text: '🔥 Tabağı <b>tost makinesine</b> koy ve <b>kapağına tıkla</b>. Altın sarısı olunca çıkar — yakma!', target: () => lay('tost', { x: 818, y: 432, w: 262, h: 200 }), side: 'above', pick: it => it.type === 'dish' },
     { text: '😋 Pişen tostu <b>müşteriye</b> sürükle. Hızlı ve doğru servis = bahşiş!', target: () => slotRect(0), side: 'right', served: true },
@@ -1425,6 +1430,7 @@
   const tut = { active: false, step: 0, picked: false };
   function buildTutorial() {
     E.tutRing = h('div', { class: 'tut-ring' });
+    E.tutRing2 = h('div', { class: 'tut-ring ring2 ks-hide' });
     E.tutText = h('div', { class: 'tut-text' });
     E.tutCount = h('span', { class: 'tut-count' });
     E.tutNext = h('button', { class: 'tut-btn next', type: 'button' }, 'İleri ›');
@@ -1434,7 +1440,7 @@
     E.tutBubble = h('div', { class: 'tut-bubble' },
       h('div', { class: 'tut-head' }, h('span', { class: 'tut-hat' }, '🎓 İpucu'), E.tutCount),
       E.tutText, h('div', { class: 'tut-btns' }, E.tutSkip, E.tutNext));
-    E.tut = h('div', { id: 'ks-tut', class: 'ks-passive ks-hide' }, E.tutRing, E.tutBubble);
+    E.tut = h('div', { id: 'ks-tut', class: 'ks-passive ks-hide' }, E.tutRing, E.tutRing2, E.tutBubble);
     return E.tut;
   }
   function startTutorial() {
@@ -1458,6 +1464,9 @@
     const st = TUT_STEPS[tut.step]; if (!st) return;
     const r = call(st.target) || { x: 700, y: 400, w: 100, h: 100 };
     Object.assign(E.tutRing.style, { left: (r.x - 4) + 'px', top: (r.y - 4) + 'px', width: (r.w + 8) + 'px', height: (r.h + 8) + 'px' });
+    const r2 = st.extra ? call(st.extra) : null;
+    show(E.tutRing2, !!r2);
+    if (r2) Object.assign(E.tutRing2.style, { left: (r2.x - 4) + 'px', top: (r2.y - 4) + 'px', width: (r2.w + 8) + 'px', height: (r2.h + 8) + 'px' });
     const bw = 340, bh = E.tutBubble.offsetHeight || 150, gap = 22;
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     let x, y, side = st.side;

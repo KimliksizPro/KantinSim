@@ -590,3 +590,4 @@
 .tut-btn:active { transform: translateY(2px); }
 .tut-btn.skip { background: rgba(122, 82, 54, .12); color: var(--ink2); }
 .tut-btn.next { background: linear-gradient(180deg, #74e59b, var(--green2)); color: #fff; box-shadow: 0 3px 0 #157a40; }
+.tut-ring.ring2 { border-color: #7dffa8; box-shadow: 0 0 22px rgba(125,255,168,.7); animation-delay: .5s; }

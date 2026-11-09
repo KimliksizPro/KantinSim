@@ -28,7 +28,7 @@
   const QUEUE_MAX = 8;
   const DEMAND_SCALE = 0.5;        // period.rate'e uygulanan genel ölçek (akınlar ayrıca eklenir)
   const WALK_SPEED = 340;          // px / oyun saniyesi
-  const BODY_OFFSET = 70;          // drawCustomer baseY = tezgah çizgisi + bu (bel altı tezgah arkasında)
+  const BODY_OFFSET = 95;          // drawCustomer baseY = tezgah çizgisi + bu (bel altı tezgah arkasında)
   const QUEUE_SCALE = 0.56;        // kuyruktaki siluetlerin ölçeği
   const QUEUE_BASE = 334;          // kuyruktakilerin "ayak" çizgisi (koridor, daha uzakta)
   const QUEUE_X0 = 1556, QUEUE_DX = 54;
@@ -623,7 +623,7 @@
     // itibar
     let rep = (avgQ - 0.7) * 0.1 + (pr - 0.45) * 0.035;
     rep = clamp(rep, -0.1, 0.06);
-    if (rep > 0) rep *= 1 - (s.rep / 5) * 0.6;     // yüksek itibarda artış yavaşlar
+    if (rep > 0) rep *= 0.6 * (1 - (s.rep / 5) * 0.6);     // yüksek itibarda artış yavaşlar
     rep *= c.vip ? 2 : 1;
     KS.addRep(rep);
     if (s.today) { s.today.served++; if (avgQ >= 0.9) s.today.perfect++; }
@@ -1276,7 +1276,7 @@
     const w = measure(ctx, sv.text, 800, size) + 22, h = 28;
     let x, y;
     if (c.state === 'queue' || c.leaveKind === 'queue') { x = c.x - w / 2; y = 196; }
-    else { x = c.x + 34; y = 178; }
+    else { x = c.x + 40; y = 214; }
     x = clamp(x, 6, 1594 - w);
     ctx.save();
     ctx.globalAlpha *= a;

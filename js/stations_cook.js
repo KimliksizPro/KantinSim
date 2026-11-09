@@ -722,11 +722,11 @@
         });
       }
       // ön panel ışıkları
-      const anyReady = M.slots.some(s => s.dish && num(s.dish.toast, 0) >= TUNE.toastDone);
-      const allReady = M.slots.every(s => !s.dish || num(s.dish.toast, 0) >= TUNE.toastDone);
+            const allReady = M.slots.every(s => !s.dish || num(s.dish.toast, 0) >= TUNE.toastDone);
       const over = M.slots.some(s => s.dish && num(s.dish.toast, 0) >= TUNE.toastSmoke);
       const redOn = pw && act && M.closed && hasC && !allReady;
-      const greenOn = pw && act && anyReady && (!over || Math.sin(t * 12) > 0);
+      const okReady = M.slots.some(s => s.dish && num(s.dish.toast, 0) >= TUNE.toastDone && num(s.dish.toast, 0) < TUNE.toastBurn);
+      const greenOn = pw && act && okReady && (!over || Math.sin(t * 12) > 0);
       led(ctx, g.x + 11, g.faceY + 11, 3.4, '#ff3b30', redOn, pw && act ? 0.18 : 0);
       led(ctx, g.x + 11, g.faceY + 22, 3.4, '#34e05a', greenOn, 0);
       // yuva çubukları

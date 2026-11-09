@@ -311,7 +311,7 @@
       (lines || []).map(l => h('div', { class: 'pp-line' }, l))));
     E.popup.classList.remove('show'); void E.popup.offsetWidth; E.popup.classList.add('show');
     clearTimeout(popupTimer);
-    popupTimer = setTimeout(() => E.popup.classList.remove('show'), 4600);
+    popupTimer = setTimeout(() => E.popup.classList.remove('show'), 3400);
     confetti(800, 230, 60);
   }
 
@@ -388,6 +388,7 @@
     id = PANELS[id] ? id : PANEL_ALIASES[id];
     const cfg = PANELS[id]; if (!cfg) return false;
     if (curPanel) closePanel(true);
+    if (E.popup) E.popup.classList.remove('show');
     unlockAudio();
     const head = h('div', { class: 'pn-head' });
     const tabs = h('div', { class: 'pn-tabs ks-hide' });
@@ -675,6 +676,7 @@
 
   function showScreen(name) {
     screen = name;
+    if (name && E.popup) E.popup.classList.remove('show');
     show(E.mainmenu, name === 'mainmenu');
     show(E.summary, name === 'summary' || name === 'gameover');
     show(E.pause, name === 'pause');
@@ -1045,7 +1047,7 @@
           h('div', { class: 'mn-name' }, h('b', null, r.name), h('small', null, '⏱ ' + (r.time || '') + ' · Önerilen ' + fmt(r.price))),
           unlocked ? toggle(m.on, on => { m.on = on; row.classList.toggle('off', !on); }, ['Menüde', 'Kapalı']) : h('div', { class: 'mn-lock' }, '🔒 Seviye ' + r.unlock),
           h('div', { class: 'mn-price' }, unlocked ? stp.el : h('b', null, fmt(r.price)), unlocked ? badge : null),
-          unlocked ? marg : h('div', { class: 'mn-marg' }, 'Seviye ' + r.unlock + "'e ulaşınca açılır"));
+          unlocked ? marg : h('div', { class: 'mn-marg' }, 'Seviye ' + r.unlock + ' gerekli'));
         updInfo();
         sec1.appendChild(row);
       }
@@ -1359,7 +1361,7 @@
         st('🙋', 'Servis', tot.served || 0), st('🏃', 'Kaçan', tot.lost || 0)),
       h('div', { class: 'go-tip' }, '💡 İpucu: Az ama karlı ürünlerle başla, hazır yemeği ihtiyacın kadar söyle, kirayı unutma!'),
       h('div', { class: 'sm-btns' },
-        btn('🏠 Ana Menü', 'ghost light', () => { toMainMenuFromOver(); }),
+        btn('🏠 Ana Menü', 'cream', () => { toMainMenuFromOver(); }),
         btn('🆕 Yeni Oyun', 'orange huge', () => startNewGame())));
     clear(E.summary).appendChild(card);
     E.summary.className = 'ks-screen summary gameover';
@@ -1419,11 +1421,11 @@
   }
   function lay(k, fb) { return (KS.layout && KS.layout[k]) || fb; }
   const TUT_STEPS = [
-    { text: '👋 <b>Müşteri geldi!</b> Başının üstündeki konuşma balonunda ne istediğini görürsün.', target: () => slotRect(0), side: 'right' },
+    { text: '👋 <b>Müşteri geldi!</b> Başının üstündeki konuşma balonunda ne istediğini görürsün.', target: () => slotRect(0), side: 'below' },
     { text: '🍞 Malzeme kutusundan <b>tost ekmeğini</b> alıp aşağıdaki tezgahta bir <b>tabağa</b> sürükle.', target: () => binRect('tost_ekmegi'), side: 'right', extra: () => plateRect(0), pick: it => it.id === 'tost_ekmegi' },
     { text: '🧀 Şimdi <b>kaşarı</b> aynı tabaktaki ekmeğin üstüne bırak.', target: () => binRect('kasar'), side: 'right', pick: it => it.id === 'kasar' },
     { text: '🔥 Tabağı <b>tost makinesine</b> koy ve <b>kapağına tıkla</b>. Altın sarısı olunca çıkar — yakma!', target: () => lay('tost', { x: 818, y: 432, w: 262, h: 200 }), side: 'above', pick: it => it.type === 'dish' },
-    { text: '😋 Pişen tostu <b>müşteriye</b> sürükle. Hızlı ve doğru servis = bahşiş!', target: () => slotRect(0), side: 'right', served: true },
+    { text: '😋 Pişen tostu <b>müşteriye</b> sürükle. Hızlı ve doğru servis = bahşiş!', target: () => slotRect(0), side: 'below', served: true },
     { text: '🥤 Ayran, kola, simit gibi hazır ürünleri <b>vitrinden</b> alıp doğrudan müşteriye ver.', target: () => lay('vitrin', { x: 14, y: 66, w: 300, h: 338 }), side: 'right', pick: it => it.type === 'product' },
     { text: '📦 Stok bitmeden <b>Malzeme</b> veya <b>Telefon</b> ile sipariş ver. Açıkken toptancı ~60 dk\'da gelir!', target: () => (E.hudQ ? logicalRect(E.hudQ.btns.supply) : { x: 1000, y: 0, w: 60, h: 56 }), side: 'below' },
   ];

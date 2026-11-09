@@ -154,13 +154,13 @@
   // ---------------------------------------------------------------------------
   // SABİT METİNLER
   // ---------------------------------------------------------------------------
-  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰' };
-  const EVENT_SHORT = { mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü' };
+  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰', gezi: '🚌', ogretmenler: '🍎', kermes: '🎪' };
+  const EVENT_SHORT = { gezi: 'Okul Gezisi', ogretmenler: 'Öğretmenler Günü', kermes: 'Kermes', mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü' };
   const UPG_ICONS = { tost: '🥪', izgara: '🔥', fritoz: '🍟', semaver: '🫖', tezgah: '🔪', bekleme: '🗄️', yogurma: '🥣', buzdolabi: '🧊', kasa: '💳', dekor: '🪴' };
-  const STAFF_ICONS = { cirak: '🧑‍🍳', temizlikci: '🧹', kasiyer: '🧾' };
+  const STAFF_ICONS = { cirak: '🧑‍🍳', temizlikci: '🧹', kasiyer: '🧾', sef: '👨‍🍳' };
   const EXP_LABELS = [
     ['malzeme', '🥬 Malzeme'], ['hazir', '🌯 Hazır yemek'], ['nakliye', '🚚 Nakliye & kurye'], ['geliştirme', '⬆️ Geliştirme'],
-    ['personel', '👥 Personel'], ['kira', '🏫 Kira'], ['fatura', '💡 Faturalar'], ['ceza', '🚨 Ceza'], ['diger', '📎 Diğer'],
+    ['personel', '👥 Personel'], ['kira', '🏫 Kira'], ['fatura', '💡 Faturalar'], ['reklam', '📣 Reklam'], ['kredi', '🏦 Kredi taksiti'], ['ceza', '🚨 Ceza'], ['diger', '📎 Diğer'],
   ];
   const ING_GROUPS = [
     { label: '🍞 Ekmekler', ids: ['tost_ekmegi', 'yarim_ekmek', 'lavas', 'hamburger_ekmegi'] },
@@ -299,6 +299,20 @@
     bannerTimer = setTimeout(() => { E.banner.classList.remove('show'); }, 2600);
   }
 
+  // Başarım kartı (üst ortada kayar)
+  let achTimer = 0;
+  function showAchievement(a) {
+    if (!E.ach || !a) return;
+    if (S().phase === 'summary' || S().phase === 'gameover') return;   // gün sonu ekranı zaten listeler
+    clear(E.ach).appendChild(h('div', { class: 'ach-toast' },
+      h('div', { class: 'at-ico' }, a.icon || '🏆'),
+      h('div', null, h('small', null, '🏆 BAŞARIM AÇILDI'), h('b', null, a.name), h('span', null, a.desc)),
+      h('div', { class: 'at-rew' }, [a.xp ? '+' + a.xp + ' XP' : null, a.money ? '+' + fmt(a.money) : null].filter(Boolean).join('\n'))));
+    E.ach.classList.remove('show'); void E.ach.offsetWidth; E.ach.classList.add('show');
+    clearTimeout(achTimer); achTimer = setTimeout(() => E.ach.classList.remove('show'), 3800);
+    confetti(800, 110, 36);
+  }
+
   // Büyük popup (seviye atlama) — tıklanmaz, kendiliğinden kaybolur
   let popupTimer = 0;
   function popup(title, lines, icon) {
@@ -380,7 +394,7 @@
   const PANEL_ALIASES = {
     malzeme: 'supply', siparis: 'supply', toptanci: 'supply', bakkal: 'supply',
     telefon: 'phone', restoran: 'phone', fiyat: 'menu', menu: 'menu', gelistir: 'upgrades', gelistirme: 'upgrades',
-    personel: 'staff', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
+    personel: 'staff', hedef: 'kantin', hedefler: 'kantin', basarim: 'kantin', banka: 'kantin', istatistik: 'kantin', pazarlama: 'kantin', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
   };
   const PANELS = {};   // id -> {title, icon, width, cls, build(p)}
 
@@ -471,6 +485,7 @@
     { id: 'upgrades', ico: '⬆️', label: 'Geliştir', title: 'Ekipman geliştirmeleri' },
     { id: 'staff', ico: '👥', label: 'Personel', title: 'Personel işe al / çıkar' },
     { id: 'recipes', ico: '📖', label: 'Tarifler', title: 'Tarif defteri ve kontroller' },
+    { id: 'kantin', ico: '🎯', label: 'Hedef', title: 'Kantin defteri: günlük hedefler, başarımlar, istatistik, pazarlama, banka' },
     { id: 'pause', ico: '⏸', label: 'Duraklat', title: 'Duraklat (P / Esc)', sep: true },
     { id: 'speed', ico: '⏩', label: '1x', title: 'Oyun hızı (1x / 2x)' },
     { id: 'sound', ico: '🔊', label: 'Ses', title: 'Sesi aç / kapat' },
@@ -601,6 +616,12 @@
     setText(q.btns.pause._lab, s.paused ? 'Devam' : 'Duraklat');
     const sp = (s.speedMult || 1) >= 2 ? 2 : 1;
     setText(q.btns.speed._lab, sp + 'x'); setCls(q.btns.speed, 'active', sp === 2);
+    if (q.btns.kantin) {
+      const gl = (KS.Meta && KS.Meta.goals()) || [];
+      const dn = gl.filter(g => g.done).length;
+      setText(q.btns.kantin._lab, gl.length ? 'Hedef ' + dn + '/' + gl.length : 'Defter');
+      setCls(q.btns.kantin, 'goal-all', gl.length > 0 && dn === gl.length);
+    }
     setText(q.btns.sound._ico, settings.sound ? '🔊' : '🔇');
     setCls(q.btns.sound, 'off', !settings.sound);
   }
@@ -769,19 +790,31 @@
           low.length > 12 ? h('span', { class: 'pl-chip more' }, '+' + (low.length - 12)) : null))
         : h('div', { class: 'prep-ok' }, '✅ Stoklar bugün için yeterli görünüyor.'),
       hazirCount === 0 ? h('div', { class: 'prep-hint' }, '🌯 Vitrinde hazır yemek yok — 📱 Telefon ile döner, çiğ köfte, simit sipariş edebilirsin.') : null,
+      prepGoalsBlock(),
       h('div', { class: 'prep-tip' }, '💡 Hazırlıkta verilen siparişler açılışta teslim edilir. Açıkken toptancı ~60 dk sürer!'),
       h('div', { class: 'prep-actions' },
         btn('📦 Malzeme', 'cream', () => openPanel('supply')),
         btn('📱 Telefon', 'cream', () => openPanel('phone')),
         btn('🍽️ Menü', 'cream', () => openPanel('menu')),
         btn('⬆️ Geliştir', 'cream', () => openPanel('upgrades')),
-        btn('👥 Personel', 'cream', () => openPanel('staff'))),
+        btn('👥 Personel', 'cream', () => openPanel('staff')),
+        btn('📣 Pazarlama', 'cream', () => openPanel('kantin', 'market')),
+        btn('🏦 Banka', 'cream', () => openPanel('kantin', 'bank'))),
       btn('🔔 Kantini Aç', 'green huge prep-open', () => {
         if (S().phase !== 'prep') return;
         call(KS.game.openShop);
         syncPhase(true);
       }));
     clear(E.prep).appendChild(card);
+  }
+  function prepGoalsBlock() {
+    if (!KS.Meta) return null;
+    const list = KS.Meta.goals(), c = KS.Meta.campaign(), debt = KS.Meta.debt();
+    return h('div', { class: 'prep-goals' },
+      h('div', { class: 'pg-head' }, h('span', null, '🎯 GÜNÜN HEDEFLERİ'),
+        h('span', { class: 'pg-camp' + (c ? ' on' : '') }, c ? c.icon + ' ' + c.name : '📣 Kampanya yok'),
+        debt > 0 ? h('span', { class: 'pg-debt' }, '🏦 Taksit ' + fmt(KS.Meta.dailyInstallment()) + '/gün') : null),
+      list.length ? list.map(g => goalRow(g, true)) : h('div', { class: 'sm-empty' }, 'Hedefler hazırlanıyor…'));
   }
   function refreshPrep() { if (S() && S().phase === 'prep' && E.prep && !E.prep.classList.contains('ks-hide')) buildPrepCard(); }
 
@@ -1186,6 +1219,219 @@
   };
 
   // ---------------------------------------------------------------------------
+  // PANEL: KANTİN DEFTERİ (hedefler, başarımlar, istatistik, pazarlama, banka)
+  // ---------------------------------------------------------------------------
+  const M = () => KS.Meta;
+  const hubState = { tab: 'goals' };
+  const HUB_TABS = [
+    { id: 'goals', label: '🎯 Günlük Hedefler' }, { id: 'ach', label: '🏆 Başarımlar' }, { id: 'stats', label: '📊 İstatistik' },
+    { id: 'market', label: '📣 Pazarlama' }, { id: 'bank', label: '🏦 Banka' },
+  ];
+  PANELS.kantin = {
+    title: 'Kantin Defteri', icon: '📒', width: 1120, cls: 'hub',
+    build(p, arg, re) {
+      if (arg && HUB_TABS.some(t => t.id === arg) && !re) hubState.tab = arg;
+      const achN = M() ? M().achievements().filter(a => M().isUnlocked(a.id)).length : 0;
+      const tabs = HUB_TABS.map(t => t.id === 'ach' && M() ? Object.assign({}, t, { badge: achN + '/' + M().achievements().length }) : t);
+      p.setTabs(tabs, hubState.tab, id => { hubState.tab = id; renderHub(p); });
+      renderHub(p);
+    },
+  };
+  function bar(ratio, cls) { return h('div', { class: 'hb-bar ' + (cls || '') }, h('i', { style: { width: (clamp(ratio, 0, 1) * 100).toFixed(1) + '%' } })); }
+  function renderHub(p) {
+    clear(p.body); p.setFoot(); p.moneyChip();
+    if (!M()) { p.body.appendChild(h('div', { class: 'pn-empty' }, 'Kantin defteri yüklenemedi.')); return; }
+    const f = { goals: hubGoals, ach: hubAch, stats: hubStats, market: hubMarket, bank: hubBank }[hubState.tab] || hubGoals;
+    try { f(p); } catch (e) { console.error('[ui hub]', e); p.body.appendChild(h('div', { class: 'pn-empty' }, 'Bu bölüm açılamadı.')); }
+  }
+  function goalRow(g, compact) {
+    const pr = M().goalProgress(g);
+    const isMoney = g.kind === 'revenue' || g.kind === 'tips';
+    const num = v => (isMoney ? fmt(v) : g.kind === 'clean' ? '%' + Math.round(v) : String(Math.floor(v)));
+    const state = g.done ? 'done' : g.failed ? 'failed' : '';
+    return h('div', { class: 'gl-row ' + state + (compact ? ' compact' : '') },
+      h('div', { class: 'gl-ico' }, g.done ? '✅' : g.failed ? '❌' : g.icon),
+      h('div', { class: 'gl-main' },
+        h('div', { class: 'gl-text' }, g.text),
+        compact ? null : h('div', { class: 'gl-prog' }, bar(pr.ratio, state), h('small', null, g.endOnly && !g.done && !g.failed ? 'Gün sonunda kontrol edilir' : num(pr.cur) + ' / ' + num(pr.target)))),
+      h('div', { class: 'gl-rew' }, h('b', null, '+' + fmt(g.reward.money)), h('small', null, '+' + g.reward.xp + ' XP')));
+  }
+  function hubGoals(p) {
+    const list = M().goals();
+    p.body.appendChild(h('div', { class: 'mn-hint' }, '🎯 Her sabah 3 yeni hedef gelir. Tamamladığın anda ödül kasana eklenir. Toplam tamamlanan hedef: ', h('b', null, String(S().goalsDone || 0))));
+    if (!list.length) { p.body.appendChild(h('div', { class: 'pn-empty' }, 'Bugünün hedefleri hazırlık aşamasında belirlenir.')); return; }
+    p.body.appendChild(h('div', { class: 'gl-list' }, list.map(g => goalRow(g))));
+    const done = list.filter(g => g.done).length;
+    p.setFoot(h('div', { class: 'sf-sum' }, h('span', null, 'Bugün: ', h('b', null, done + ' / ' + list.length + ' hedef')),
+      h('span', null, 'Kalan ödül: ', h('b', null, fmt(list.filter(g => !g.done && !g.failed).reduce((a, g) => a + g.reward.money, 0))))));
+  }
+  function hubAch(p) {
+    const all = M().achievements();
+    const un = all.filter(a => M().isUnlocked(a.id));
+    p.body.appendChild(h('div', { class: 'ach-head' },
+      h('div', { class: 'ach-count' }, h('b', null, un.length), ' / ' + all.length),
+      h('div', { class: 'ach-hbar' }, bar(un.length / all.length, 'gold')),
+      h('small', null, 'Başarımlar XP ve para ödülü kazandırır.')));
+    const sorted = all.slice().sort((a, b) => (M().isUnlocked(b.id) - M().isUnlocked(a.id)) || (M().achProgress(b).ratio - M().achProgress(a).ratio));
+    p.body.appendChild(h('div', { class: 'ach-grid' }, sorted.map(a => {
+      const ok = M().isUnlocked(a.id), pr = M().achProgress(a);
+      const rew = [a.xp ? '+' + a.xp + ' XP' : null, a.money ? '+' + fmt(a.money) : null].filter(Boolean).join(' · ');
+      const fmtN = v => (v >= 1000 ? Math.floor(v).toLocaleString('tr-TR') : String(Math.round(v * 10) / 10).replace('.', ','));
+      return h('div', { class: 'ach-card' + (ok ? ' on' : '') },
+        h('div', { class: 'ac-ico' }, a.icon),
+        h('div', { class: 'ac-main' },
+          h('b', null, a.name), h('small', null, a.desc),
+          ok ? h('div', { class: 'ac-done' }, '✔ Gün ' + S().achievements[a.id] + "'de kazanıldı") :
+            h('div', { class: 'ac-prog' }, bar(pr.ratio), h('span', null, fmtN(pr.cur) + ' / ' + fmtN(pr.target)))),
+        h('div', { class: 'ac-rew' }, rew));
+    })));
+  }
+  function hubStats(p) {
+    const s = S(), tot = (s.stats && s.stats.total) || {}, L = (M().lifeStats && M().lifeStats()) || {};
+    const hist = (s.history || []).slice(-20);
+    const tile = (ico, label, val) => h('div', { class: 'stt-tile' }, h('span', null, ico), h('b', null, val), h('small', null, label));
+    const curServed = (s.today && (s.phase === 'open' || s.phase === 'closing')) ? (s.today.served || 0) : 0;
+    p.body.appendChild(h('div', { class: 'stt-tiles' },
+      tile('📅', 'Tamamlanan gün', String(tot.days || 0)),
+      tile('🧾', 'Toplam ciro', fmt(tot.revenue || 0)),
+      tile('🪙', 'Toplam bahşiş', fmt(tot.tips || 0)),
+      tile('🙋', 'Servis edilen', String((tot.served || 0) + curServed)),
+      tile('🤩', 'Mükemmel servis', String(L.perfect || 0)),
+      tile('🏃', 'Kaçan müşteri', String(tot.lost || 0))));
+    // grafikler
+    const charts = h('div', { class: 'stt-charts' });
+    if (hist.length >= 1) {
+      charts.appendChild(chartBox('💹 Günlük net kâr (son ' + hist.length + ' gün)', barChart(hist, x => x.net || 0, fmtSigned, true)));
+      charts.appendChild(chartBox('🙋 Günlük müşteri', barChart(hist, x => x.served || 0, v => v + ' müşteri', false)));
+      charts.appendChild(chartBox('⭐ İtibar', lineChart(hist, x => x.rep || 0, 0, 5, v => v.toFixed(2) + ' ★')));
+      charts.appendChild(chartBox('🧾 Günlük ciro', barChart(hist, x => x.revenue || 0, fmt, false)));
+    } else charts.appendChild(h('div', { class: 'pn-empty' }, '📈 İlk günü bitirdiğinde grafikler burada görünecek.'));
+    p.body.appendChild(charts);
+    // rekorlar + çok satanlar
+    const recs = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '🏅 Rekorlar'),
+      [['📈 En kârlı gün', fmt(L.bestNet || 0)], ['🧾 En yüksek ciro', fmt(L.bestRevenue || 0)], ['🙋 En çok müşteri', String(L.bestServed || 0)],
+        ['🪙 En çok bahşiş', fmt(L.bestTips || 0)], ['💎 Kusursuz gün', String(L.flawlessDays || 0)], ['🫖 Toplu sipariş', String(L.bulk || 0)],
+        ['👑 Müdür memnuniyeti', String(L.vipHappy || 0)], ['🗑️ Çöpe giden', String(L.trashed || 0)]]
+        .map(([k, v]) => h('div', { class: 'sm-row' }, h('span', null, k), h('b', null, v))));
+    const sales = Object.entries((s.stats && s.stats.sales) || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const maxS = sales.length ? sales[0][1] : 1;
+    const best = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '🏆 Tüm zamanların en çok satanları'),
+      sales.length ? sales.map(([id, n], i) => h('div', { class: 'sm-sale' },
+        h('span', { class: 'ss-rank' }, ['🥇', '🥈', '🥉'][i] || (i + 1) + '.'), h('span', { class: 'ss-name' }, nameOf(id)),
+        h('div', { class: 'ss-bar' }, h('i', { style: { width: (n / maxS * 100).toFixed(0) + '%' } })), h('b', null, '×' + n)))
+        : h('div', { class: 'sm-empty' }, 'Henüz satış kaydı yok.'));
+    p.body.appendChild(h('div', { class: 'stt-cols' }, recs, best));
+  }
+  function chartBox(title, el) { return h('div', { class: 'ch-box' }, h('div', { class: 'ch-title' }, title), el); }
+  // Basit çubuk grafik (tek seri; negatif değerler kırmızı, sıfır çizgisi ortada)
+  function barChart(hist, get, f, signed) {
+    const vals = hist.map(get);
+    const max = Math.max(1, ...vals.map(v => Math.abs(v)));
+    const hasNeg = signed && vals.some(v => v < 0);
+    const wrap = h('div', { class: 'ch-bars' + (hasNeg ? ' signed' : '') });
+    hist.forEach((x, i) => {
+      const v = vals[i], hpx = Math.max(2, Math.abs(v) / max * (hasNeg ? 58 : 116));
+      const col = h('div', { class: 'ch-col', title: 'Gün ' + x.day + ': ' + f(v) },
+        h('div', { class: 'ch-pos' }, v >= 0 ? h('i', { class: 'pos', style: { height: hpx + 'px' } }) : null),
+        hasNeg ? h('div', { class: 'ch-neg' }, v < 0 ? h('i', { class: 'neg', style: { height: hpx + 'px' } }) : null) : null,
+        h('small', null, String(x.day)));
+      wrap.appendChild(col);
+    });
+    const last = vals[vals.length - 1];
+    return h('div', { class: 'ch-wrap' }, h('div', { class: 'ch-max' }, 'maks ' + f(Math.max(...vals)) + ' · son ' + f(last)), wrap);
+  }
+  function lineChart(hist, get, min, max, f) {
+    const W = 480, H = 130, pad = 14;
+    const vals = hist.map(get);
+    const xs = i => pad + (hist.length <= 1 ? (W - pad * 2) / 2 : i * (W - pad * 2) / (hist.length - 1));
+    const ys = v => H - pad - (clamp(v, min, max) - min) / (max - min) * (H - pad * 2);
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('class', 'ch-svg');
+    const mk = (tag, attrs) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+    for (let g = min; g <= max; g++) {
+      mk('line', { x1: pad, x2: W - pad, y1: ys(g), y2: ys(g), class: 'ch-grid' });
+      const t = mk('text', { x: 2, y: ys(g) + 4, class: 'ch-ax' }); t.textContent = g;
+    }
+    const pts = vals.map((v, i) => xs(i).toFixed(1) + ',' + ys(v).toFixed(1)).join(' ');
+    mk('polygon', { points: xs(0) + ',' + (H - pad) + ' ' + pts + ' ' + xs(vals.length - 1) + ',' + (H - pad), class: 'ch-area' });
+    mk('polyline', { points: pts, class: 'ch-line' });
+    vals.forEach((v, i) => {
+      const c = mk('circle', { cx: xs(i), cy: ys(v), r: 4.5, class: 'ch-dot' });
+      const t = document.createElementNS(ns, 'title'); t.textContent = 'Gün ' + hist[i].day + ': ' + f(v); c.appendChild(t);
+    });
+    return h('div', { class: 'ch-wrap' }, h('div', { class: 'ch-max' }, 'şu an ' + f(vals[vals.length - 1])), svg);
+  }
+  function hubMarket(p) {
+    const s = S(), cur = M().campaign();
+    p.body.appendChild(h('div', { class: 'mn-hint' }, '📣 Kampanyalar yalnızca ', h('b', null, 'hazırlık aşamasında'), ' başlatılır ve o gün boyunca geçerlidir. Günde bir kampanya yapılabilir.'));
+    if (cur) p.body.appendChild(h('div', { class: 'mk-active' }, h('span', null, cur.icon), h('div', null, h('b', null, 'Bugünün kampanyası: ' + cur.name), h('small', null, cur.desc))));
+    const grid = h('div', { class: 'mk-grid' });
+    for (const [id, c] of Object.entries(D().campaigns || {})) {
+      const chk = M().canCampaign(id);
+      const locked = (c.unlock || 1) > s.level;
+      const active = cur && cur.id === id;
+      const fx = [];
+      if (c.demand && c.demand !== 1) fx.push('📈 Talep +%' + Math.round((c.demand - 1) * 100));
+      if (c.patience && c.patience !== 1) fx.push('⏳ Sabır +%' + Math.round((c.patience - 1) * 100));
+      if (c.tip && c.tip !== 1) fx.push('🪙 Bahşiş +%' + Math.round((c.tip - 1) * 100));
+      if (c.rep) fx.push('⭐ İtibar +' + String(c.rep).replace('.', ','));
+      if (c.studentBoost) fx.push('🎒 Daha çok öğrenci');
+      const b = locked ? h('div', { class: 'stc-lock' }, '🔒 Seviye ' + c.unlock)
+        : active ? h('div', { class: 'mk-on' }, '✔ Aktif')
+          : btn(['Başlat', h('span', { class: 'ub-price' }, fmt(c.cost))], chk.ok ? 'orange' : 'ghost', () => {
+            const r = M().runCampaign(id);
+            if (!r.ok) { notify(r.msg, 'warn'); return; }
+            confettiAt(b, 30); rerenderPanel(); refreshPrep();
+          });
+      if (!locked && !active && !chk.ok) { setDisabled(b, true); b.title = chk.msg; }
+      grid.appendChild(h('div', { class: 'mk-card' + (active ? ' on' : '') + (locked ? ' locked' : '') },
+        h('div', { class: 'mk-ico' }, c.icon), h('b', null, c.name), h('small', null, c.desc),
+        h('div', { class: 'mk-fx' }, fx.map(x => h('span', null, x))), b));
+    }
+    p.body.appendChild(grid);
+    if (s.phase !== 'prep') p.body.appendChild(h('div', { class: 'prep-tip' }, '⏰ Kantin şu an açık — yeni kampanyayı yarın sabah hazırlıkta başlatabilirsin.'));
+  }
+  function hubBank(p) {
+    const s = S(), loans = M().loans();
+    p.body.appendChild(h('div', { class: 'mn-hint' }, '🏦 Kredi çekip yatırım yapabilir ya da zor günü atlatabilirsin. Taksitler her ', h('b', null, 'gün sonunda'), ' otomatik ödenir. Erken kapamada kalan faizin yarısı silinir.'));
+    const offers = h('div', { class: 'bk-offers' });
+    for (const id of Object.keys(D().loans || {})) {
+      const o = M().loanOffer(id), chk = M().canLoan(id);
+      const locked = o.unlock > s.level;
+      const b = locked ? h('div', { class: 'stc-lock' }, '🔒 Seviye ' + o.unlock)
+        : btn('Krediyi Çek', chk.ok ? 'green' : 'ghost', () => confirmBox(o.name + ' çekilsin mi?',
+          fmt(o.amount) + ' hemen kasana geçer. ' + o.days + ' gün boyunca günde ' + fmt(o.perDay) + ' taksit ödersin (toplam ' + fmt(o.total) + ').',
+          'Krediyi çek', () => { const r = M().takeLoan(id); if (!r.ok) notify(r.msg, 'warn'); else confetti(800, 300, 30); rerenderPanel(); refreshPrep(); }));
+      if (!locked && !chk.ok) { setDisabled(b, true); b.title = chk.msg; }
+      offers.appendChild(h('div', { class: 'bko-card' + (locked ? ' locked' : '') },
+        h('div', { class: 'bko-ico' }, o.icon), h('b', null, o.name),
+        h('div', { class: 'bko-amt' }, fmt(o.amount)),
+        h('div', { class: 'bko-row' }, h('span', null, 'Vade'), h('b', null, o.days + ' gün')),
+        h('div', { class: 'bko-row' }, h('span', null, 'Faiz'), h('b', null, '%' + Math.round(o.rate * 100))),
+        h('div', { class: 'bko-row' }, h('span', null, 'Günlük taksit'), h('b', null, fmt(o.perDay))),
+        h('div', { class: 'bko-row' }, h('span', null, 'Geri ödeme'), h('b', null, fmt(o.total))),
+        !locked && !chk.ok ? h('small', { class: 'bko-why' }, chk.msg) : null, b));
+    }
+    p.body.appendChild(h('div', { class: 'sg-title' }, '💳 Kredi teklifleri'));
+    p.body.appendChild(offers);
+    p.body.appendChild(h('div', { class: 'sg-title' }, '📄 Aktif krediler'));
+    if (!loans.length) p.body.appendChild(h('div', { class: 'sm-empty' }, 'Aktif kredin yok. Borçsuz kantin, huzurlu kantin! 😌'));
+    else p.body.appendChild(h('div', { class: 'bk-loans' }, loans.map(l => {
+      const left = l.total - l.paid;
+      return h('div', { class: 'bkl-row' },
+        h('b', null, l.name), h('small', null, 'Gün ' + l.day + "'de çekildi"),
+        h('div', { class: 'bkl-prog' }, bar(l.paid / l.total, 'gold'), h('span', null, fmt(l.paid) + ' / ' + fmt(l.total))),
+        h('span', { class: 'bkl-left' }, 'Kalan ', h('b', null, fmt(left)), ' · ' + Math.ceil(left / l.perDay) + ' gün'),
+        btn('Erken Kapat', 'cream', () => confirmBox('Kredi kapatılsın mı?', 'Kalan borç (faiz indirimiyle) kasadan ödenir.', 'Öde ve kapat', () => {
+          const r = M().payOffLoan(l.uid); if (!r.ok) notify(r.msg, 'warn'); else notify('🏦 ' + fmt(r.paid) + ' ödendi, kredi kapandı.', 'good');
+          rerenderPanel(); refreshPrep();
+        })));
+    })));
+    p.setFoot(h('div', { class: 'sf-sum' }, h('span', null, 'Toplam borç: ', h('b', null, fmt(M().debt()))), h('span', null, 'Günlük taksit: ', h('b', null, fmt(M().dailyInstallment())))));
+  }
+
+  // ---------------------------------------------------------------------------
   // PANEL: TARİF DEFTERİ
   // ---------------------------------------------------------------------------
   const CONTROLS = [
@@ -1265,6 +1511,9 @@
         sec('📦', 'Stok & sipariş', '<b>Toptancı</b> ucuzdur ama açıkken ~60 dk\'da gelir; <b>bakkal</b> pahalı ama hızlıdır. <b>Telefonla</b> hazır yemek söyle — gün sonunda bozulur!'),
         sec('⭐', 'İtibar & seviye', 'Mutlu müşteri itibar ve XP getirir. Seviye atladıkça yeni tarifler, ürünler ve personel açılır.'),
         sec('🧽', 'Temizlik', 'Tezgah kirlenir; bezle sil. Müfettiş günü kirli kantine <b>ceza</b> keser.'),
+        sec('🎯', 'Hedefler & başarımlar', 'Her gün 3 <b>günlük hedef</b> gelir; tamamlayınca para ve XP kazanırsın. 📒 <b>Kantin Defteri</b>\'nde başarımlarını ve istatistiklerini takip et.'),
+        sec('📣', 'Pazarlama & banka', 'Hazırlıkta <b>kampanya</b> başlatıp talebi arttır. Zor günde <b>banka kredisi</b> çekebilirsin; taksitler gün sonunda ödenir.'),
+        sec('🫖', 'Toplu sipariş', 'Ders saatlerinde öğretmenler odası arayıp toplu sipariş verebilir. Görevli gelince hepsini eksiksiz ver — bahşiş bol!'),
         sec('💸', 'Giderler', 'Her gün sonunda kira, faturalar ve yevmiyeler ödenir. Kasa ' + fmt(D().costs.bankruptcy) + ' altına düşerse iflas edersin.')));
       p.body.appendChild(h('div', { class: 'sg-title' }, '🎮 Kontroller'));
       p.body.appendChild(controlsBlock());
@@ -1294,7 +1543,8 @@
       return el;
     };
     const income = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💰 Gelirler'),
-      row('🧾 Satışlar', r.revenue || 0, 'inc'), row('🪙 Bahşiş', r.tips || 0, 'inc'));
+      row('🧾 Satışlar', r.revenue || 0, 'inc'), row('🪙 Bahşiş', r.tips || 0, 'inc'),
+      (r.bonus || 0) > 0 ? row('🎯 Hedef & başarım ödülü', r.bonus, 'inc') : null);
     const exp = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💸 Giderler'),
       expRows.map(([k, label]) => row(label, -((r.expenses || {})[k] || 0), 'exp')),
       h('div', { class: 'sm-row total', style: { animationDelay: d.toFixed(2) + 's' } }, h('span', null, 'Toplam gider'), h('b', { class: 'exp' }, '−' + fmt(r.expenseTotal || 0))));
@@ -1319,7 +1569,9 @@
       h('div', { class: 'sm-cols' },
         h('div', { class: 'sm-col' }, income, exp,
           h('div', { class: 'sm-net', style: { animationDelay: (d + 0.1).toFixed(2) + 's' } }, h('span', null, 'GÜNÜN NETİ'), netEl),
-          h('div', { class: 'sm-cash' }, 'Kasa: ', h('b', { class: (r.money || 0) < 0 ? 'neg' : '' }, fmt(r.money || 0)))),
+          h('div', { class: 'sm-cash' }, 'Kasa: ', h('b', { class: (r.money || 0) < 0 ? 'neg' : '' }, fmt(r.money || 0)),
+            (r.debt || 0) > 0 ? h('span', { class: 'sm-debt' }, ' · 🏦 Borç ' + fmt(r.debt)) : null),
+          summaryMeta(r)),
         h('div', { class: 'sm-col' },
           h('div', { class: 'sm-tiles' },
             tile('🙋', 'Servis', r.served), tile('🏃', 'Kaçan', r.lost, (r.lost || 0) > 0 ? 'bad' : ''),
@@ -1347,6 +1599,16 @@
     showScreen('summary');
     sfx((r.net || 0) >= 0 ? 'coin' : 'error');
     if ((r.net || 0) > 0) setTimeout(() => confetti(800, 140, 40), (d + 1.1) * 1000);
+  }
+  function summaryMeta(r) {
+    const goals = r.goals || [], ach = r.achievements || [], recs = r.records || [];
+    if (!goals.length && !ach.length && !recs.length) return null;
+    return h('div', { class: 'sm-box sm-meta' },
+      goals.length ? h('div', { class: 'sm-h' }, '🎯 Günün hedefleri · ' + goals.filter(g => g.done).length + '/' + goals.length) : null,
+      goals.map(g => h('div', { class: 'smg-row' + (g.done ? ' done' : ' fail') }, h('span', null, g.done ? '✅' : '❌'), h('span', { class: 'smg-t' }, g.text),
+        h('b', null, g.done ? '+' + fmt(g.reward.money) : '—'))),
+      ach.length ? h('div', { class: 'smg-ach' }, ach.map(a => h('span', { class: 'smg-chip' }, a.icon + ' ' + a.name))) : null,
+      recs.length ? h('div', { class: 'smg-ach' }, recs.map(x => h('span', { class: 'smg-chip rec' }, 'Yeni rekor: ' + x))) : null);
   }
   function showGameOver(report) {
     closePanel(true); hideTutorial();
@@ -1579,6 +1841,9 @@
       const ct = info.type && D().customerTypes && D().customerTypes[info.type];
       notify('😠 ' + (info.name || (ct && ct.name) || 'Müşteri') + ' beklemekten sıkılıp gitti!', 'bad');
     });
+    on('achievement', a => showAchievement(a));
+    on('goalDone', () => { updateHUD(); if (E.hudQ && E.hudQ.btns.kantin) { const b = E.hudQ.btns.kantin; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); confettiAt(b, 26); } if (curPanel && curPanel.id === 'kantin') rerenderPanel(); });
+    on('campaign', () => refreshPrep());
     on('moneyChanged', () => { /* HUD 5Hz döngüde yakalar */ });
     on('powerChange', () => updateHUD());
   }
@@ -1607,13 +1872,14 @@
     E.prep = h('div', { id: 'ks-prep', class: 'ks-passive ks-hide' });
     E.banner = h('div', { class: 'ks-banner ks-passive' });
     E.popup = h('div', { id: 'ks-popup', class: 'ks-passive' });
+    E.ach = h('div', { id: 'ks-ach', class: 'ks-passive' });
     E.notifs = h('div', { id: 'ks-notifs', class: 'ks-passive' });
     E.fx = h('div', { id: 'ks-fx', class: 'ks-passive' });
     E.modal = h('div', { id: 'ks-modal', class: 'ks-hide' });
     E.modal.addEventListener('pointerdown', ev => { if (ev.target === E.modal) { E.modal._down = true; } });
     E.modal.addEventListener('click', ev => { if (ev.target === E.modal && E.modal._down) { sfx('click'); closePanel(); } E.modal._down = false; });
     E.summary = h('div', { id: 'ks-summary', class: 'ks-screen ks-hide' });
-    add(root, [E.prep, buildTutorial(), buildHUD(), E.banner, buildMainMenu(), E.summary, buildPause(), E.modal, E.popup, E.notifs, E.fx]);
+    add(root, [E.prep, buildTutorial(), buildHUD(), E.banner, buildMainMenu(), E.summary, buildPause(), E.modal, E.popup, E.ach, E.notifs, E.fx]);
     // klavye: paneller için kısayollar yok; Esc çekirdekte
     window.addEventListener('pointerdown', () => unlockAudio(), { once: true });
     window.addEventListener('resize', () => placeTutorial());

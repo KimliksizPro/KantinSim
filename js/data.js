@@ -105,6 +105,16 @@ window.KS = window.KS || {};
       defaults: ['marul', 'domates', 'tursu', 'ketcap'], toast: false, price: 170, unlock: 4, time: 'Uzun',
       steps: ['Köfteyi ızgarada iki yüzlü pişir', 'Tabağa hamburger ekmeği koy', 'Köfte + cheddar ekle', 'İstenen garnitür ve sosları ekle'],
     },
+    ayvalik_tostu: {
+      name: 'Ayvalık Tostu', base: 'tost_ekmegi', required: ['kasar', 'sucuk', 'domates', 'tursu'], optional: ['ketcap', 'mayonez', 'pul_biber'],
+      defaults: ['ketcap', 'mayonez'], toast: true, price: 145, unlock: 5, time: 'Orta',
+      steps: ['Tabağa tost ekmeği koy', 'Kaşar, sucuk, domates ve turşu ekle', 'Ketçap & mayonez sür', 'Tost makinesinde bas, altın sarısı olunca çıkar'],
+    },
+    kofte_durum: {
+      name: 'Köfte Dürüm', base: 'lavas', required: ['kofte'], optional: ['domates', 'sogan', 'marul', 'maydanoz', 'tursu', 'pul_biber'],
+      defaults: ['domates', 'sogan', 'maydanoz'], toast: false, price: 165, unlock: 6, time: 'Orta',
+      steps: ['Köfteyi ızgarada iki yüzlü pişir', 'Tabağa lavaş koy', 'Pişmiş köfteyi ekle', 'Domates, soğan, maydanoz ekleyip sar'],
+    },
   };
 
   // ---------------------------------------------------------------------------
@@ -126,6 +136,10 @@ window.KS = window.KS || {};
     hazir_cigkofte: { name: 'Hazır Çiğ Köfte Dürüm', group: 'hazir', buy: 55, price: 85, pack: 1, supplier: 'cigkofteci', start: 0, unlock: 1, color: '#8c2a1a' },
     lahmacun:     { name: 'Lahmacun',         group: 'hazir',   buy: 70,  price: 100, pack: 1, supplier: 'pideci',    start: 0, unlock: 2, color: '#c0472a' },
     kiymali_pide: { name: 'Kıymalı Pide',     group: 'hazir',   buy: 120, price: 165, pack: 1, supplier: 'pideci',    start: 0, unlock: 2, color: '#d08a3c' },
+    gofret:       { name: 'Gofret',           group: 'paketli', buy: 8,  price: 15, pack: 24, supplier: 'toptanci', start: 0, unlock: 2, color: '#c8873a' },
+    soguk_cay:    { name: 'Soğuk Çay',        group: 'paketli', buy: 16, price: 30, pack: 24, supplier: 'toptanci', start: 0, unlock: 3, drink: true, color: '#e0a23a' },
+    sutlac:       { name: 'Fırın Sütlaç',     group: 'paketli', buy: 22, price: 40, pack: 12, supplier: 'toptanci', start: 0, unlock: 4, color: '#f6ead0' },
+    limonata:     { name: 'Ev Limonatası',    group: 'paketli', buy: 14, price: 30, pack: 20, supplier: 'toptanci', start: 0, unlock: 5, drink: true, color: '#f7e86a' },
   };
 
   // ---------------------------------------------------------------------------
@@ -195,6 +209,7 @@ window.KS = window.KS || {};
     cirak:      { name: 'Çırak Emre (Çaycı)', wage: 350, unlock: 2, desc: 'Demliği kendisi tazeler, boş bardakları doldurur.' },
     temizlikci: { name: 'Temizlikçi Fatma Abla', wage: 300, unlock: 2, desc: 'Tezgahı düzenli siler, kirlilik daha yavaş artar.' },
     kasiyer:    { name: 'Kasiyer Kerem', wage: 400, unlock: 3, desc: 'Ödemeleri hızlandırır; müşteriler %15 daha sabırlı.' },
+    sef:        { name: 'Usta Aşçı Nihat', wage: 550, unlock: 6, desc: 'Izgaradaki köfteleri tam zamanında çevirir, fritözdeki patatesi yanmadan çıkarır.' },
   };
 
   // ---------------------------------------------------------------------------
@@ -243,6 +258,30 @@ window.KS = window.KS || {};
     sinav:        { name: 'Sınav Haftası', weight: 1.0, desc: 'Öğrenciler gergin ve aceleci: sabır az, çay talebi yüksek.', demand: 1.1, patience: 0.8, prefs: { cay: 1.6, cikolata: 1.6 } },
     elektrik:     { name: 'Elektrik Kesintisi', weight: 0.8, desc: '11:00 - 11:40 arası elektrik kesik! Tost makinesi ve fritöz çalışmaz.', demand: 1.0, powerCut: [660, 700] },
     burs:         { name: 'Harçlık Günü', weight: 0.8, desc: 'Ay başı! Öğrencilerin cebi dolu, bahşişler bol.', demand: 1.15, tip: 1.6 },
+    gezi:         { name: 'Okul Gezisi', weight: 0.7, desc: 'Birkaç sınıf müzeye gitti: kantin bugün sakin. Hazır yemeği az söyle!', demand: 0.7 },
+    ogretmenler:  { name: 'Öğretmenler Günü', weight: 0.6, desc: 'Öğretmenler kutlama yapıyor: daha çok öğretmen müşteri ve toplu çay siparişi.', demand: 1.1, typeMult: { ogretmen: 3 }, tip: 1.3, prefs: { cay: 1.5, sutlac: 1.6, pogaca: 1.3 } },
+    kermes:       { name: 'Hayır Kermesi', weight: 0.6, desc: 'Bahçede kermes var: veliler ve misafirlerle kantin tıklım tıklım!', demand: 1.45, adultRatio: 0.35, prefs: { simit: 1.4, ayran: 1.4, kofte_ekmek: 1.3 } },
+  };
+
+  // ---------------------------------------------------------------------------
+  // PAZARLAMA KAMPANYALARI — hazırlıkta seçilir, o gün geçerlidir
+  // demand: talep çarpanı | patience: sabır çarpanı | tip: bahşiş çarpanı | rep: gün sonu itibar
+  // ---------------------------------------------------------------------------
+  const campaigns = {
+    afis:    { name: 'Okul Panosuna Afiş',   icon: '📋', cost: 150, unlock: 1, demand: 1.10, desc: 'Koridordaki panoya renkli menü afişi as. Talep +%10.' },
+    anons:   { name: 'Okul Radyosu Anonsu',   icon: '📻', cost: 350, unlock: 2, demand: 1.20, patience: 1.05, desc: 'Teneffüste okul radyosunda kantin reklamı. Talep +%20.' },
+    sosyal:  { name: 'Okul Sosyal Medyası',   icon: '📱', cost: 600, unlock: 3, demand: 1.32, studentBoost: true, desc: 'Öğrenci sayfasında kantin paylaşımı. Talep +%32, öğrenciler akın eder.' },
+    ikram:   { name: 'Bedava Çay İkramı',     icon: '🫖', cost: 250, unlock: 2, demand: 1.05, rep: 0.12, tip: 1.15, desc: 'Sabah ilk gelenlere çay ikramı. İtibar +0,12, bahşiş +%15.' },
+    sadakat: { name: 'Sadakat Kartı Günü',    icon: '💳', cost: 450, unlock: 4, demand: 1.15, patience: 1.2, tip: 1.1, desc: 'Damga kartı dağıt: müşteriler %20 daha sabırlı, talep +%15.' },
+  };
+
+  // ---------------------------------------------------------------------------
+  // BANKA KREDİLERİ — gün sonunda taksit düşer
+  // ---------------------------------------------------------------------------
+  const loans = {
+    kucuk: { name: 'Esnaf Kredisi',    amount: 2000,  days: 8,  rate: 0.12, unlock: 1, icon: '💵' },
+    orta:  { name: 'İşletme Kredisi',  amount: 5000,  days: 12, rate: 0.18, unlock: 2, icon: '🏦' },
+    buyuk: { name: 'Yatırım Kredisi',  amount: 12000, days: 20, rate: 0.25, unlock: 4, icon: '🏛️' },
   };
 
   // ---------------------------------------------------------------------------
@@ -274,6 +313,6 @@ window.KS = window.KS || {};
 
   KS.DATA = {
     ingredients, binOrder, prepared, dishBases, recipes, products, suppliers, upgrades, staff,
-    periods, OPEN_MIN, CLOSE_MIN, weekdays, weathers, events, customerTypes, levels, costs,
+    periods, OPEN_MIN, CLOSE_MIN, weekdays, weathers, events, customerTypes, levels, costs, campaigns, loans,
   };
 })(window.KS);

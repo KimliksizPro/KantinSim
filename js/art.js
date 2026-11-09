@@ -1112,7 +1112,7 @@
         const p = D.products[id];
         if (p && (!KS.isProductUnlocked || KS.isProductUnlocked(id))) out.push([p.name.replace(' (0,5L)', ''), (s.prices && s.prices[id] != null) ? s.prices[id] : p.price]);
       }
-      return out.slice(0, 9);
+      return out.slice(0, 11);
     } catch (e) { return []; }
   }
   let _menuSig = null, _menuKey = '', _menuCheck = -1;
@@ -1123,12 +1123,13 @@
     g.strokeStyle = 'rgba(255,240,200,0.6)'; g.lineWidth = 1.2;
     g.beginPath(); g.moveTo(Bd.x + 14, Bd.y + 23); g.quadraticCurveTo(Bd.x + Bd.w / 2, Bd.y + 27, Bd.x + Bd.w - 14, Bd.y + 23); g.stroke();
     const cols = ['#ffffff', '#ffe28a', '#ffc0cb', '#bfe8ff', '#c8f5b0'];
+    const step = items.length > 1 ? Math.min(16.5, 134 / (items.length - 1)) : 16.5, fs = step < 14 ? 9 : 10;
     items.forEach((it, i) => {
-      const y = Bd.y + 36 + i * 16.5;
-      g.font = '700 10px ' + FONT_T; g.textAlign = 'left';
+      const y = Bd.y + 36 + i * step;
+      g.font = '700 ' + fs + 'px ' + FONT_T; g.textAlign = 'left';
       g.fillStyle = rgba(cols[i % cols.length], 0.88);
       g.fillText(it[0], Bd.x + 5, y, 66);
-      g.textAlign = 'right'; g.font = '800 10px ' + FONT_T; g.fillStyle = '#fff6d6';
+      g.textAlign = 'right'; g.font = '800 ' + fs + 'px ' + FONT_T; g.fillStyle = '#fff6d6';
       g.fillText(Math.round(it[1]) + '₺', Bd.x + Bd.w - 4, y);
     });
     // karalamalar
@@ -2110,6 +2111,72 @@
       g.restore();
     },
   };
+  // Sonradan eklenen paketli ürünler
+  Object.assign(PROD, {
+    gofret(g) {
+      g.save(); g.rotate(-0.12);
+      rr(g, -44, -20, 88, 40, 6);
+      g.fillStyle = lin(g, 0, -20, 0, 20, [[0, '#e85a8a'], [0.5, '#c8326a'], [1, '#8e1c48']]); g.fill(); outline(g, '#5a0e2c');
+      g.save(); rr(g, -44, -20, 88, 40, 6); g.clip();
+      // pencere: gofret dokusu
+      rr(g, -30, -10, 46, 20, 4); g.fillStyle = lin(g, 0, -10, 0, 10, [[0, '#f0c27e'], [1, '#c8873a']]); g.fill();
+      g.strokeStyle = 'rgba(120,70,20,0.55)'; g.lineWidth = 1;
+      g.beginPath(); for (let x = -28; x < 16; x += 5) { g.moveTo(x, -10); g.lineTo(x, 10); } for (let y = -6; y < 10; y += 5) { g.moveTo(-30, y); g.lineTo(16, y); } g.stroke();
+      g.fillStyle = '#5a2d14'; g.fillRect(-30, -2, 46, 3);
+      g.fillStyle = '#fff2c4'; g.font = '900 11px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('GOFRET', 30, 0);
+      g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(-44, -18, 88, 6);
+      g.restore();
+      // kırışık uçlar
+      g.fillStyle = '#b02a5c';
+      for (const sx of [-1, 1]) { g.beginPath(); for (let i = 0; i < 5; i++) { const y = -18 + i * 9; g.moveTo(sx * 44, y); g.lineTo(sx * 50, y + 4.5); g.lineTo(sx * 44, y + 9); } g.fill(); }
+      g.restore();
+    },
+    soguk_cay(g) {
+      rr(g, -20, -38, 40, 82, 8);
+      g.fillStyle = lin(g, -20, 0, 20, 0, [[0, '#7a4a0c'], [0.35, '#f0b040'], [0.55, '#d8902a'], [1, '#6a3c08']]); g.fill(); outline(g, '#4a2804');
+      g.save(); rr(g, -20, -38, 40, 82, 8); g.clip();
+      // şeftali ve buz
+      circ(g, -2, 12, 11); g.fillStyle = rad(g, -6, 8, 2, 12, [[0, '#ffd08a'], [1, '#ff8a3c']]); g.fill();
+      ell(g, 6, 2, 6, 3, -0.6); g.fillStyle = '#4fae3a'; g.fill();
+      rr(g, -16, -24, 12, 12, 3); g.fillStyle = 'rgba(220,245,255,0.75)'; g.fill();
+      rr(g, 2, -28, 10, 10, 3); g.fillStyle = 'rgba(220,245,255,0.6)'; g.fill();
+      g.fillStyle = '#fff8e6'; g.font = '900 9.5px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SOĞUK ÇAY', 0, 32);
+      g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(-12, -36, 5, 78);
+      g.restore();
+      ell(g, 0, -38, 17, 5); g.fillStyle = lin(g, -17, 0, 17, 0, [[0, '#8a949e'], [0.5, '#f2f5f8'], [1, '#7a848e']]); g.fill(); outline(g, '#4a525a', 1.4);
+      rr(g, -5, -41, 10, 5, 2); g.strokeStyle = '#6a737c'; g.lineWidth = 1.4; g.stroke();
+      // damlalar
+      for (const d of [[-14, -6], [12, 20], [-10, 28]]) { ell(g, d[0], d[1], 1.6, 2.6); g.fillStyle = 'rgba(255,255,255,0.7)'; g.fill(); }
+    },
+    sutlac(g) {
+      // toprak kase
+      g.beginPath(); g.moveTo(-38, -8); g.lineTo(38, -8); g.quadraticCurveTo(34, 30, 0, 32); g.quadraticCurveTo(-34, 30, -38, -8); g.closePath();
+      g.fillStyle = lin(g, -38, 0, 38, 0, [[0, '#8a3e1a'], [0.4, '#d0743a'], [1, '#7a3412']]); g.fill(); outline(g, '#4a1e08');
+      g.strokeStyle = 'rgba(255,220,180,0.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-32, 6); g.quadraticCurveTo(0, 14, 32, 6); g.stroke();
+      // fırınlanmış üst
+      ell(g, 0, -8, 38, 10); g.fillStyle = '#f6ead0'; g.fill(); outline(g, '#b07a3a', 1.6);
+      ell(g, 0, -9, 34, 8); g.fillStyle = rad(g, 4, -10, 2, 30, [[0, '#c8742a'], [0.45, '#e0a050'], [1, '#f6e2b8']]); g.fill();
+      g.fillStyle = 'rgba(110,50,10,0.45)'; for (const b of [[-12, -10, 4], [8, -7, 3], [16, -11, 2.5], [-2, -12, 2]]) { ell(g, b[0], b[1], b[2], b[2] * 0.6); g.fill(); }
+      // tarçın serpintisi
+      const R = rng(171); g.fillStyle = 'rgba(90,40,10,0.6)'; for (let i = 0; i < 22; i++) { circ(g, (R() - 0.5) * 56, -9 + (R() - 0.5) * 10, 0.9); g.fill(); }
+      gloss(g, -18, -12, 10, 2.5, -0.1, 0.4);
+    },
+    limonata(g) {
+      const body = () => { g.beginPath(); g.moveTo(-22, -30); g.lineTo(22, -30); g.lineTo(18, 42); g.quadraticCurveTo(0, 46, -18, 42); g.closePath(); };
+      body(); g.fillStyle = lin(g, -22, 0, 22, 0, [[0, 'rgba(240,230,120,0.9)'], [0.4, 'rgba(255,250,200,0.95)'], [1, 'rgba(230,210,90,0.9)']]); g.fill(); outline(g, '#a89a2a');
+      g.save(); body(); g.clip();
+      g.fillStyle = 'rgba(255,240,120,0.55)'; g.fillRect(-24, -18, 48, 64);
+      for (const b of [[-8, 0, 2], [6, 14, 1.6], [-4, 26, 1.8], [10, -6, 1.4]]) { circ(g, b[0], b[1], b[2]); g.fillStyle = 'rgba(255,255,255,0.8)'; g.fill(); }
+      rr(g, -12, -16, 11, 11, 3); g.fillStyle = 'rgba(235,250,255,0.6)'; g.fill();
+      ell(g, 2, 8, 5, 3, 0.4); g.fillStyle = '#4fae3a'; g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(-15, -28, 4, 70);
+      g.restore();
+      // limon dilimi ve pipet
+      g.save(); g.translate(20, -30); g.rotate(0.3); lemonSlice(g, 0, 0, 12, true); g.restore();
+      g.strokeStyle = '#e8402f'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, 20); g.lineTo(-12, -44); g.stroke();
+      g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(-6, 20); g.lineTo(-12, -44); g.stroke(); g.setLineDash([]);
+    },
+  });
   function fallbackProduct(g, id) {
     const c = colorOf(id);
     rr(g, -26, -36, 52, 76, 8);

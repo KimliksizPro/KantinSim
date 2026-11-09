@@ -1002,8 +1002,11 @@
       const it = sl.item; if (!it) return;
       n++;
       const s = G.slots[i]; if (!s) return;
-      if (run) it.cookA = Math.min(TUNE.grillMax, num(it.cookA, 0) + dt * spd / TUNE.grillTime);
+      const chef = !!(KS.hasStaff && KS.hasStaff('sef'));
+      const resting = chef && num(it.cookA, 0) >= 1.0 && num(it.cookB, 0) >= 1.0;   // usta aşçı pişmiş köfteyi ızgaranın kenarına çeker
+      if (run && !resting) it.cookA = Math.min(TUNE.grillMax, num(it.cookA, 0) + dt * spd / TUNE.grillTime);
       const a = num(it.cookA, 0), b = num(it.cookB, 0);
+      if (chef && run && a >= 1.0 && b < TUNE.grillReady && sl.flipT < 0) { flipPatty(i); floatTxt(s.cx, s.cy - s.r - 12, '👨‍🍳 Çevirdi', '#ffe08a', 15); }
       if (!sl.ready && a >= TUNE.grillReady) { sl.ready = true; if (b < TUNE.grillReady) snd('tick', { vol: 0.5 }); }
       if (!sl.smk && a >= TUNE.grillSmoke) sl.smk = true;
       if (!sl.burn && a >= TUNE.grillBurn) { sl.burn = true; snd('burn'); floatTxt(s.cx, s.cy - s.r - 14, 'Yanıyor!', '#ff6a5a', 18); }
@@ -1257,6 +1260,7 @@
       if (B.c) {
         if (run && inOil && heat > 0) { B.c.cook = Math.min(TUNE.fryMax, num(B.c.cook, 0) + dt * spd * heat / TUNE.fryTime); frying = true; }
         const c = num(B.c.cook, 0);
+        if (run && B.down && c >= 1.02 && KS.hasStaff && KS.hasStaff('sef')) { toggleBasket(i); floatTxt(g.cx, G.oilY - 40, '👨‍🍳 Kaldırdı', '#ffe08a', 15); }
         if (!B.ready && c >= TUNE.fryDone) { B.ready = true; if (c < TUNE.fryBurn) { snd('ready'); floatTxt(g.cx, G.oilY - 24, 'Hazır!', '#7dff8a', 20); } }
         if (!B.burn && c >= TUNE.fryBurn) { B.burn = true; snd('burn'); floatTxt(g.cx, G.oilY - 24, 'Yandı!', '#ff6a5a', 20); }
         if (run && c >= TUNE.frySmoke && Math.random() < dt * (c >= TUNE.fryBurn ? 6 : 2.5)) {

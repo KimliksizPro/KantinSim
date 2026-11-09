@@ -26,12 +26,14 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 | Çiğ Köfte Dürüm | Leğende bulgur + isot + salça yoğur → lavaş + çiğ köfte + marul + nar ekşisi + limon |
 | Patates Kızartması | Fritözde kızart → keseye → tuz / ketçap / mayonez |
 | Çay | Semaverde demle → ince belli bardağa doldur |
+| Ayvalık Tostu *(Sv. 5)* | Tost ekmeği + kaşar + sucuk + domates + turşu + ketçap/mayonez → tost makinesi |
+| Köfte Dürüm *(Sv. 6)* | Izgarada pişmiş köfte + lavaş + domates/soğan/maydanoz |
 
 Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul biber"**… Balona dikkat!
 
 ## Hazır ürünler
 
-- **Toptancı / Bakkal**: ayran, su, kola, meyve suyu, cips, çikolata ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
+- **Toptancı / Bakkal**: ayran, su, kola, meyve suyu, cips, çikolata, gofret, soğuk çay, fırın sütlaç, ev limonatası ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
 - **Telefonla sipariş (kurye)**: Dönerci (et/tavuk döner dürüm), Çiğköfteci (hazır dürüm), Fırın (simit, poğaça), Pideci (lahmacun, kıymalı pide).
   Hazır yemekler gün sonunda bozulur — doğru miktarda sipariş ver!
 
@@ -48,6 +50,19 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 - **Temizlik**: tezgah kirlenir, müşteriler ve müfettiş fark eder.
 - **Seviye & kilitler**: XP ile yeni tarifler, restoranlar ve personel açılır. Oyun otomatik kaydedilir.
 
+## Kantin Defteri (📒 HUD'daki 🎯 Hedef düğmesi)
+
+- **Günlük hedefler**: her sabah 3 rastgele hedef (ör. "70 müşteriye servis yap", "5 adet Köfte Ekmek sat",
+  "günü hiç kızgın müşteri olmadan bitir"). Tamamlanınca anında para + XP ödülü.
+- **Başarımlar**: 29 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
+- **İstatistik**: günlük net kâr, müşteri, ciro ve itibar grafikleri; rekorlar; tüm zamanların en çok satanları.
+- **Pazarlama**: hazırlıkta günlük kampanya — okul panosuna afiş, okul radyosu, sosyal medya, bedava çay ikramı, sadakat kartı.
+- **Banka**: esnaf / işletme / yatırım kredisi. Taksitler gün sonunda ödenir, erken kapamada faiz indirimi.
+- **Toplu sipariş**: ders saatlerinde öğretmenler odası, rehberlik servisi veya spor salonu arar; görevli gelince
+  3 kalemlik siparişi eksiksiz ver — bahşiş ×1,8 ve ek XP.
+- **Usta Aşçı Nihat** *(Sv. 6 personel)*: ızgaradaki köfteyi zamanında çevirir, fritöz sepetini yanmadan kaldırır.
+- Yeni günlük olaylar: **Okul Gezisi**, **Öğretmenler Günü**, **Hayır Kermesi**.
+
 ## Proje yapısı
 
 Vanilla JS + HTML5 Canvas, build adımı yok, tüm grafikler ve sesler prosedürel olarak kodla üretilir.
@@ -63,6 +78,7 @@ js/audio.js           prosedürel ses efektleri ve müzik (WebAudio)
 js/stations_prep.js   malzeme kutuları, tezgah, çiğ köfte leğeni, sıcak dolap, vitrin, temizlik, çöp
 js/stations_cook.js   tost makinesi, ızgara, fritöz, semaver
 js/customers.js       müşteri yapay zekâsı, sipariş, sabır, ödeme, müfettiş
+js/meta.js            günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş
 js/ui.js              HUD, paneller, gün sonu raporu, eğitim
 CONTRACT.md           modüller arası arayüz sözleşmesi
 ```

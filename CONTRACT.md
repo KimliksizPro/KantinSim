@@ -16,7 +16,9 @@ Oyun dili **Türkçe** (tüm metinler, etiketler, bildirimler Türkçe ve doğru
 | `js/customers.js` | Müşteriler | müşteri üretimi, sıra, sipariş, sabır, ödeme, itibar, müfettiş |
 | `js/ui.js`, `css/ui.css` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim |
 
-Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → ui → main.
+| `js/meta.js` | Meta sistemler | günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş |
+
+Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → meta → ui → main.
 `KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
 Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmiştir). Başka modülün API'sini
 çağırmadan önce varlığını kontrol edin (`KS.Customers && ...`).
@@ -36,6 +38,10 @@ Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmi
 - Gün akışı: `KS.game.newGame() / continueGame() / openShop() / endDay() / nextDay() / togglePause(v?)`; `KS.currentPeriod()`, `KS.isBreak()`, `KS.inputEnabled()`, `KS.powerOn()`, `KS.todayEvent()`, `KS.todayWeather()`, `KS.lastReport`
 - Kayıt: `KS.save()`, `KS.load()`, `KS.hasSave()`, `KS.deleteSave()`
 - Kancalar: `KS.hooks.activeCustomerCount = () => n`, `KS.hooks.forceCustomersLeave = () => {}` (müşteri modülü üzerine yazar)
+- Meta kancaları (meta.js yazar, customers.js okur): `KS.hooks.demandMult/patienceMult/tipMult/studentMult = () => çarpan`
+- `KS.bonus(tl, x?, y?)`: satış dışı ödül geliri (`today.bonus`, gün netine dahil). `beforeDayEnd` olayı sabit giderlerden önce yayılır (kredi taksiti, hedef değerlendirme).
+- `KS.Meta = { goals(), goalProgress(g), achievements(), achProgress(a), isUnlocked(id), campaign(), canCampaign(id), runCampaign(id), loans(), loanOffer(id), canLoan(id), takeLoan(id), payOffLoan(uid), debt(), dailyInstallment(), lifeStats() }`
+  - Olaylar: `goalDone(goal)`, `achievement(ach)`, `campaign(id)`, `loanTaken(loan)`, `loanRepaid(loan)`, `bulkOrder(info)`
 - Efekt: `KS.fx.floatText(x,y,text,color,size)`, `KS.fx.burst(x,y,color,n,opts)`, `KS.fx.smoke(x,y,n,color)`, `KS.fx.coins(x,y,n)`, `KS.fx.shake(a)`
 - `KS.notify(msg, 'info'|'good'|'bad'|'warn')` → UI'ın `KS.ui.notify`'ına gider
 - `KS.time` gerçek geçen saniye (animasyon için), `KS.roundRectPath(ctx,x,y,w,h,r)`

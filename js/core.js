@@ -110,7 +110,10 @@ window.KS = window.KS || {};
       cleanliness: 100,         // 0..100
       power: true,
       today: null,              // rollToday() doldurur
-      stats: { total: { revenue: 0, served: 0, lost: 0, tips: 0, days: 0 } },
+      stats: { total: { revenue: 0, served: 0, lost: 0, tips: 0, days: 0 }, life: {}, sales: {} },
+      achievements: {},         // {id: gün}  (meta modülü)
+      loans: [],                // aktif krediler (meta modülü)
+      goalsDone: 0,
       tutorialDone: false,
       settings: { sound: true, music: true },
       history: [],              // gün sonu raporları
@@ -126,8 +129,9 @@ window.KS = window.KS || {};
       weekday: D.weekdays[(s.day - 1) % 5],
       weather: s.day === 1 ? 'gunesli' : util.weighted(wmap),
       event: ev,
-      revenue: 0, tips: 0, served: 0, lost: 0, angry: 0, perfect: 0,
-      expenses: { malzeme: 0, hazir: 0, nakliye: 0, geliştirme: 0, personel: 0, kira: 0, fatura: 0, ceza: 0, diger: 0 },
+      revenue: 0, tips: 0, bonus: 0, served: 0, lost: 0, angry: 0, perfect: 0,
+      expenses: { malzeme: 0, hazir: 0, nakliye: 0, geliştirme: 0, personel: 0, kira: 0, fatura: 0, reklam: 0, kredi: 0, ceza: 0, diger: 0 },
+      campaign: null, goals: null, meta: {},
       sales: {},              // {lineId: adet}
       repStart: s.rep, xpStart: s.xp, moneyStart: s.money,
       wasted: 0,
@@ -155,6 +159,13 @@ window.KS = window.KS || {};
       // yeni eklenen alanlar için birleştir
       for (const k of ['inventory', 'products', 'prices', 'upgrades']) loaded[k] = Object.assign({}, base[k], loaded[k]);
       loaded.menu = Object.assign({}, base.menu, loaded.menu);
+      loaded.stats = Object.assign({}, base.stats, loaded.stats || {});
+      loaded.stats.total = Object.assign({}, base.stats.total, loaded.stats.total || {});
+      if (loaded.today) {
+        loaded.today.expenses = Object.assign({ reklam: 0, kredi: 0 }, loaded.today.expenses || {});
+        if (loaded.today.bonus == null) loaded.today.bonus = 0;
+        if (!loaded.today.meta) loaded.today.meta = {};
+      }
       KS.state = Object.assign(base, loaded);
       KS.bus.emit('stateLoaded');
       return true;
@@ -184,6 +195,16 @@ window.KS = window.KS || {};
     if (s.today) s.today.expenses[category] = (s.today.expenses[category] || 0) + amount;
     KS.bus.emit('moneyChanged', s.money);
     return true;
+  };
+
+  // Ödül (hedef / başarım): satış dışı gelir, gün netine dahil
+  KS.bonus = function (amount, x, y) {
+    const s = KS.state;
+    amount = Math.round(amount || 0); if (amount <= 0) return;
+    s.money += amount;
+    if (s.today) s.today.bonus = (s.today.bonus || 0) + amount;
+    if (x != null) KS.fx.floatText(x, y, '+' + util.fmtMoney(amount), '#7fd8ff');
+    KS.bus.emit('moneyChanged', s.money);
   };
 
   KS.inv = {
@@ -371,6 +392,7 @@ window.KS = window.KS || {};
       if (s.phase === 'summary') return;
       KS.returnHeld && KS.returnHeld();
       KS.hooks.forceCustomersLeave();
+      KS.bus.emit('beforeDayEnd');
       // sabit giderler
       KS.spend(D.costs.rent, 'kira', true);
       const upgLevels = Object.values(s.upgrades).reduce((a, b) => a + b, 0);
@@ -396,8 +418,8 @@ window.KS = window.KS || {};
       const expenses = Object.values(t.expenses).reduce((a, b) => a + b, 0);
       const report = {
         day: s.day, weekday: t.weekday, weather: t.weather, event: t.event,
-        revenue: t.revenue, tips: t.tips, expenses: Object.assign({}, t.expenses), expenseTotal: expenses,
-        net: t.revenue + t.tips - expenses,
+        revenue: t.revenue, tips: t.tips, bonus: t.bonus || 0, expenses: Object.assign({}, t.expenses), expenseTotal: expenses,
+        net: t.revenue + t.tips + (t.bonus || 0) - expenses,
         served: t.served, lost: t.lost, angry: t.angry, perfect: t.perfect,
         repDelta: s.rep - t.repStart, xpDelta: s.xp - t.xpStart, rep: s.rep, level: s.level,
         money: s.money, spoiled, spoiledProd, sales: Object.assign({}, t.sales), cleanliness: s.cleanliness,

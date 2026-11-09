@@ -47,7 +47,8 @@
   const CATEGORY = {
     // tarifler
     kasarli_tost: 'main', karisik_tost: 'main', kofte_ekmek: 'main', hamburger: 'main', cigkofte_durum: 'main',
-    patates: 'side', cay: 'hot',
+    patates: 'side', cay: 'hot', ayvalik_tostu: 'main', kofte_durum: 'main',
+    gofret: 'snack', soguk_cay: 'drink', sutlac: 'snack', limonata: 'drink',
     // ürünler
     ayran: 'drink', su: 'drink', kola: 'drink', meyve_suyu: 'drink',
     cips: 'snack', cikolata: 'snack', simit: 'bakery', pogaca: 'bakery',
@@ -58,6 +59,7 @@
     kasarli_tost: 1.6, karisik_tost: 1.4, cay: 1.0, kofte_ekmek: 1.5, patates: 1.2, cigkofte_durum: 1.2, hamburger: 1.4,
     ayran: 1.2, su: 1.0, kola: 1.3, meyve_suyu: 0.9, cips: 1.0, cikolata: 0.9, simit: 1.0, pogaca: 1.0,
     et_doner: 1.3, tavuk_doner: 1.3, hazir_cigkofte: 1.0, lahmacun: 1.1, kiymali_pide: 0.9,
+    ayvalik_tostu: 1.3, kofte_durum: 1.4, gofret: 0.9, soguk_cay: 1.1, sutlac: 0.8, limonata: 1.0,
   };
 
   const PERIOD_PREFS = {
@@ -65,10 +67,10 @@
       kola: 0.5, cips: 0.4, cikolata: 0.6, kofte_ekmek: 0.35, hamburger: 0.3, et_doner: 0.3, tavuk_doner: 0.3,
       lahmacun: 0.5, kiymali_pide: 0.6, patates: 0.3, cigkofte_durum: 0.4, hazir_cigkofte: 0.4 },
     ders: { cay: 2.8, simit: 1.5, pogaca: 1.3, kasarli_tost: 1.2, su: 1.1, cips: 0.6, kola: 0.6 },
-    teneffus: { kasarli_tost: 2.0, karisik_tost: 1.6, cips: 2.2, cikolata: 2.2, kola: 2.0, su: 1.8, meyve_suyu: 1.5,
+    teneffus: { gofret: 2.2, soguk_cay: 1.8, limonata: 1.4, ayvalik_tostu: 1.3, kasarli_tost: 2.0, karisik_tost: 1.6, cips: 2.2, cikolata: 2.2, kola: 2.0, su: 1.8, meyve_suyu: 1.5,
       simit: 1.2, pogaca: 1.2, cay: 0.8, kofte_ekmek: 0.6, hamburger: 0.5, et_doner: 0.5, tavuk_doner: 0.5,
       lahmacun: 0.5, kiymali_pide: 0.4, cigkofte_durum: 0.7, hazir_cigkofte: 0.7, patates: 0.9 },
-    ogle: { kofte_ekmek: 3.2, et_doner: 2.6, tavuk_doner: 2.6, hamburger: 2.6, kasarli_tost: 1.4, karisik_tost: 1.8,
+    ogle: { kofte_durum: 3.0, ayvalik_tostu: 1.8, limonata: 1.6, soguk_cay: 1.4, sutlac: 1.3, kofte_ekmek: 3.2, et_doner: 2.6, tavuk_doner: 2.6, hamburger: 2.6, kasarli_tost: 1.4, karisik_tost: 1.8,
       cigkofte_durum: 2.3, hazir_cigkofte: 2.1, ayran: 2.4, lahmacun: 2.3, kiymali_pide: 2.1, patates: 1.6,
       kola: 1.3, cay: 0.6, cikolata: 0.5, simit: 0.5, pogaca: 0.5, cips: 0.6 },
     cikis: { kola: 2.5, cips: 2.2, patates: 2.5, hamburger: 1.4, cikolata: 1.6, meyve_suyu: 1.4, su: 1.2,
@@ -77,8 +79,8 @@
   };
 
   const TYPE_PREFS = {
-    ogrenci: { cay: 0.25, cips: 1.3, kola: 1.3, cikolata: 1.2, hamburger: 1.2 },
-    ogretmen: { cay: 4, simit: 1.5, pogaca: 1.5, kasarli_tost: 1.3, cips: 0.3, cikolata: 0.4, kola: 0.4, su: 1.2 },
+    ogrenci: { cay: 0.25, cips: 1.3, kola: 1.3, cikolata: 1.2, hamburger: 1.2, gofret: 1.5, soguk_cay: 1.4, sutlac: 0.6 },
+    ogretmen: { cay: 4, sutlac: 1.8, limonata: 1.2, gofret: 0.4, simit: 1.5, pogaca: 1.5, kasarli_tost: 1.3, cips: 0.3, cikolata: 0.4, kola: 0.4, su: 1.2 },
     hizmetli: { cay: 4, simit: 3, pogaca: 1.6, ayran: 1.2, kola: 0.4, cips: 0.4 },
     mudur: { cay: 3, kofte_ekmek: 1.6, karisik_tost: 1.5, cips: 0.2, kola: 0.3, cikolata: 0.3 },
     veli: { cay: 2.5, kasarli_tost: 1.6, su: 1.3, pogaca: 1.3, simit: 1.3, cips: 0.4 },
@@ -167,6 +169,8 @@
     return clamp(1 - (avg - 1) * 0.9, 0.5, 1.2);
   }
   function repMultiplier() { return 0.45 + (KS.state.rep / 5) * 0.9; }
+  // meta modülünün (kampanya vb.) sağladığı çarpanlar
+  function hookMult(name) { try { const f = KS.hooks && KS.hooks[name]; const v = f ? f() : 1; return isFinite(v) && v > 0 ? v : 1; } catch (e) { return 1; } }
   function dayMultiplier() { const d = KS.state.day; return d <= 1 ? 0.75 : d === 2 ? 0.9 : 1; }
 
   function demandPerMin() {
@@ -174,7 +178,8 @@
     const p = KS.currentPeriod();
     const w = KS.todayWeather() || {}, ev = KS.todayEvent() || {};
     return (p.rate || 0) * DEMAND_SCALE * repMultiplier() * (w.demand || 1) * (ev.demand || 1) *
-      (KS.upgVal('dekor', 'demand') || 1) * (KS.upgVal('kasa', 'demand') || 1) * dayMultiplier() * priceMultiplier();
+      (KS.upgVal('dekor', 'demand') || 1) * (KS.upgVal('kasa', 'demand') || 1) * dayMultiplier() * priceMultiplier() *
+      hookMult('demandMult');
   }
 
   // ---------------------------------------------------------------------------
@@ -192,6 +197,8 @@
     const maxMudur = KS.state.rep >= 4 ? 2 : 1;
     if (stats.mudur >= maxMudur || KS.state.day <= 1) w.mudur = 0;
     if (ev.adultRatio) w.veli = (w.ogretmen || 1) * 0.6;
+    if (ev.typeMult) for (const [k, m] of Object.entries(ev.typeMult)) if (w[k]) w[k] *= m;
+    if (w.ogrenci && hookMult('studentMult') !== 1) w.ogrenci *= hookMult('studentMult');
     return U().weighted(w);
   }
 
@@ -396,6 +403,7 @@
     base *= 1 + 0.12 * Math.max(0, c.lines.length - 1);
     base *= (t.patience || 1) * (ev.patience || 1) * (KS.upgVal('dekor', 'patience') || 1);
     if (KS.hasStaff('kasiyer')) base *= 1.15;
+    base *= hookMult('patienceMult');
     if (KS.state.cleanliness < 50) base *= 0.85;
     return base;
   }
@@ -613,7 +621,7 @@
     KS.earn(total, 'satis', x, 300);
     let tipRate = 0;
     if (avgQ >= 0.55) tipRate = 0.2 * ((avgQ - 0.55) / 0.45) * (0.4 + 0.6 * pr);
-    let tip = Math.round(total * tipRate * (c.type.tipMult || 1) * (ev.tip || 1));
+    let tip = Math.round(total * tipRate * (c.type.tipMult || 1) * (ev.tip || 1) * hookMult('tipMult') * (c.tipBonus || 1));
     if (tip >= 1) {
       KS.earn(tip, 'bahsis', x, 268);
       audio('coin');
@@ -1092,11 +1100,11 @@
     if (c.vip) { drawCrown(ctx, x + 22, y + 13, 20); nx = x + 36; }
     const typeName = c.type.name || '';
     // tip rozeti (sağda)
-    const pillTxt = c.vip ? 'VIP' : typeName;
+    const pillTxt = c.vip ? 'VIP' : c.bulk ? 'TOPLU' : typeName;
     const pw = measure(ctx, pillTxt, 800, 11) + 14;
     const px = x + w - pw - 10, py = y + 5;
     ctx.save();
-    ctx.fillStyle = tc; rr(ctx, px, py, pw, 17, 8.5); ctx.fill();
+    ctx.fillStyle = c.bulk ? '#2a9d8f' : tc; rr(ctx, px, py, pw, 17, 8.5); ctx.fill();
     ctx.restore();
     txt(ctx, pillTxt, px + pw / 2, py + 9, { size: 11, weight: 800, color: '#fff', align: 'center' });
     const maxW = px - nx - 6;

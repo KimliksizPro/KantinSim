@@ -623,6 +623,7 @@
     // itibar
     let rep = (avgQ - 0.7) * 0.1 + (pr - 0.45) * 0.035;
     rep = clamp(rep, -0.1, 0.06);
+    if (rep > 0) rep *= 0.5;                               // pozitif kazanç yarıya indirildi (3 günde 3.0->5.0 çok hızlıydı; cezalar aynı)
     if (rep > 0) rep *= 0.6 * (1 - (s.rep / 5) * 0.6);     // yüksek itibarda artış yavaşlar
     rep *= c.vip ? 2 : 1;
     KS.addRep(rep);

@@ -394,7 +394,7 @@
   const S = {
     tost: { machines: [], lastSlot: null },
     izgara: { slots: [], flares: [], lastSlot: -1 },
-    fritoz: { baskets: [], temp: 1, oilLife: TUNE.oilMax, oldWarned: false, lastBasket: -1 },
+    fritoz: { baskets: [], temp: 1, oldWarned: false, lastBasket: -1 },
     semaver: { water: 0, state: 'empty', brewT: 0, glasses: 0, spare: 0, age: 0, lastAge: 0, staleWarned: false, cirakT: 0, cirakBusy: 0, emptyWarned: false },
   };
   const newToastSlot = () => ({ dish: null, done: false, smk: false, burn: false });
@@ -432,7 +432,7 @@
     syncSlots(true);
     for (const M of S.tost.machines) { M.closed = false; M.lidT = 0; }
     S.fritoz.temp = 1;
-    if (full) { S.fritoz.oilLife = TUNE.oilMax; S.fritoz.oldWarned = false; }
+    if (full) { oilSet(TUNE.oilMax); S.fritoz.oldWarned = false; }
     resetSemaver();
     P.length = 0; S.izgara.flares.length = 0;
     loopsOff();
@@ -495,6 +495,15 @@
     if (best.M.closed) best.M.closed = false;
     return true;
   }
+  const TOAST_RAW = 0.3;
+  const toastPress = { active: false, i: -1, j: -1, x: 0, y: 0 };
+  function takeToastSlot(i, j) {
+    const M = S.tost.machines[i]; if (!M) return null;
+    const sl = M.slots[j]; if (!sl || !sl.dish) return null;
+    const d = sl.dish; sl.dish = null; toastFlags(sl);
+    S.tost.lastSlot = { i, j };
+    return d;
+  }
   const tostZone = {
     id: 'tost', z: 5,
     getRect: () => KS.layout.tost,
@@ -506,20 +515,31 @@
       for (const M of S.tost.machines) for (const sl of M.slots) if (!sl.dish) { sl.dish = item; toastFlags(sl); return; }
       warnOnce('tostReturn', 'yer yok');
     },
+    // Kapak açıkken ham (toast < TOAST_RAW) tosta basış: kısa tık = kapağı kapat, sürükleme = tostu al.
+    // Basılmış tost (>= TOAST_RAW) doğrudan alınır (eski davranış).
     onPick(pt) {
+      toastPress.active = false;
       const G = tostGeo().list, i = machineAt(G, pt), M = S.tost.machines[i], g = G[i];
       if (!M || !g || M.closed || M.lidT > 0.25) return null;
       for (let j = 0; j < 2; j++) {
         const s = g.slots[j], sl = M.slots[j];
         if (sl.dish && pt.x >= s.x - 3 && pt.x <= s.x + s.w + 3 && pt.y >= s.y - 8 && pt.y <= s.y + s.h + 8) {
-          const d = sl.dish; sl.dish = null; toastFlags(sl);
-          S.tost.lastSlot = { i, j };
-          return d;
+          if (num(sl.dish.toast, 0) < TOAST_RAW) { Object.assign(toastPress, { active: true, i, j, x: pt.x, y: pt.y }); return null; }
+          return takeToastSlot(i, j);
         }
       }
       return null;
     },
-    onClick(pt) { const G = tostGeo().list, i = machineAt(G, pt); if (i >= 0) toggleLid(i); },
+    onDrag(pt) {
+      if (!toastPress.active || KS.held) return;
+      if (dist(pt.x, pt.y, toastPress.x, toastPress.y) < 12) return;
+      toastPress.active = false;
+      const item = takeToastSlot(toastPress.i, toastPress.j); if (!item) return;
+      KS.held = { item, from: tostZone, x: pt.x, y: pt.y, sx: toastPress.x, sy: toastPress.y, moved: true, sticky: false, t: 0 };
+      snd('pick');
+    },
+    onClick(pt) { toastPress.active = false; const G = tostGeo().list, i = machineAt(G, pt); if (i >= 0) toggleLid(i); },
+    onRelease() { toastPress.active = false; },
     tooltip(pt) {
       const G = tostGeo().list, i = machineAt(G, pt), M = S.tost.machines[i], g = G[i];
       if (!M || !g) return null;
@@ -532,7 +552,8 @@
       for (let j = 0; j < 2; j++) {
         const s = g.slots[j], d = M.slots[j].dish;
         if (d && pt.x >= s.x - 3 && pt.x <= s.x + s.w + 3 && pt.y >= s.y - 8 && pt.y <= s.y + s.h + 8) {
-          return itemName(d) + ' — Tost: ' + toastLabel(d.toast) + '\nSürükle/tıkla: al • Kapağa tıkla: kapat' + warn;
+          if (num(d.toast, 0) < TOAST_RAW) return itemName(d) + ' — Tost: ' + toastLabel(d.toast) + '\nTıkla: kapağı kapat • Sürükle: al' + warn;
+          return itemName(d) + ' — Tost: ' + toastLabel(d.toast) + '\nTıkla/sürükle: al' + warn;
         }
       }
       if (!machineEmpty(M)) return 'Tost makinesi (kapak açık)\nTıkla: kapağı kapat ve bas' + warn;
@@ -1091,8 +1112,11 @@
     }
     return -1;
   }
-  const oilWear = () => 1 - clamp(S.fritoz.oilLife / TUNE.oilMax, 0, 1);
-  function oilMult() { const L = S.fritoz.oilLife; return L > TUNE.oilOld ? 1 : L > 0 ? TUNE.oilOldMult : TUNE.oilDeadMult; }
+  // Yağ ömrü KS.state.oilLife'ta tutulur (KS.save ile kaydedilir); alan yoksa taze (oilMax) kabul edilir.
+  const oilGet = () => { const v = KS.state && KS.state.oilLife; return typeof v === 'number' && isFinite(v) ? clamp(v, 0, TUNE.oilMax) : TUNE.oilMax; };
+  const oilSet = v => { if (KS.state) KS.state.oilLife = clamp(num(v, TUNE.oilMax), 0, TUNE.oilMax); };
+  const oilWear = () => 1 - clamp(oilGet() / TUNE.oilMax, 0, 1);
+  function oilMult() { const L = oilGet(); return L > TUNE.oilOld ? 1 : L > 0 ? TUNE.oilOldMult : TUNE.oilDeadMult; }
   function fryCanTake(item) {
     if (!item) return false;
     if (item.type === 'ing' && item.id === 'patates') return true;
@@ -1122,9 +1146,9 @@
   }
   function changeOil() {
     const F = S.fritoz;
-    if (F.oilLife >= TUNE.oilMax) { note('Fritöz yağı zaten taze.', 'info'); snd('click'); return false; }
+    if (oilGet() >= TUNE.oilMax) { note('Fritöz yağı zaten taze.', 'info'); snd('click'); return false; }
     if (!invTake('yag')) { note('Kızartma yağı kalmadı! Toptancıdan sipariş et.', 'warn'); snd('error'); return false; }
-    F.oilLife = TUNE.oilMax; F.oldWarned = false;
+    oilSet(TUNE.oilMax); F.oldWarned = false;
     snd('pour');
     const G = fryGeo();
     floatTxt(G.vat.x + G.vat.w / 2, G.vat.y - 6, 'Taze yağ!', '#ffe08a', 20);
@@ -1136,8 +1160,8 @@
     if (item.type === 'ing') {
       const om = oilMult();
       B.c = { cook: num(item.cook, 0), oilMult: om };
-      F.oilLife = Math.max(0, F.oilLife - 1);
-      if (!F.oldWarned && F.oilLife <= TUNE.oilOld) { F.oldWarned = true; note('Fritöz yağı eskidi — patatesler kötüleşiyor. "Yağı Değiştir"e bas!', 'warn'); }
+      oilSet(oilGet() - 1);
+      if (!F.oldWarned && oilGet() <= TUNE.oilOld) { F.oldWarned = true; note('Fritöz yağı eskidi — patatesler kötüleşiyor. "Yağı Değiştir"e bas!', 'warn'); }
     } else {
       const L = item.layers[0];
       B.c = { cook: num(L.cook, 0), oilMult: num(item.oilMult, 1) };
@@ -1201,7 +1225,7 @@
     tooltip(pt) {
       const G = fryGeo(), F = S.fritoz;
       const warn = power() ? '' : '\n⚡ Elektrik yok — fritöz ısınmıyor!';
-      if (inR(pt, G.btn)) return 'Yağı Değiştir — 1 Kızartma Yağı harcar (stok: ' + invGet('yag') + ')\nYağ ömrü: ' + F.oilLife + '/' + TUNE.oilMax + ' porsiyon';
+      if (inR(pt, G.btn)) return 'Yağı Değiştir — 1 Kızartma Yağı harcar (stok: ' + invGet('yag') + ')\nYağ ömrü: ' + oilGet() + '/' + TUNE.oilMax + ' porsiyon';
       const i = basketAt(G, pt);
       if (i >= 0) {
         const B = F.baskets[i];
@@ -1213,7 +1237,7 @@
         }
         return 'Fritöz sepeti (boş)\nÇiğ patatesi sepete bırak — sepet yağa iner' + warn;
       }
-      return 'Fritöz — yağ ömrü ' + F.oilLife + '/' + TUNE.oilMax + (F.oilLife <= TUNE.oilOld ? ' (ESKİ!)' : '') + '\nÇiğ patatesi sepete bırak' + warn;
+      return 'Fritöz — yağ ömrü ' + oilGet() + '/' + TUNE.oilMax + (oilGet() <= TUNE.oilOld ? ' (ESKİ!)' : '') + '\nÇiğ patatesi sepete bırak' + warn;
     },
   };
 
@@ -1380,9 +1404,9 @@
     const ready = act && pw && F.temp > 0.85;
     led(ctx, G.panel.x + 50, G.panel.y + 9, 3, ready ? '#34e05a' : '#ff3b30', act && pw, 0);
     // yağ göstergesi
-    const gg = G.gauge, life = clamp(F.oilLife / TUNE.oilMax, 0, 1), old = F.oilLife <= TUNE.oilOld;
+    const gg = G.gauge, oil = oilGet(), life = clamp(oil / TUNE.oilMax, 0, 1), old = oil <= TUNE.oilOld;
     txt(ctx, 'Yağ', gg.x, gg.y - 7, { size: 11, weight: 800, color: '#e8e2d4' });
-    txt(ctx, F.oilLife + '/' + TUNE.oilMax + (old ? ' eski!' : ''), gg.x + gg.w, gg.y - 7, { size: 10, weight: 800, color: old ? (Math.sin(t * 6) > 0 ? '#ff8a6a' : '#ffd08a') : '#c9c3b6', align: 'right' });
+    txt(ctx, oil + '/' + TUNE.oilMax + (old ? ' eski!' : ''), gg.x + gg.w, gg.y - 7, { size: 10, weight: 800, color: old ? (Math.sin(t * 6) > 0 ? '#ff8a6a' : '#ffd08a') : '#c9c3b6', align: 'right' });
     rr(ctx, gg.x, gg.y, gg.w, gg.h, 3.5); ctx.fillStyle = '#121316'; ctx.fill();
     if (life > 0) { rr(ctx, gg.x + 1, gg.y + 1, Math.max(5, (gg.w - 2) * life), gg.h - 2, 3); ctx.fillStyle = css(oc); ctx.fill(); }
     // buton
@@ -1912,7 +1936,7 @@
     return {
       tost: S.tost.machines.map(M => ({ closed: M.closed, slots: M.slots.map(s => s.dish ? num(s.dish.toast, 0) : null) })),
       izgara: S.izgara.slots.map(s => s.item ? { cookA: num(s.item.cookA, 0), cookB: num(s.item.cookB, 0) } : null),
-      fritoz: { temp: S.fritoz.temp, oilLife: S.fritoz.oilLife, baskets: S.fritoz.baskets.map(B => ({ down: B.down, cook: B.c ? num(B.c.cook, 0) : null })) },
+      fritoz: { temp: S.fritoz.temp, oilLife: oilGet(), baskets: S.fritoz.baskets.map(B => ({ down: B.down, cook: B.c ? num(B.c.cook, 0) : null })) },
       semaver: { water: T.water, state: T.state, brew: T.state === 'brewing' ? T.brewT / brewTime() : (T.state === 'ready' ? 1 : 0), glasses: T.glasses, age: T.age, quality: teaQuality() },
     };
   }
@@ -1921,7 +1945,8 @@
     for (const z of [tostZone, izgaraZone, fritozZone, semaverZone]) { KS.removeZone && KS.removeZone(z.id); KS.addZone(z); }
     const on = (ev, fn) => { try { KS.bus.on(ev, fn); } catch (e) { /* yok */ } };
     on('newGame', () => resetAll(true));
-    on('stateLoaded', () => resetAll(true));
+    // Kayıt yüklenince yağ ömrü KS.state'ten okunur (sıfırlanmaz); eski kayıtta alan yoksa 30 yazılır.
+    on('stateLoaded', () => { resetAll(false); oilSet(oilGet()); S.fritoz.oldWarned = oilGet() <= TUNE.oilOld; });
     on('prepStart', () => resetAll(false));
     on('dayEnd', () => { addWasted(emptyAll()); resetSemaver(); loopsOff(); });
     on('upgradeBought', () => { addWasted(syncSlots(false)); });
@@ -1933,7 +1958,7 @@
     state: S, tune: TUNE, info,
     reset: () => resetAll(false), sync: () => syncSlots(false),
     toggleLid, flipPatty, toggleBasket, changeOil, brewTea: () => brew(false), rebrewTea: rebrew,
-    teaQuality, oilLife: () => S.fritoz.oilLife,
+    teaQuality, oilLife: () => oilGet(),
     zones: { tost: tostZone, izgara: izgaraZone, fritoz: fritozZone, semaver: semaverZone },
   };
   KS.registerModule({ name: 'cook', order: 20, init, update, draw });

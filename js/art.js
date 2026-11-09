@@ -2232,10 +2232,10 @@
     const id = L.id, R = rng(seed + idx * 31);
     const jx = () => cx + (R() - 0.5) * Rr * 0.5, jy = () => cy + (R() - 0.5) * Rr * 0.5;
     switch (id) {
-      case 'kasar': cheeseSlice(g, jx() * 0.4 + cx * 0.6, jy() * 0.4 + cy * 0.6, Rr * 1.55, Rr * 1.45, (R() - 0.5) * 0.3, '#f8dc72'); break;
-      case 'cheddar': cheeseSlice(g, jx() * 0.4 + cx * 0.6, jy() * 0.4 + cy * 0.6, Rr * 1.5, Rr * 1.45, (R() - 0.5) * 0.4, '#f7a933'); break;
+      case 'kasar': cheeseSlice(g, jx() * 0.2 + cx * 0.8, jy() * 0.2 + cy * 0.8, Rr * 2.2, Rr * 2.05, (R() - 0.5) * 0.25, '#f8dc72'); break;
+      case 'cheddar': cheeseSlice(g, jx() * 0.2 + cx * 0.8, jy() * 0.2 + cy * 0.8, Rr * 2.1, Rr * 2.0, (R() - 0.5) * 0.4, '#f7a933'); break;
       case 'sucuk': { const pts = [[-0.5, -0.45], [0.45, -0.4], [0, 0.05], [-0.5, 0.5], [0.48, 0.5]]; pts.forEach((p, i) => sucukSlice(g, cx + p[0] * Rr + (R() - 0.5) * 4, cy + p[1] * Rr + (R() - 0.5) * 4, Rr * 0.3, seed + i)); break; }
-      case 'domates': { const pts = [[-0.42, -0.3], [0.42, -0.2], [0, 0.42]]; pts.forEach(p => tomatoSlice(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.4, R() * 3)); break; }
+      case 'domates': { const pts = [[-0.48, -0.42], [0.5, -0.3], [0.02, 0.5]]; pts.forEach(p => tomatoSlice(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.32, R() * 3)); break; }
       case 'kofte': { const c = L.cook || 0; const top = L.cookB != null ? Math.max(L.cookA || 0, L.cookB) : c; kofte(g, cx - Rr * 0.35, cy, Rr * 0.42, Rr * 0.28, top, top, 9); kofte(g, cx + Rr * 0.38, cy + Rr * 0.1, Rr * 0.42, Rr * 0.28, top, top, 10); break; }
       case 'marul': lettuceLeaf(g, jx(), jy(), Rr / 34, (R() - 0.5) * 1.5, seed + idx); break;
       case 'sogan': { const pts = [[-0.4, -0.35], [0.4, -0.3], [-0.2, 0.35], [0.35, 0.4]]; pts.forEach(p => onionRing(g, cx + p[0] * Rr, cy + p[1] * Rr, Rr * 0.22, false)); break; }
@@ -2395,14 +2395,14 @@
       // erimiş kaşar katmanı
       if (has('kasar') || has('cheddar')) {
         const col = has('kasar') ? (toast > 1.5 ? '#c49a3a' : '#f7d24a') : '#f39a22';
-        g.beginPath(); g.moveTo(-44, 38); g.lineTo(44, 38);
-        g.lineTo(44, 40 + melt * 4); g.quadraticCurveTo(40, 40 + melt * 12, 36, 40 + melt * 4);
-        g.lineTo(10, 41); g.quadraticCurveTo(6, 42 + melt * 14, 0, 41);
-        g.lineTo(-24, 41 + melt * 3); g.quadraticCurveTo(-28, 42 + melt * 10, -32, 41); g.lineTo(-44, 40); g.closePath();
+        g.beginPath(); g.moveTo(-42, 40); g.lineTo(42, 40);
+        g.lineTo(42, 45 + melt * 4); g.quadraticCurveTo(38, 46 + melt * 12, 34, 45 + melt * 4);
+        g.lineTo(10, 46); g.quadraticCurveTo(6, 47 + melt * 14, 0, 46);
+        g.lineTo(-22, 46 + melt * 3); g.quadraticCurveTo(-26, 47 + melt * 10, -30, 46); g.lineTo(-42, 45); g.closePath();
         g.fillStyle = lin(g, 0, 36, 0, 54, [[0, shade(col, 0.25)], [1, shade(col, -0.1)]]); g.fill(); outline(g, shade(col, -0.35), 1.1);
         // yan taşma
-        g.beginPath(); g.moveTo(43, -6); g.quadraticCurveTo(46 + melt * 5, 0, 43, 8 + melt * 6); g.lineTo(41, 10); g.closePath(); g.fillStyle = col; g.fill();
-        g.beginPath(); g.moveTo(-43, -2); g.quadraticCurveTo(-46 - melt * 5, 6, -43, 14 + melt * 4); g.lineTo(-41, 12); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(42, -6); g.quadraticCurveTo(49 + melt * 6, 2, 43, 10 + melt * 8); g.lineTo(40, 10); g.closePath(); g.fillStyle = col; g.fill(); outline(g, shade(col, -0.35), 1);
+        g.beginPath(); g.moveTo(-42, -2); g.quadraticCurveTo(-49 - melt * 6, 6, -43, 16 + melt * 6); g.lineTo(-40, 12); g.closePath(); g.fill(); outline(g, shade(col, -0.35), 1);
       }
       // üst dilim
       breadSlice(g, 86, 88, toast, 11);
@@ -3133,12 +3133,12 @@
         }
       } else if (st === 'eat') {
         const hy = -150 + Math.sin(t * 9) * 4;
-        sleeve(g, W - 14, 20, 18, hy + 12, top, 22);
+        sleeve(g, W - 6, -70, 30, hy + 14, top, 22);
         g.save(); g.translate(8, hy - 6); g.rotate(-0.4);
         rr(g, -14, -9, 28, 18, 5); g.fillStyle = lin(g, 0, -9, 0, 9, [[0, '#f0c27a'], [1, '#c98a3a']]); g.fill(); outline(g, '#7a4614', 1.6);
         g.fillStyle = '#f6d55c'; g.fillRect(-14, -2, 28, 3);
         g.restore();
-        hand(g, 18, hy + 6, skin);
+        hand(g, 22, hy + 8, skin);
       }
       // ruh hali efektleri
       if (st === 'angry' || mood < 0.12) {

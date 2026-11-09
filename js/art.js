@@ -2659,4 +2659,510 @@
   Object.assign(Art, { drawItem, drawPlate, drawSteam, drawSmoke });
   Object.assign(Art._h, { drizzle, sprinkle, topLayer, sideBand, DISH });
 })(window.KS);
-/* @@ART-PART-5@@ */
+/* ===== Art bölüm 5: müşteriler (randomLook, drawCustomer) ===== */
+(function (KS) {
+  'use strict';
+  const Art = KS.Art, H = Art._h;
+  const { TAU, clamp, rr, ell, circ, shade, mix, rgba, lin, rad, outline } = H;
+
+  const SKINS = ['#fbdcc4', '#f4cba8', '#ecbb92', '#e0a87e', '#cc9064', '#b0764e', '#8c5a3a'];
+  const HAIRS = ['#1e1814', '#2e2018', '#4a3020', '#6b4528', '#8a5a32', '#a8453a', '#c9a060'];
+  const GRAYS = ['#8c8c8c', '#a8a8a8', '#c9c9c9'];
+  const pickR = (R, a) => a[Math.floor(R() * a.length) % a.length];
+  const ch = (R, p) => R() < p;
+
+  function randomLook(type) {
+    const seed = (Math.random() * 1e9) | 0;
+    const R = Math.random;
+    type = type || 'ogrenci';
+    const adult = type !== 'ogrenci';
+    const female = type === 'mudur' ? R() < 0.25 : R() < 0.5;
+    const look = {
+      type, seed, gender: female ? 'k' : 'e',
+      skin: pickR(R, SKINS), hair: pickR(R, HAIRS), eye: pickR(R, ['#2a1a10', '#3a2614', '#2a3a20', '#24364a']),
+      size: adult ? 0.98 + R() * 0.08 : 0.9 + R() * 0.08,
+      glasses: null, backpack: null, acc: null, accColor: pickR(R, ['#e8443a', '#ff7aa8', '#3f7ac2', '#f0b13b', '#9a5ad0']),
+      mustache: false, beard: false, mask: false, scarf: null, freckles: !adult && R() < 0.18,
+      badge: false, tie: null, top: '#2b3a67', shirt: '#ffffff', outfit: 'ceket', hairStyle: 'kisa',
+    };
+    if (adult && R() < 0.22) look.hair = pickR(R, GRAYS);
+    const mStyles = adult ? ['kisa', 'yan', 'kel', 'dalga', 'kisa'] : ['kisa', 'yan', 'diken', 'kivircik', 'dalga'];
+    const fStyles = adult ? ['topuz', 'kare', 'uzun', 'atkuyrugu', 'kivircik'] : ['atkuyrugu', 'orgu', 'uzun', 'kare', 'atkuyrugu', 'topuz'];
+    look.hairStyle = pickR(R, female ? fStyles : mStyles);
+    if (female && (type === 'veli' || type === 'hizmetli') && R() < 0.35) { look.hairStyle = 'basortu'; look.scarfHead = pickR(R, ['#c0506a', '#5a7ab0', '#8a6ab0', '#d08a3a', '#4a8a7a', '#e0c0a0']); }
+    if (!female && adult) { look.mustache = R() < (type === 'mudur' ? 0.65 : type === 'hizmetli' ? 0.5 : 0.3); look.beard = !look.mustache && R() < 0.15; }
+    if (female && !adult && R() < 0.55) look.acc = R() < 0.5 ? 'kurdele' : 'toka';
+    switch (type) {
+      case 'ogrenci':
+        look.outfit = pickR(R, ['ceket', 'yelek', 'sweat']);
+        look.top = pickR(R, ['#24305e', '#2b3a67', '#1f2a50']);
+        look.tie = look.outfit !== 'sweat' && R() < 0.55 ? pickR(R, ['#a8263a', '#24305e', '#7a1a2a']) : null;
+        look.backpack = R() < 0.6 ? pickR(R, ['#e8443a', '#3f9ad8', '#f0b13b', '#4fae5a', '#9a5ad0', '#ff7aa8']) : null;
+        look.glasses = R() < 0.15 ? 'yuvarlak' : null;
+        break;
+      case 'ogretmen':
+        look.outfit = pickR(R, ['ceket', 'hirka']);
+        look.top = pickR(R, ['#7a5a3a', '#8a2a3a', '#5a6a7a', '#6a7a4a', '#4a4a5a', '#a86a4a']);
+        look.shirt = pickR(R, ['#ffffff', '#dce8f6', '#f6e8dc', '#e8f0e0']);
+        look.tie = !female && look.outfit === 'ceket' && R() < 0.4 ? pickR(R, ['#3a4a7a', '#7a2a2a', '#2a5a4a']) : null;
+        look.glasses = R() < 0.45 ? pickR(R, ['yuvarlak', 'kare']) : null;
+        look.badge = true;
+        break;
+      case 'hizmetli':
+        look.outfit = 'onluk'; look.top = '#3a7ac8'; look.shirt = '#e8eef4';
+        look.glasses = R() < 0.15 ? 'kare' : null;
+        break;
+      case 'mudur':
+        look.outfit = 'takim'; look.top = pickR(R, ['#2a2f3a', '#1f2a44', '#3a3a40']);
+        look.tie = pickR(R, ['#a8263a', '#7a1a2a', '#2a4a8a', '#c49a2a']);
+        look.glasses = R() < 0.35 ? 'kare' : null;
+        if (!female && R() < 0.4) look.hairStyle = 'kel';
+        if (R() < 0.35) look.hair = pickR(R, GRAYS);
+        break;
+      case 'veli':
+        look.outfit = pickR(R, ['kazak', 'mont', 'gomlek']);
+        look.top = pickR(R, ['#c0504a', '#4a8a6a', '#d0a040', '#6a5aa0', '#3a6a9a', '#a07050', '#e07a4a']);
+        look.shirt = pickR(R, ['#ffffff', '#f0e6d6', '#dfe8f0']);
+        look.glasses = R() < 0.3 ? pickR(R, ['yuvarlak', 'kare']) : null;
+        break;
+      case 'mufettis':
+        look.outfit = 'onlukBeyaz'; look.top = '#f6f8fa'; look.shirt = '#cfe0f2';
+        look.tie = !female && R() < 0.6 ? '#2a4a7a' : null;
+        look.glasses = R() < 0.6 ? 'kare' : null;
+        look.mask = R() < 0.5;
+        break;
+    }
+    try { if (adult && KS.state && KS.state.today && KS.state.today.weather === 'soguk' && R() < 0.5) look.scarf = pickR(R, ['#c0392b', '#2f6aa8', '#e0a030', '#4a8a5a']); } catch (e) { /* yok */ }
+    return look;
+  }
+
+  // ---------------------------------------------------------------------------
+  // ÇİZİM PARÇALARI (yerel koordinat: (0,0) = taban orta, baş merkezi (0,-190))
+  // ---------------------------------------------------------------------------
+  const HY = -190, HRX = 44, HRY = 47;
+  function torsoPath(g, W) {
+    g.beginPath();
+    g.moveTo(-16, -138);
+    g.quadraticCurveTo(-W + 18, -136, -W + 2, -116);
+    g.quadraticCurveTo(-W - 6, -96, -W - 6, -60);
+    g.lineTo(-W - 8, 60); g.lineTo(W + 8, 60); g.lineTo(W + 6, -60);
+    g.quadraticCurveTo(W + 6, -96, W - 2, -116);
+    g.quadraticCurveTo(W - 18, -136, 16, -138);
+    g.closePath();
+  }
+  function hairBack(g, L, col, t) {
+    const s = L.hairStyle;
+    g.fillStyle = col;
+    if (s === 'uzun' || s === 'kivircik' && L.gender === 'k') {
+      g.beginPath(); g.moveTo(-50, -200); g.quadraticCurveTo(-58, -150, -54, -112); g.quadraticCurveTo(0, -100, 54, -112); g.quadraticCurveTo(58, -150, 50, -200); g.closePath(); g.fill(); outline(g, shade(col, -0.4), 2);
+      if (s === 'kivircik') { for (let i = 0; i < 8; i++) { circ(g, -52 + i * 15, -116 + Math.sin(i) * 4, 9); g.fill(); } }
+    } else if (s === 'atkuyrugu') {
+      const sw = Math.sin(t * 3 + L.seed) * 4;
+      g.beginPath(); g.moveTo(30, -222); g.quadraticCurveTo(70 + sw, -210, 62 + sw, -160); g.quadraticCurveTo(56 + sw, -136, 48 + sw, -128); g.quadraticCurveTo(52, -170, 26, -206); g.closePath(); g.fill(); outline(g, shade(col, -0.4), 2);
+      circ(g, 34, -216, 5); g.fillStyle = L.accColor; g.fill();
+    } else if (s === 'topuz') {
+      circ(g, 0, -244, 17); g.fill(); outline(g, shade(col, -0.4), 2);
+      g.strokeStyle = shade(col, 0.2); g.lineWidth = 1.5; g.beginPath(); g.arc(0, -244, 10, 0.5, 2.5); g.stroke();
+    } else if (s === 'kare') {
+      g.beginPath(); g.moveTo(-50, -205); g.quadraticCurveTo(-56, -160, -48, -150); g.lineTo(48, -150); g.quadraticCurveTo(56, -160, 50, -205); g.closePath(); g.fill(); outline(g, shade(col, -0.4), 2);
+    }
+  }
+  function hairFront(g, L, col) {
+    const s = L.hairStyle, dk = shade(col, -0.4);
+    const capGrad = lin(g, 0, -240, 0, -195, [[0, shade(col, 0.15)], [1, col]]);
+    g.fillStyle = capGrad;
+    const cap = (fringe) => {
+      g.beginPath();
+      g.moveTo(-46, -180);
+      g.bezierCurveTo(-52, -232, -26, -246, 0, -246);
+      g.bezierCurveTo(26, -246, 52, -232, 46, -180);
+      fringe();
+      g.closePath(); g.fill(); outline(g, dk, 2.2);
+    };
+    if (s === 'kel') {
+      g.beginPath(); g.moveTo(-46, -172); g.quadraticCurveTo(-50, -200, -40, -210); g.lineTo(-36, -186); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(46, -172); g.quadraticCurveTo(50, -200, 40, -210); g.lineTo(36, -186); g.closePath(); g.fill();
+      ell(g, -14, -224, 12, 6, -0.4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fill();
+      return;
+    }
+    if (s === 'basortu') return;
+    if (s === 'kisa') cap(() => { g.lineTo(42, -200); g.quadraticCurveTo(20, -216, 0, -212); g.quadraticCurveTo(-24, -216, -42, -200); });
+    else if (s === 'yan') cap(() => { g.lineTo(42, -196); g.quadraticCurveTo(30, -222, -10, -214); g.quadraticCurveTo(-30, -210, -42, -198); });
+    else if (s === 'diken') {
+      g.beginPath(); g.moveTo(-46, -182); g.lineTo(-48, -214);
+      const pts = [[-44, -236], [-32, -230], [-26, -254], [-12, -238], [0, -258], [10, -238], [24, -254], [28, -232], [44, -238], [46, -212]];
+      for (const p of pts) g.lineTo(p[0], p[1]);
+      g.lineTo(46, -182); g.lineTo(42, -200); g.quadraticCurveTo(0, -214, -42, -200); g.closePath(); g.fill(); outline(g, dk, 2.2);
+    } else if (s === 'kivircik') {
+      for (let i = 0; i < 11; i++) { const a = Math.PI + i * Math.PI / 10; circ(g, Math.cos(a) * 42, -200 + Math.sin(a) * 40, 13); g.fill(); }
+      for (let i = 0; i < 5; i++) { circ(g, -28 + i * 14, -212 + (i % 2) * 4, 10); g.fill(); }
+      g.strokeStyle = shade(col, 0.25); g.lineWidth = 1.2;
+      for (let i = 0; i < 8; i++) { g.beginPath(); g.arc(-34 + i * 10, -228 + (i % 2) * 8, 4, 0, 4); g.stroke(); }
+    } else if (s === 'dalga') {
+      cap(() => { g.lineTo(42, -204); g.bezierCurveTo(30, -236, 6, -224, -4, -214); g.quadraticCurveTo(-26, -206, -42, -200); });
+      g.strokeStyle = shade(col, 0.3); g.lineWidth = 2; g.beginPath(); g.moveTo(-20, -232); g.quadraticCurveTo(6, -240, 26, -226); g.stroke();
+    } else {
+      // kadın stilleri: orta/yan ayrık perçem
+      cap(() => {
+        g.lineTo(44, -186); g.quadraticCurveTo(40, -210, 8, -222); g.quadraticCurveTo(-4, -208, -30, -206); g.quadraticCurveTo(-42, -200, -44, -186);
+      });
+      // yanlarda saç tutamları
+      g.fillStyle = col;
+      g.beginPath(); g.moveTo(-46, -196); g.quadraticCurveTo(-52, -170, -46, -150); g.lineTo(-40, -158); g.quadraticCurveTo(-42, -176, -38, -196); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(46, -196); g.quadraticCurveTo(52, -170, 46, -150); g.lineTo(40, -158); g.quadraticCurveTo(42, -176, 38, -196); g.closePath(); g.fill();
+      if (s === 'orgu') {
+        for (const sx of [-1, 1]) {
+          for (let i = 0; i < 6; i++) { ell(g, sx * 46, -146 + i * 11, 7, 7, 0); g.fillStyle = i % 2 ? shade(col, 0.1) : col; g.fill(); outline(g, dk, 1.2); }
+          circ(g, sx * 46, -80, 4); g.fillStyle = L.accColor; g.fill();
+        }
+      }
+    }
+    g.strokeStyle = rgba('#ffffff', 0.22); g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.arc(0, -205, 34, Math.PI * 1.2, Math.PI * 1.45); g.stroke();
+  }
+  function headscarf(g, L, front) {
+    const c = L.scarfHead || '#c0506a';
+    if (!front) {
+      g.beginPath(); g.moveTo(-52, -186); g.bezierCurveTo(-58, -250, 58, -250, 52, -186); g.quadraticCurveTo(64, -130, 40, -110); g.quadraticCurveTo(0, -100, -40, -110); g.quadraticCurveTo(-64, -130, -52, -186); g.closePath();
+      g.fillStyle = lin(g, 0, -246, 0, -104, [[0, shade(c, 0.2)], [1, shade(c, -0.15)]]); g.fill(); outline(g, shade(c, -0.45), 2.2);
+      g.fillStyle = rgba('#ffffff', 0.35);
+      for (let i = 0; i < 14; i++) { circ(g, -40 + (i * 37) % 80, -230 + (i * 23) % 110, 2); g.fill(); }
+    } else {
+      g.beginPath(); g.ellipse(0, HY + 2, 41, 45, 0, Math.PI * 1.02, Math.PI * 1.98); g.strokeStyle = shade(c, -0.1); g.lineWidth = 7; g.stroke();
+    }
+  }
+  function eyes(g, L, mood, blink, state) {
+    const ey = HY + 2, ex = 16;
+    const angry = state === 'angry' || mood < 0.2;
+    const happy = state === 'happy' || mood > 0.85;
+    for (const sx of [-1, 1]) {
+      const x = sx * ex;
+      if (blink) { g.strokeStyle = '#2a1a10'; g.lineWidth = 2.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 6, ey); g.quadraticCurveTo(x, ey + 3, x + 6, ey); g.stroke(); continue; }
+      if (happy && state === 'happy') { g.strokeStyle = '#2a1a10'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 6, ey + 2); g.quadraticCurveTo(x, ey - 6, x + 6, ey + 2); g.stroke(); continue; }
+      const ry = angry ? 5.5 : 7.5;
+      ell(g, x, ey, 6, ry); g.fillStyle = L.eye || '#2a1a10'; g.fill();
+      circ(g, x + 2, ey - ry * 0.4, 2.1); g.fillStyle = '#fff'; g.fill();
+      circ(g, x - 1.8, ey + ry * 0.4, 1); g.fill();
+    }
+    // kaşlar
+    const by = HY - 14, bc = shade(L.hair || '#2a1a10', -0.2);
+    g.strokeStyle = L.hairStyle === 'basortu' ? '#3a2a1a' : bc; g.lineWidth = 3.4; g.lineCap = 'round';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      if (angry) { g.moveTo(sx * 25, by - 4); g.lineTo(sx * 8, by + 3); }
+      else if (mood < 0.45) { g.moveTo(sx * 25, by + 1); g.quadraticCurveTo(sx * 17, by - 3, sx * 8, by - 4); }
+      else if (happy) { g.moveTo(sx * 24, by); g.quadraticCurveTo(sx * 16, by - 6, sx * 8, by - 2); }
+      else { g.moveTo(sx * 24, by - 1); g.quadraticCurveTo(sx * 16, by - 4, sx * 8, by - 1); }
+      g.stroke();
+    }
+  }
+  function mouth(g, L, mood, state, t) {
+    const my = HY + 30;
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const talk = state === 'talk' || state === 'eat';
+    if (talk) {
+      const o = Math.abs(Math.sin(t * (state === 'eat' ? 9 : 13))) * 6 + 1.5;
+      ell(g, 0, my, 7, o); g.fillStyle = '#6a1e1e'; g.fill();
+      if (o > 4) { ell(g, 0, my + o * 0.5, 4, 2); g.fillStyle = '#e86a6a'; g.fill(); }
+      return;
+    }
+    if (state === 'happy' || mood > 0.8) {
+      g.beginPath(); g.moveTo(-11, my - 3); g.quadraticCurveTo(0, my + 13, 11, my - 3); g.closePath();
+      g.fillStyle = '#7a2020'; g.fill(); g.strokeStyle = '#4a1010'; g.lineWidth = 1.6; g.stroke();
+      g.save(); g.clip(); ell(g, 0, my + 8, 6, 4); g.fillStyle = '#ef7a7a'; g.fill(); g.fillStyle = '#fff'; g.fillRect(-8, my - 4, 16, 3.5); g.restore();
+    } else if (mood > 0.55) {
+      g.strokeStyle = '#6a2a1a'; g.lineWidth = 2.8; g.beginPath(); g.moveTo(-9, my - 1); g.quadraticCurveTo(0, my + 6, 9, my - 1); g.stroke();
+    } else if (mood > 0.3) {
+      g.strokeStyle = '#6a2a1a'; g.lineWidth = 2.8; g.beginPath(); g.moveTo(-7, my + 1); g.quadraticCurveTo(0, my - 0.5, 7, my + 1.5); g.stroke();
+    } else if (state === 'angry' || mood < 0.15) {
+      rr(g, -10, my - 3, 20, 8, 3); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#5a1a10'; g.lineWidth = 2; g.stroke();
+      g.beginPath(); g.moveTo(-10, my + 1); g.lineTo(10, my + 1); for (let x = -5; x <= 5; x += 5) { g.moveTo(x, my - 3); g.lineTo(x, my + 5); } g.lineWidth = 1; g.stroke();
+    } else {
+      g.strokeStyle = '#6a2a1a'; g.lineWidth = 2.8; g.beginPath(); g.moveTo(-9, my + 3); g.quadraticCurveTo(0, my - 5, 9, my + 3); g.stroke();
+    }
+  }
+  function glasses(g, L) {
+    const col = L.type === 'mudur' ? '#2a2a2a' : L.type === 'ogretmen' ? '#7a3a2a' : '#2a2a3a';
+    g.strokeStyle = col; g.lineWidth = 2.6;
+    for (const sx of [-1, 1]) {
+      if (L.glasses === 'yuvarlak') circ(g, sx * 16, HY + 2, 12); else rr(g, sx * 16 - 13, HY - 8, 26, 19, 5);
+      g.fillStyle = 'rgba(200,225,255,0.18)'; g.fill(); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(sx * 16 - 6, HY - 3); g.lineTo(sx * 16 - 2, HY - 6); g.stroke();
+      g.strokeStyle = col; g.lineWidth = 2.6;
+    }
+    g.beginPath(); g.moveTo(-4, HY); g.quadraticCurveTo(0, HY - 3, 4, HY); g.moveTo(-29, HY - 2); g.lineTo(-42, HY - 6); g.moveTo(29, HY - 2); g.lineTo(42, HY - 6); g.stroke();
+  }
+  function hairAcc(g, L) {
+    if (L.acc === 'kurdele') {
+      g.save(); g.translate(30, -232); g.rotate(0.35);
+      const c = L.accColor;
+      g.fillStyle = lin(g, 0, -10, 0, 10, [[0, shade(c, 0.3)], [1, shade(c, -0.15)]]);
+      g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-18, -14, -20, 0); g.quadraticCurveTo(-18, 14, 0, 0); g.fill(); outline(g, shade(c, -0.45), 1.5);
+      g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(18, -14, 20, 0); g.quadraticCurveTo(18, 14, 0, 0); g.fill(); outline(g, shade(c, -0.45), 1.5);
+      circ(g, 0, 0, 4.5); g.fillStyle = shade(c, -0.1); g.fill(); outline(g, shade(c, -0.45), 1.2);
+      g.restore();
+    } else if (L.acc === 'toka') {
+      g.save(); g.translate(-28, -218); g.rotate(-0.5);
+      rr(g, -9, -3, 18, 6, 3); g.fillStyle = L.accColor; g.fill(); outline(g, shade(L.accColor, -0.45), 1.2);
+      circ(g, 0, 0, 2); g.fillStyle = '#fff'; g.fill(); g.restore();
+    }
+  }
+
+  function clothes(g, L, W, t) {
+    const top = L.top || '#2b3a67', shirt = L.shirt || '#ffffff', o = L.outfit;
+    const dk = shade(top, -0.45);
+    // sırt çantası (arkadan omuz üstü)
+    if (L.backpack) { rr(g, -W + 8, -150, 2 * W - 16, 60, 18); g.fillStyle = shade(L.backpack, -0.15); g.fill(); outline(g, shade(L.backpack, -0.5), 2); }
+    const body = (o === 'yelek' || o === 'gomlek') ? shirt : top;
+    torsoPath(g, W);
+    g.fillStyle = lin(g, -W, 0, W, 0, [[0, shade(body, -0.12)], [0.35, shade(body, 0.1)], [1, shade(body, -0.22)]]); g.fill();
+    outline(g, shade(body, -0.45), 2.4);
+    // kol çizgileri
+    g.strokeStyle = rgba(shade(body, -0.5), 0.45); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(-W + 20, -96); g.quadraticCurveTo(-W + 16, -40, -W + 18, 60); g.moveTo(W - 20, -96); g.quadraticCurveTo(W - 16, -40, W - 18, 60); g.stroke();
+    const vee = (depth, col) => { g.beginPath(); g.moveTo(-17, -137); g.lineTo(0, depth); g.lineTo(17, -137); g.closePath(); g.fillStyle = col; g.fill(); };
+    const collar = (col) => {
+      g.fillStyle = col; g.strokeStyle = shade(col, -0.3); g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(-15, -140); g.lineTo(-2, -122); g.lineTo(-18, -118); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(15, -140); g.lineTo(2, -122); g.lineTo(18, -118); g.closePath(); g.fill(); g.stroke();
+    };
+    const tie = (col, len) => {
+      g.fillStyle = col; g.strokeStyle = shade(col, -0.45); g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(-5, -128); g.lineTo(5, -128); g.lineTo(3.5, -120); g.lineTo(-3.5, -120); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(-3.5, -120); g.lineTo(3.5, -120); g.lineTo(8, -120 + len); g.lineTo(0, -112 + len); g.lineTo(-8, -120 + len); g.closePath(); g.fill(); g.stroke();
+      g.strokeStyle = rgba('#ffffff', 0.25); g.lineWidth = 2; g.beginPath(); g.moveTo(-3, -110); g.lineTo(4, -102); g.moveTo(-5, -94); g.lineTo(6, -84); g.stroke();
+    };
+    const lapels = (col, depth) => {
+      g.fillStyle = shade(col, -0.12); g.strokeStyle = shade(col, -0.5); g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(-18, -137); g.lineTo(-30, -110); g.lineTo(-22, -104); g.lineTo(-2, depth); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(18, -137); g.lineTo(30, -110); g.lineTo(22, -104); g.lineTo(2, depth); g.closePath(); g.fill(); g.stroke();
+    };
+    if (o === 'ceket' || o === 'takim' || o === 'onlukBeyaz') {
+      vee(-62, shirt); collar(shirt);
+      if (L.tie) tie(L.tie, 56);
+      lapels(top, -62);
+      for (const by of [-46, -20]) { circ(g, 0, by, 3); g.fillStyle = shade(top, -0.35); g.fill(); }
+      if (L.type === 'ogrenci') { // okul arması
+        g.save(); g.translate(-34, -96);
+        g.beginPath(); g.moveTo(-7, -8); g.lineTo(7, -8); g.lineTo(7, 2); g.quadraticCurveTo(0, 10, -7, 2); g.closePath();
+        g.fillStyle = '#c9a23a'; g.fill(); g.strokeStyle = '#8a6a1a'; g.lineWidth = 1; g.stroke();
+        g.fillStyle = '#a8263a'; g.fillRect(-3, -5, 6, 6); g.restore();
+      }
+      if (o === 'takim') { g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(-44, -90); g.lineTo(-36, -94); g.lineTo(-30, -90); g.closePath(); g.fill(); g.strokeStyle = shade(top, 0.25); g.lineWidth = 1.5; g.beginPath(); g.moveTo(-48, -88); g.lineTo(-26, -88); g.stroke(); }
+      if (o === 'onlukBeyaz') { g.strokeStyle = 'rgba(120,140,160,0.6)'; g.lineWidth = 1.5; rr(g, 22, -86, 22, 20, 3); g.stroke(); g.fillStyle = '#3a7ac8'; g.fillRect(28, -94, 2.5, 10); }
+    } else if (o === 'yelek') {
+      collar(shirt);
+      if (L.tie) tie(L.tie, 50);
+      g.beginPath(); g.moveTo(-W + 22, -122); g.lineTo(-18, -130); g.lineTo(0, -76); g.lineTo(18, -130); g.lineTo(W - 22, -122); g.lineTo(W - 18, 60); g.lineTo(-W + 18, 60); g.closePath();
+      g.fillStyle = lin(g, -W, 0, W, 0, [[0, shade(top, -0.1)], [0.4, shade(top, 0.12)], [1, shade(top, -0.2)]]); g.fill(); outline(g, dk, 2);
+      g.strokeStyle = shade(top, 0.3); g.lineWidth = 2.5; g.beginPath(); g.moveTo(-18, -128); g.lineTo(0, -78); g.lineTo(18, -128); g.stroke();
+      g.strokeStyle = rgba(shade(top, -0.5), 0.4); g.lineWidth = 1; g.beginPath(); for (let x = -W + 26; x < W - 22; x += 6) { g.moveTo(x, -60); g.lineTo(x, 60); } g.stroke();
+    } else if (o === 'sweat' || o === 'kazak') {
+      g.beginPath(); g.moveTo(-20, -138); g.quadraticCurveTo(0, -116, 20, -138); g.strokeStyle = shade(top, 0.25); g.lineWidth = 6; g.stroke();
+      if (o === 'sweat') { collar(shirt); g.beginPath(); g.moveTo(-20, -138); g.quadraticCurveTo(0, -116, 20, -138); g.strokeStyle = shade(top, 0.2); g.lineWidth = 5; g.stroke(); }
+      else { g.strokeStyle = rgba(shade(top, -0.4), 0.35); g.lineWidth = 1.2; g.beginPath(); for (let y = -100; y < 60; y += 12) { for (let x = -W + 18; x < W - 18; x += 12) { g.moveTo(x, y); g.lineTo(x + 6, y + 6); g.lineTo(x + 12, y); } } g.stroke(); }
+    } else if (o === 'hirka') {
+      vee(-40, shirt);
+      g.strokeStyle = dk; g.lineWidth = 2; g.beginPath(); g.moveTo(-17, -137); g.lineTo(-4, -40); g.lineTo(-4, 60); g.moveTo(17, -137); g.lineTo(4, -40); g.lineTo(4, 60); g.stroke();
+      g.fillStyle = shirt; g.fillRect(-3, -40, 6, 100);
+      for (const by of [-30, -6, 18]) { circ(g, -8, by, 2.6); g.fillStyle = shade(top, 0.35); g.fill(); }
+      g.strokeStyle = rgba(shade(top, -0.4), 0.3); g.lineWidth = 1; g.beginPath(); for (let x = -W + 24; x < W - 20; x += 5) { if (Math.abs(x) < 10) continue; g.moveTo(x, -100); g.lineTo(x, 60); } g.stroke();
+    } else if (o === 'mont') {
+      collar(shirt);
+      g.strokeStyle = shade(top, -0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(0, -122); g.lineTo(0, 60); g.stroke();
+      g.strokeStyle = '#c9ccd0'; g.lineWidth = 1.2; g.beginPath(); for (let y = -118; y < 60; y += 5) { g.moveTo(-2, y); g.lineTo(2, y); } g.stroke();
+      g.strokeStyle = rgba(shade(top, -0.5), 0.4); g.lineWidth = 2; g.beginPath(); for (const y of [-80, -40, 0]) { g.moveTo(-W + 10, y); g.quadraticCurveTo(-W / 2, y + 4, -4, y); g.moveTo(4, y); g.quadraticCurveTo(W / 2, y + 4, W - 10, y); } g.stroke();
+    } else if (o === 'gomlek') {
+      collar(shirt);
+      g.strokeStyle = rgba(shade(shirt, -0.4), 0.6); g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, -122); g.lineTo(0, 60); g.stroke();
+      for (const by of [-100, -70, -40, -10]) { circ(g, 3, by, 1.8); g.fillStyle = shade(shirt, -0.3); g.fill(); }
+      // kareli desen
+      g.strokeStyle = rgba(top, 0.35); g.lineWidth = 2; g.beginPath(); for (let x = -W; x < W; x += 14) { g.moveTo(x, -130); g.lineTo(x, 60); } for (let y = -126; y < 60; y += 14) { g.moveTo(-W, y); g.lineTo(W, y); } g.stroke();
+    } else if (o === 'onluk') {
+      collar(shirt);
+      g.strokeStyle = shade(top, -0.45); g.lineWidth = 1.6; g.beginPath(); g.moveTo(-2, -124); g.lineTo(-2, 60); g.stroke();
+      for (const by of [-100, -64, -28, 8]) { circ(g, 4, by, 2.8); g.fillStyle = '#e8eef4'; g.fill(); }
+      rr(g, -42, -92, 24, 22, 3); g.strokeStyle = shade(top, -0.4); g.lineWidth = 1.6; g.stroke();
+      g.fillStyle = '#f0b13b'; g.fillRect(-36, -100, 3, 12); g.fillStyle = '#e8443a'; g.fillRect(-31, -98, 3, 10);
+    }
+    if (o === 'onlukBeyaz') {
+      g.strokeStyle = 'rgba(150,165,180,0.7)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, -62); g.lineTo(0, 60); g.stroke();
+    }
+    // sırt çantası askıları
+    if (L.backpack) {
+      for (const sx of [-1, 1]) {
+        g.beginPath(); g.moveTo(sx * (W - 34), -134); g.quadraticCurveTo(sx * (W - 24), -60, sx * (W - 26), 60);
+        g.lineWidth = 11; g.strokeStyle = shade(L.backpack, -0.4); g.stroke();
+        g.lineWidth = 8; g.strokeStyle = L.backpack; g.stroke();
+        rr(g, sx * (W - 26) - 6, -72, 12, 8, 2); g.fillStyle = '#2a2a30'; g.fill();
+      }
+    }
+    // yaka kartı
+    if (L.badge) {
+      g.strokeStyle = '#d23a3a'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-14, -136); g.quadraticCurveTo(-4, -100, 4, -82); g.moveTo(14, -136); g.quadraticCurveTo(12, -100, 6, -82); g.stroke();
+      rr(g, -6, -84, 22, 28, 3); g.fillStyle = '#ffffff'; g.fill(); outline(g, 'rgba(0,0,0,0.3)', 1);
+      g.fillStyle = '#3f7ac2'; g.fillRect(-6, -84, 22, 6);
+      rr(g, -2, -74, 8, 9, 1); g.fillStyle = '#c9d6e2'; g.fill();
+      g.fillStyle = '#8a96a2'; g.fillRect(8, -73, 6, 1.6); g.fillRect(8, -69, 5, 1.6); g.fillRect(-2, -62, 15, 1.6);
+    }
+    // atkı
+    if (L.scarf) {
+      const c = L.scarf;
+      g.beginPath(); g.moveTo(-30, -146); g.quadraticCurveTo(0, -126, 30, -146); g.lineTo(32, -132); g.quadraticCurveTo(0, -112, -32, -132); g.closePath();
+      g.fillStyle = c; g.fill(); outline(g, shade(c, -0.4), 1.6);
+      rr(g, 10, -132, 14, 52, 4); g.fill(); outline(g, shade(c, -0.4), 1.6);
+      g.strokeStyle = rgba('#ffffff', 0.45); g.lineWidth = 2; g.beginPath(); g.moveTo(10, -110); g.lineTo(24, -110); g.moveTo(10, -100); g.lineTo(24, -100); g.stroke();
+    }
+  }
+
+  function hand(g, x, y, skin, r) {
+    circ(g, x, y, r || 11); g.fillStyle = rad(g, x - 3, y - 3, 1, (r || 11) * 1.2, [[0, shade(skin, 0.12)], [1, shade(skin, -0.1)]]); g.fill(); outline(g, shade(skin, -0.4), 1.8);
+  }
+  function sleeve(g, x0, y0, x1, y1, col, w) {
+    g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.strokeStyle = shade(col, -0.45); g.lineWidth = w + 4; g.stroke();
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.strokeStyle = col; g.lineWidth = w; g.stroke();
+  }
+  function clipboard(g) {
+    g.save(); g.translate(18, -66); g.rotate(-0.12);
+    rr(g, -24, -34, 48, 64, 4); g.fillStyle = lin(g, 0, -34, 0, 30, [[0, '#b8854a'], [1, '#8a5a2a']]); g.fill(); outline(g, '#5a3a18', 2);
+    rr(g, -19, -26, 38, 52, 2); g.fillStyle = '#fbfbf6'; g.fill();
+    rr(g, -10, -38, 20, 9, 3); g.fillStyle = lin(g, -10, 0, 10, 0, [[0, '#7d8790'], [0.5, '#e6eaee'], [1, '#6d7780']]); g.fill(); outline(g, '#3a4048', 1.2);
+    for (let i = 0; i < 4; i++) {
+      const y = -16 + i * 11;
+      g.strokeStyle = '#2f9a4a'; g.lineWidth = 2; g.beginPath(); g.moveTo(-15, y); g.lineTo(-12, y + 3); g.lineTo(-7, y - 3); g.stroke();
+      g.fillStyle = '#9aa6b2'; g.fillRect(-3, y - 1, 18 - (i % 2) * 5, 2);
+    }
+    g.restore();
+  }
+
+  function drawCustomer(ctx, c, x, baseY, t) {
+    if (!c) return;
+    ctx.save();
+    try {
+      if (!c.look || typeof c.look !== 'object' || !c.look.skin) {
+        const base = (c.look && c.look.type) || c.type || c.typeId || 'ogrenci';
+        const nl = randomLook(base);
+        c.look = Object.assign(nl, c.look || {}, { skin: nl.skin });
+      }
+      const L = c.look;
+      t = t == null ? (KS.time || 0) : t;
+      const st = (c.anim && c.anim.state) || 'idle';
+      const mood = clamp(c.mood == null ? 0.8 : c.mood, 0, 1);
+      const seed = (L.seed || 1) % 1000;
+      const adult = L.type !== 'ogrenci';
+      const W = adult ? 74 : 64;
+      let dy = Math.sin(t * 2.2 + seed) * 1.5, dx = 0, rot = 0;
+      if (st === 'walk') { dy = -Math.abs(Math.sin(t * 9 + seed)) * 8; rot = Math.sin(t * 9 + seed) * 0.035; }
+      else if (st === 'happy') dy = -Math.abs(Math.sin(t * 10)) * 13;
+      else if (st === 'angry') dx = Math.sin(t * 46) * 2.6;
+      ctx.translate(x + dx, baseY + dy);
+      const sc = (L.size || 1) * (c.artScale || 1);
+      ctx.scale(sc, sc);
+      ctx.rotate(rot);
+      const g = ctx;
+      const skin = L.skin || '#f1c27d';
+      const hairCol = L.hair || '#3b2a1a';
+      // arka saç / başörtüsü
+      if (L.hairStyle === 'basortu') headscarf(g, L, false);
+      else hairBack(g, L, hairCol, t);
+      // gövde
+      clothes(g, L, W, t);
+      // boyun
+      rr(g, -13, -152, 26, 22, 8); g.fillStyle = shade(skin, -0.12); g.fill();
+      ell(g, 0, -146, 14, 5); g.fillStyle = rgba(shade(skin, -0.5), 0.25); g.fill();
+      if (L.hairStyle === 'basortu') { // örtü önden boynu kapatır
+        g.beginPath(); g.moveTo(-34, -150); g.quadraticCurveTo(0, -118, 34, -150); g.lineTo(30, -130); g.quadraticCurveTo(0, -108, -30, -130); g.closePath();
+        g.fillStyle = shade(L.scarfHead, -0.08); g.fill(); outline(g, shade(L.scarfHead, -0.45), 1.6);
+      }
+      // kulaklar
+      if (L.hairStyle !== 'basortu') for (const sx of [-1, 1]) { ell(g, sx * 43, HY + 4, 7, 10); g.fillStyle = shade(skin, -0.05); g.fill(); outline(g, shade(skin, -0.4), 1.8); ell(g, sx * 43, HY + 4, 3, 5); g.fillStyle = rgba(shade(skin, -0.4), 0.35); g.fill(); }
+      // yüz
+      const hrx = L.hairStyle === 'basortu' ? 37 : HRX, hry = L.hairStyle === 'basortu' ? 42 : HRY;
+      ell(g, 0, HY, hrx, hry);
+      g.fillStyle = rad(g, -14, HY - 18, 4, 60, [[0, shade(skin, 0.14)], [0.7, skin], [1, shade(skin, -0.1)]]); g.fill();
+      outline(g, shade(skin, -0.42), 2.2);
+      // öfke kızarması
+      const red = st === 'angry' ? 1 : clamp((0.35 - mood) / 0.35, 0, 1);
+      if (red > 0) { ell(g, 0, HY, hrx, hry); g.fillStyle = rad(g, 0, HY + 10, 4, 52, [[0, rgba('#ff3a2a', 0.42 * red)], [1, rgba('#ff3a2a', 0.12 * red)]]); g.fill(); }
+      // yanak
+      for (const sx of [-1, 1]) { ell(g, sx * 26, HY + 18, 8, 5); g.fillStyle = rgba('#ff7a8a', mood > 0.7 || st === 'happy' ? 0.45 : 0.25); g.fill(); }
+      if (L.freckles) { g.fillStyle = rgba('#a0603a', 0.5); for (const p of [[-24, 12], [-20, 15], [-27, 16], [24, 12], [20, 15], [27, 16]]) { circ(g, p[0], HY + p[1], 1.1); g.fill(); } }
+      // burun
+      g.strokeStyle = rgba(shade(skin, -0.45), 0.8); g.lineWidth = 2.2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(-2, HY + 8); g.quadraticCurveTo(4, HY + 15, -2, HY + 18); g.stroke();
+      if (L.beard) { g.beginPath(); g.ellipse(0, HY + 18, 38, 28, 0, 0.1, Math.PI - 0.1); g.fillStyle = rgba(shade(hairCol, 0.1), 0.35); g.fill(); }
+      // ağız / bıyık / maske
+      if (!L.mask) {
+        mouth(g, L, mood, st, t);
+        if (L.mustache) {
+          g.fillStyle = shade(hairCol, -0.05);
+          g.beginPath(); g.moveTo(0, HY + 21); g.quadraticCurveTo(-10, HY + 18, -18, HY + 28); g.quadraticCurveTo(-8, HY + 25, 0, HY + 25); g.quadraticCurveTo(8, HY + 25, 18, HY + 28); g.quadraticCurveTo(10, HY + 18, 0, HY + 21); g.fill();
+          outline(g, shade(hairCol, -0.4), 1.2);
+        }
+      } else {
+        g.beginPath(); g.moveTo(-30, HY + 10); g.quadraticCurveTo(0, HY + 4, 30, HY + 10); g.quadraticCurveTo(30, HY + 38, 0, HY + 44); g.quadraticCurveTo(-30, HY + 38, -30, HY + 10); g.closePath();
+        g.fillStyle = lin(g, 0, HY + 6, 0, HY + 44, [[0, '#d6ecfa'], [1, '#9cc8e8']]); g.fill(); outline(g, '#6a9ac0', 1.6);
+        g.strokeStyle = 'rgba(90,140,180,0.6)'; g.lineWidth = 1.2; g.beginPath(); for (const y of [16, 24, 32]) { g.moveTo(-26, HY + y); g.quadraticCurveTo(0, HY + y - 3, 26, HY + y); } g.stroke();
+        g.strokeStyle = '#e8f4fc'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-30, HY + 12); g.lineTo(-42, HY + 2); g.moveTo(30, HY + 12); g.lineTo(42, HY + 2); g.stroke();
+      }
+      // göz kırpma
+      const per = 3.2 + (seed % 17) / 10;
+      const blink = ((t + seed * 0.37) % per) < 0.13;
+      eyes(g, L, mood, blink, st);
+      // saç ön / başörtüsü çerçeve
+      if (L.hairStyle === 'basortu') headscarf(g, L, true); else { hairFront(g, L, hairCol); hairAcc(g, L); }
+      if (L.glasses) glasses(g, L);
+      // eller / kollar
+      const top = (L.outfit === 'yelek' || L.outfit === 'gomlek') ? (L.shirt || '#fff') : (L.top || '#2b3a67');
+      if (L.type === 'mufettis' && st !== 'happy') {
+        clipboard(g);
+        sleeve(g, W - 4, -30, 18, -40, top, 20);
+        hand(g, 10, -40, skin);
+      }
+      if (st === 'happy') {
+        const wave = Math.sin(t * 12) * 0.25;
+        const hx = W + 22 + Math.sin(wave) * 10, hy = -214;
+        sleeve(g, W - 8, -112, hx - 4, hy + 16, top, 22);
+        hand(g, hx, hy, skin, 12);
+        g.strokeStyle = shade(skin, -0.35); g.lineWidth = 1.4; g.beginPath(); g.moveTo(hx - 5, hy - 6); g.lineTo(hx - 6, hy - 14); g.moveTo(hx, hy - 8); g.lineTo(hx, hy - 16); g.moveTo(hx + 5, hy - 6); g.lineTo(hx + 6, hy - 13); g.stroke();
+        // parıltılar
+        for (let i = 0; i < 3; i++) {
+          const a = t * 2 + i * 2.1, px = Math.cos(a) * 66, py = HY - 30 + Math.sin(a) * 30;
+          Art.drawIcon(ctx, i === 1 ? 'heart' : 'sparkle', px, py, 14 + Math.sin(t * 6 + i) * 3);
+        }
+      } else if (st === 'eat') {
+        const hy = -150 + Math.sin(t * 9) * 4;
+        sleeve(g, W - 14, 20, 18, hy + 12, top, 22);
+        g.save(); g.translate(8, hy - 6); g.rotate(-0.4);
+        rr(g, -14, -9, 28, 18, 5); g.fillStyle = lin(g, 0, -9, 0, 9, [[0, '#f0c27a'], [1, '#c98a3a']]); g.fill(); outline(g, '#7a4614', 1.6);
+        g.fillStyle = '#f6d55c'; g.fillRect(-14, -2, 28, 3);
+        g.restore();
+        hand(g, 18, hy + 6, skin);
+      }
+      // ruh hali efektleri
+      if (st === 'angry' || mood < 0.12) {
+        for (const sx of [-1, 1]) {
+          for (let i = 0; i < 3; i++) {
+            const ph = (t * 1.6 + i / 3) % 1;
+            const px = sx * (52 + ph * 20), py = HY - 26 - ph * 40, r = 6 + ph * 9;
+            circ(g, px, py, r); g.fillStyle = 'rgba(255,255,255,' + (0.75 * (1 - ph)).toFixed(3) + ')'; g.fill();
+          }
+        }
+        // öfke damarı
+        g.save(); g.translate(26, HY - 32); g.strokeStyle = '#e8262a'; g.lineWidth = 3; g.lineCap = 'round';
+        for (let i = 0; i < 4; i++) { g.rotate(Math.PI / 2); g.beginPath(); g.moveTo(2.5, 2.5); g.quadraticCurveTo(6.5, 3, 7, 8); g.stroke(); }
+        g.restore();
+      } else if (mood < 0.42 && st !== 'happy') {
+        // ter damlası (sabırsızlık)
+        const ph = (t * 0.7 + seed) % 1;
+        g.save(); g.translate(-40, HY - 18 + ph * 14); g.globalAlpha *= 1 - ph * 0.6;
+        g.beginPath(); g.moveTo(0, -8); g.quadraticCurveTo(6, 2, 0, 5); g.quadraticCurveTo(-6, 2, 0, -8); g.fillStyle = '#8fd0ff'; g.fill(); outline(g, '#3a8ad0', 1.2);
+        g.restore();
+      }
+    } catch (e) { /* yok */ }
+    ctx.restore();
+  }
+
+  Object.assign(Art, { randomLook, drawCustomer });
+})(window.KS);

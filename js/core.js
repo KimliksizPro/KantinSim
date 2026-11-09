@@ -422,6 +422,20 @@ window.KS = window.KS || {};
       for (const d of s.deliveries.slice()) deliverNow(d);
       KS.game._enterPrep();
     },
+    // Ana menüye dön: oyun sürüyorsa kaydeder, iflas/gameover ise kaydı siler
+    toMenu() {
+      const s = KS.state;
+      if (KS.held) KS.returnHeld();
+      KS.hooks.forceCustomersLeave();
+      if (s.phase === 'gameover') { KS.deleteSave(); KS.state = newState(); }
+      else {
+        if (s.phase === 'open' || s.phase === 'closing') { s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN; }
+        s.paused = false;
+        KS.save();
+        s.phase = 'menu';
+      }
+      KS.bus.emit('toMenu');
+    },
     togglePause(v) {
       const s = KS.state;
       if (s.phase !== 'open' && s.phase !== 'closing') return;

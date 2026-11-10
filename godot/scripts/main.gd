@@ -19,6 +19,14 @@ const STATION_SCENES := [
 	"res://scenes/stations/bins.tscn",
 	"res://scenes/stations/tezgah.tscn",
 	"res://scenes/stations/tost.tscn",
+	"res://scenes/stations/yogurma.tscn",
+	"res://scenes/stations/bekleme.tscn",
+	"res://scenes/stations/izgara.tscn",
+	"res://scenes/stations/fritoz.tscn",
+	"res://scenes/stations/temizlik.tscn",
+	"res://scenes/stations/semaver.tscn",
+	"res://scenes/stations/cop.tscn",
+	"res://scenes/stations/vitrin.tscn",
 ]
 const TOP_SCENES := [
 	"res://scenes/fx/fx_layer.tscn",

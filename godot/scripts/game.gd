@@ -11,6 +11,12 @@ signal time_changed(minute: float)
 signal phase_changed(phase: String)
 ## Ekranda uçan yazı isteği (FX katmanı dinler)
 signal float_text(pos: Vector2, text: String, color: Color)
+signal products_changed(id: String, count: int)
+signal cleanliness_changed(value: float)
+signal item_trashed(item: Dictionary)
+signal upgrade_changed(id: String, level: int)
+## Kısa bildirim (HUD/bildirim paneli dinler). kind: "info" | "good" | "bad" | "warn"
+signal notified(msg: String, kind: String)
 
 const SAVE_VERSION := 1
 ## Yazı renkleri
@@ -30,6 +36,15 @@ var speed_mult: float = 1.0
 ## Bir oyun dakikası kaç gerçek saniye (web: periyodun speed alanı, varsayılan 0.6)
 var sec_per_min: float = 0.6
 var today: Dictionary = {}
+## Hazır/paketli ürün stoğu (vitrin)
+var products: Dictionary = {}
+var level: int = 1
+## Geliştirme seviyeleri {id: seviye (0 = başlangıç)}
+var upgrades: Dictionary = {}
+var staff: Dictionary = {}
+## Temizlik 0..100
+var cleanliness: float = 100.0
+var power: bool = true
 
 
 func _ready() -> void:
@@ -52,6 +67,15 @@ func new_game() -> void:
 	var ings: Dictionary = d.get("ingredients", {})
 	for id in ings:
 		inventory[id] = int(ings[id].get("start", 0))
+	products.clear()
+	var prods: Dictionary = d.get("products", {})
+	for id in prods:
+		products[id] = int(prods[id].get("start", 0))
+	level = 1
+	upgrades.clear()
+	staff.clear()
+	cleanliness = 100.0
+	power = true
 	time_min = open_min()
 	phase = "open"
 	paused = false
@@ -167,3 +191,85 @@ func price_of(line: Dictionary) -> int:
 	if line.get("type", "") == "product":
 		return int(d.get("products", {}).get(id, {}).get("price", 0))
 	return int(d.get("recipes", {}).get(id, {}).get("price", 0))
+
+
+# --- Hazır ürünler (vitrin) ------------------------------------------------------
+
+func prod_get(id: String) -> int:
+	return int(products.get(id, 0))
+
+
+func prod_has(id: String, n: int = 1) -> bool:
+	return prod_get(id) >= n
+
+
+func prod_add(id: String, n: int = 1) -> void:
+	products[id] = prod_get(id) + n
+	products_changed.emit(id, products[id])
+
+
+func prod_take(id: String, n: int = 1) -> bool:
+	if not prod_has(id, n):
+		return false
+	products[id] = prod_get(id) - n
+	products_changed.emit(id, products[id])
+	return true
+
+
+# --- Geliştirmeler, personel, kilitler -----------------------------------------------
+
+func upg(id: String) -> int:
+	return int(upgrades.get(id, 0))
+
+
+## Geliştirmenin şu anki seviyesindeki alan (ör. upg_val("izgara", "slots")). Yoksa fallback.
+func upg_val(id: String, field: String, fallback: Variant = null) -> Variant:
+	var u: Dictionary = Recipes.data().get("upgrades", {}).get(id, {})
+	var levels: Array = u.get("levels", [])
+	if levels.is_empty():
+		return fallback
+	var lv: Dictionary = levels[mini(upg(id), levels.size() - 1)]
+	return lv.get(field, fallback)
+
+
+func set_upgrade(id: String, lv: int) -> void:
+	upgrades[id] = lv
+	upgrade_changed.emit(id, lv)
+
+
+func has_staff(id: String) -> bool:
+	return bool(staff.get(id, false))
+
+
+func is_recipe_unlocked(id: String) -> bool:
+	return level >= int(Recipes.recipes().get(id, {}).get("unlock", 1))
+
+
+func is_product_unlocked(id: String) -> bool:
+	return level >= int(Recipes.data().get("products", {}).get(id, {}).get("unlock", 1))
+
+
+func power_on() -> bool:
+	return power
+
+
+# --- Temizlik ----------------------------------------------------------------------
+
+func add_dirt(amount: float) -> void:
+	var mult := 0.5 if has_staff("temizlikci") else 1.0
+	cleanliness = clampf(cleanliness - amount * mult, 0.0, 100.0)
+	cleanliness_changed.emit(cleanliness)
+
+
+func clean(amount: float) -> void:
+	cleanliness = clampf(cleanliness + amount, 0.0, 100.0)
+	cleanliness_changed.emit(cleanliness)
+
+
+## Çöpe atılan item'ı bildir (istatistik / ses için).
+func trash(item: Dictionary) -> void:
+	item_trashed.emit(item)
+
+
+func notify(msg: String, kind: String = "info") -> void:
+	notified.emit(msg, kind)

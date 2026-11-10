@@ -69,7 +69,17 @@ static func draw_item(ci: CanvasItem, it: Dictionary, center: Vector2, w: float,
 	if type == "dish":
 		_draw_dish(ci, it, center, w, mod)
 		return
-	var t := tex(type, id)
+	var t: Texture2D = null
+	if type == "ing" and (id == "kofte" or id == "patates"):
+		# pişebilen malzemeler: çiğ / pişmiş / yanık görseli
+		var c: float = it.get("cook", 0.0)
+		if id == "kofte":
+			c = (float(it.get("cookA", 0.0)) + float(it.get("cookB", 0.0))) * 0.5
+		t = tex("ing", id + "_" + cook_suffix(c))
+		if t != null:
+			_blit(ci, t, center, w, mod)
+			return
+	t = tex(type, id)
 	if t == null:
 		ci.draw_circle(center, w * 0.3, Color(0.8, 0.3, 0.8) * mod)
 		return
@@ -79,6 +89,15 @@ static func draw_item(ci: CanvasItem, it: Dictionary, center: Vector2, w: float,
 	_blit(ci, t, center, w, m)
 
 
+## Pişme değerine göre görsel eki: raw / cooked / burnt
+static func cook_suffix(c: float) -> String:
+	if c < Recipes.COOK_RAW:
+		return "raw"
+	if c < Recipes.COOK_BURNT:
+		return "cooked"
+	return "burnt"
+
+
 static func _blit(ci: CanvasItem, t: Texture2D, center: Vector2, w: float, mod: Color) -> void:
 	var h := w * float(t.get_height()) / float(t.get_width())
 	ci.draw_texture_rect(t, Rect2(center - Vector2(w, h) * 0.5, Vector2(w, h)), false, mod)
@@ -86,6 +105,20 @@ static func _blit(ci: CanvasItem, t: Texture2D, center: Vector2, w: float, mod: 
 
 static func _draw_dish(ci: CanvasItem, it: Dictionary, center: Vector2, w: float, mod: Color) -> void:
 	var toast: float = it.get("toast", 0.0)
+	var base_id: String = it.get("id", "")
+	# Kese (patates) ve bardak (çay): boş / dolu hazır görseller
+	if base_id == "kese" or base_id == "bardak":
+		var layers0: Array = it.get("layers", [])
+		var name0 := ("bos_kese" if base_id == "kese" else "bos_bardak")
+		var m0 := mod
+		if not layers0.is_empty():
+			name0 = "patates" if base_id == "kese" else "cay"
+			if layers0[0].has("cook"):
+				m0 *= toast_color(float(layers0[0].cook))
+		var t0 := tex("dish", name0)
+		if t0 != null:
+			_blit(ci, t0, center, w, m0)
+		return
 	var rid := Recipes.identify(it)
 	# Basılmış ve tanınan yemek: hazır yemek görseli, tost rengine göre boyanır
 	if rid != "" and toast >= Recipes.COOK_RAW:
@@ -101,11 +134,14 @@ static func _draw_dish(ci: CanvasItem, it: Dictionary, center: Vector2, w: float
 	var layers: Array = it.get("layers", [])
 	for i in layers.size():
 		var l: Dictionary = layers[i]
-		var lt := tex("ing", l.get("id", ""))
+		var lid: String = l.get("id", "")
+		var lt := tex("ing", lid)
+		if (lid == "kofte" or lid == "patates") and l.has("cook"):
+			var ct := tex("ing", lid + "_" + cook_suffix(float(l.cook)))
+			if ct != null:
+				lt = ct
 		if lt == null:
 			continue
 		var off := Vector2((i % 2) * 6.0 - 3.0, -w * 0.06 - i * w * 0.05)
 		var lm := tint
-		if l.has("cook"):
-			lm *= toast_color(float(l.cook))
 		_blit(ci, lt, center + off, w * 0.72, lm)

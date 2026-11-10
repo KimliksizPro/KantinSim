@@ -1572,7 +1572,7 @@
   }
 
   Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace, drawLighting, parallax: PX, setFx, fxActive: () => FXQ.on && !FXQ.autoOff });
-  Object.assign(Art._h, { skyAt, WINS, OPEN });
+  Object.assign(Art._h, { skyAt, WINS, OPEN, paintSky, paintCorridor, paintFrame, paintHud, paintWorktop, paintCounter, paintRegister, paintStationShadows });
 })(window.KS);
 /* ===== Art bölüm 3: malzemeler (drawIngredient) ve hazır ürünler (drawProduct) =====
  * Her çizim 100x100 birimlik kutuda (merkez 0,0; yaklaşık -48..48) tasarlanır ve size/100 ile ölçeklenir. */

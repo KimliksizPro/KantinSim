@@ -9,7 +9,7 @@ malzemeleri sürükleyip birleştirerek yemek hazırlıyor (tost, köfte ekmek, 
 | Klasör | Ne | Durum |
 |---|---|---|
 | kök (`index.html`, `js/`, `css/`) | Çalışan **web prototipi** (HTML5 Canvas, ~14 bin satır JS) | **Referans.** Oynanış mantığının kaynağı. Değiştirme; sadece referans olarak oku. |
-| `godot/` | **Godot 4.7 projesi** (GDScript) | Oynanabilir tost dilimi hazır: kutular, tezgah (2 tabak), tost makinesi, tek müşteri slotu, uçan para, mini HUD. |
+| `godot/` | **Godot 4.7 projesi** (GDScript) | Tüm istasyonlar hazır (kutular, tezgah, tost, ızgara, fritöz, semaver, leğen, bekleme rafı, vitrin, temizlik, çöp); tek müşteri slotu (yalnız kaşarlı tost ister), uçan para, mini HUD. |
 | `tools/export_assets.js` | Web sürümündeki çizimleri PNG'ye, verileri JSON'a aktarır | Çıktısı `godot/assets/` ve `godot/data/game_data.json` |
 
 Hedef: oyunu Godot'da, web sürümünden daha güzel görünecek şekilde (2D ışık/gölge, parallax, partiküller → "2D ama 3D hissi")
@@ -32,6 +32,8 @@ GODOT --headless --path godot -s res://tests/run_tests.gd
 GODOT --path godot -- --shot=res://../shots/main.png --frames=60
 #   isteğe bağlı: --scene=res://scenes/xyz.tscn   --mouse=800,450 (fare konumu; parallax/hover testi)
 #   demo durumları: --tost-demo=1.3 (yuvada o pişme değerinde tost)  --fx-demo  --patience-demo=0.2
+#     --izgara-demo=1.0  --fritoz-demo=0.7[,kalk|eski|soguk]  --semaver-demo=6[,bayat|demleniyor|kapali|bos|lv1|lv2]
+#     --yogurma-demo=0.6|done  --bekleme-demo[=soguk|sicak]  --dirt-demo=40[,yika|bez]  --cop-demo  --vitrin-demo
 
 # Uçtan uca otomatik oynanış (sahte fareyle tost yapıp müşteriye verir; shots/auto_N.png kaydeder, çıkış kodu 0 = servis başarılı)
 GODOT --path godot -- --autoplay
@@ -71,7 +73,8 @@ godot/
   scripts/recipes.gd     Recipes (statik): identify, evaluate, cook_quality, line_label  — web recipes.js karşılığı
   scripts/items.gd       Items (statik): ing / dish / product fabrikaları (item = Dictionary)
   scripts/item_view.gd   ItemView: herhangi bir item'ı çizer (ItemView.draw_item)
-  scripts/stations/      bins, tezgah, tost (+ *_logic.gd: sahneden bağımsız, testli saf mantık)
+  scripts/stations/      bins, tezgah, tost, izgara, fritoz, semaver, yogurma, bekleme, vitrin, temizlik, cop
+                         (+ *_logic.gd: sahneden bağımsız, testli saf mantık; prep_draw.gd: ortak çizim yardımcıları)
   scripts/customers/     customer_slot + customer_logic (sabır, ödeme, bahşiş)
   scripts/fx/ scripts/ui/   uçan yazı + para efekti, mini HUD
   tools/screenshot.gd    autoload "Shot": --shot argümanıyla otomatik ekran görüntüsü
@@ -117,8 +120,9 @@ Web sürümünü tarayıcıda açıp karşılaştırmak için: repo kökünde `p
    - Görsel: arka plan parallax (hazır), istasyonlara gölge, tost makinesine `PointLight2D` parıltısı, buhar partikülü.
    - Testler: tarif tanıma, pişme kalitesi, ödeme. Ekran görüntüsü ile görsel kontrol.
    - Kullanıcıya oynatıp geri bildirim al.
-3. **(sıradaki iş)** Kalan istasyonlar: ızgara (iki yüzlü köfte), fritöz, semaver, leğen, vitrin + hazır ürünler, temizlik, çöp.
-4. Müşteri sistemi tam hali: 4 slot, kuyruk, tipler, sabır, özel istekler, itibar, müfettiş.
+3. ~~Kalan istasyonlar: ızgara (iki yüzlü köfte), fritöz, semaver, leğen, vitrin + hazır ürünler, temizlik, çöp~~ ✅
+   (eksik: sesler; fritöz yağ ömrü `fritoz_logic.oil_life`'ta, kayıt sistemi gelince `Game`'e taşınacak; seviye 1'de kilitli malzeme stokları 0)
+4. **(sıradaki iş)** Müşteri sistemi tam hali: 4 slot, kuyruk, tipler, sabır, özel istekler, itibar, müfettiş.
 5. HUD ve paneller (malzeme siparişi, telefon, menü & fiyat, geliştirme, personel, tarifler, hedefler), gün sonu raporu.
 6. Meta sistemler, kayıt/yükleme, ses (web sürümündeki sesler prosedüreldi: Godot'da `AudioStreamGenerator` veya ses dosyaları).
 7. Cila: ışıklar, normal map'li sprite'lar, ekran efektleri; masaüstü export (Windows/Linux/Mac), sonra Steam.

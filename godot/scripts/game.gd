@@ -79,7 +79,7 @@ func new_game() -> void:
 	time_min = open_min()
 	phase = "open"
 	paused = false
-	today = {"revenue": 0, "tips": 0, "served": 0, "lost": 0, "perfect": 0, "sales": {}}
+	today = {"revenue": 0, "tips": 0, "served": 0, "lost": 0, "perfect": 0, "wasted": 0, "sales": {}}
 	money_changed.emit(money)
 
 

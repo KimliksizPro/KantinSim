@@ -233,6 +233,7 @@ func _serve(item: Dictionary) -> void:
 	if r.tip > 0:
 		Game.earn(r.tip, "bahsis", Vector2(_cx + 104, 274))
 	Game.record_sale(line.get("id", ""), r.quality)
+	Game.add_dirt(0.5)  # her servis tezgahı biraz kirletir (web: customers.js)
 	_set_mood(r.mood)
 	if r.mood == "happy":
 		_pop_icon("heart")

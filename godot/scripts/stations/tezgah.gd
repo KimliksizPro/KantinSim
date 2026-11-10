@@ -134,6 +134,10 @@ func return_dish(item: Dictionary, pref: int) -> void:
 		return
 	var j := Logic.place_dish_back(plates, item, pref)
 	if j < 0:
+		# boş tabak yok: bekleme rafına gönder (web davranışı); raf da doluysa uyar
+		for shelf in get_tree().get_nodes_in_group("item_shelf"):
+			if shelf.has_method("put_item") and shelf.call("put_item", item):
+				return
 		push_warning("tezgah: tabak geri konamadı")
 		return
 	_bump[j] = _now()

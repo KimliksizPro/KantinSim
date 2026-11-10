@@ -1188,8 +1188,6 @@
       // gökyüzü (10 dk kademeli önbellek) — yalnız pencere bölgeleri kopyalanır
       const bucket = Math.round(clamp(gameMin || 480, 480, 1020) / 10) * 10;
       const S = skyAt(bucket, weather);
-      const in3d = !!(KS.Scene3D && KS.Scene3D.isOn() && KS.Scene3D.draw(ctx, OPEN, S, weather, t, k));
-      if (!in3d) {
       const SR = { x: 500, y: 90, w: 820, h: 130 };
       const sky = layer('sky|' + bucket + '|' + weather, SR.w, SR.h, k, (g) => { g.translate(-SR.x, -SR.y); paintSky(g, S); });
       for (const w of WINS) {
@@ -1210,7 +1208,6 @@
         }
         ctx.restore();
       }
-      } // !in3d
       // saat / hava ışık tonu
       const o = OPEN;
       if (S.late > 0) { ctx.fillStyle = rgba('#ff8a3a', 0.13 * S.late); ctx.fillRect(o.x, o.y, o.w, o.h); }
@@ -1392,7 +1389,7 @@
     } catch (e) { /* yok */ }
   }
 
-  Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace, _skyAt: skyAt, _paintSky: paintSky });
+  Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace });
   Object.assign(Art._h, { skyAt, WINS, OPEN });
 })(window.KS);
 /* ===== Art bölüm 3: malzemeler (drawIngredient) ve hazır ürünler (drawProduct) =====

@@ -236,7 +236,7 @@
   // AYARLAR (ses / müzik) — ayrı anahtarda saklanır ki ana menüde de geçerli olsun
   // ---------------------------------------------------------------------------
   const SET_KEY = 'kantinsim_ui_settings';
-  let settings = { sound: true, music: true };
+  let settings = { sound: true, music: true, fx: true };
   function loadSettings() {
     try { const raw = localStorage.getItem(SET_KEY); if (raw) settings = Object.assign(settings, JSON.parse(raw)); } catch (e) { /* */ }
   }
@@ -244,6 +244,7 @@
     try { if (S()) S().settings = Object.assign({}, S().settings || {}, settings); } catch (e) { /* */ }
     try { if (KS.audio && KS.audio.setMuted) KS.audio.setMuted(!settings.sound); } catch (e) { /* */ }
     try { if (KS.audio && KS.audio.setMusic) KS.audio.setMusic(!!settings.music && !!settings.sound); } catch (e) { /* */ }
+    try { if (KS.Art && KS.Art.setFx) KS.Art.setFx(settings.fx !== false, false); } catch (e) { /* */ }
     if (persist) { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) { /* */ } save(); }
     if (E.mmSound) E.mmSound.classList.toggle('off', !settings.sound);
     if (E.mmMusic) E.mmMusic.classList.toggle('off', !settings.music);
@@ -478,17 +479,33 @@
   // ---------------------------------------------------------------------------
   // HUD
   // ---------------------------------------------------------------------------
+  // HUD ikonları (24x24, çizgi stili; renk = currentColor)
+  const HUD_ICONS = {
+    supply: '<path d="M3.5 7.6 12 3.4l8.5 4.2v8.8L12 20.6l-8.5-4.2z"/><path d="M3.5 7.6 12 11.8l8.5-4.2M12 11.8v8.8"/><path d="m7.8 5.5 8.5 4.2"/>',
+    phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.4 18.3h3.2"/><path d="M9.5 6.2h5"/>',
+    menu: '<path d="M3 17.2h18"/><path d="M4.6 17.2a7.4 7.4 0 0 1 14.8 0"/><path d="M12 7.2V5.4"/><path d="M10.3 5.2h3.4"/><path d="M4 20.2h16"/>',
+    upgrades: '<path d="m6 12.5 6-6 6 6"/><path d="m6 18.5 6-6 6 6"/>',
+    staff: '<circle cx="9" cy="8.2" r="3.4"/><path d="M2.8 20a6.2 6.2 0 0 1 12.4 0"/><path d="M15.8 4.9a3.4 3.4 0 0 1 0 6.6"/><path d="M18 14.3a6.2 6.2 0 0 1 3.4 5.7"/>',
+    recipes: '<path d="M5 5.2A2.2 2.2 0 0 1 7.2 3H19v14.5H7.2A2.2 2.2 0 0 0 5 19.7z"/><path d="M5 19.7A2.2 2.2 0 0 0 7.2 21.9H19v-4.4"/><path d="M9 7.5h6M9 10.8h4"/>',
+    kantin: '<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
+    pause: '<rect x="6.5" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/>',
+    play: '<path d="M8 5.6v12.8a.8.8 0 0 0 1.2.7l10-6.4a.8.8 0 0 0 0-1.4l-10-6.4A.8.8 0 0 0 8 5.6z" fill="currentColor" stroke="none"/>',
+    speed: '<path d="M3.5 6.8v10.4l7.6-5.2z" fill="currentColor"/><path d="M12.4 6.8v10.4L20 12z" fill="currentColor"/>',
+    sound: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="M15.4 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.4a7.8 7.8 0 0 1 0 11.2"/>',
+    mute: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="m15.8 9.6 4.8 4.8M20.6 9.6l-4.8 4.8"/>',
+  };
+  const svgIco = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (HUD_ICONS[name] || '') + '</svg>';
   const HUD_BTNS = [
-    { id: 'supply', ico: '📦', label: 'Malzeme', title: 'Malzeme siparişi (toptancı / bakkal)' },
-    { id: 'phone', ico: '📱', label: 'Telefon', title: 'Hazır yemek siparişi (döner, çiğ köfte, pide...)' },
-    { id: 'menu', ico: '🍽️', label: 'Menü', title: 'Menü & fiyatlar' },
-    { id: 'upgrades', ico: '⬆️', label: 'Geliştir', title: 'Ekipman geliştirmeleri' },
-    { id: 'staff', ico: '👥', label: 'Personel', title: 'Personel işe al / çıkar' },
-    { id: 'recipes', ico: '📖', label: 'Tarifler', title: 'Tarif defteri ve kontroller' },
-    { id: 'kantin', ico: '🎯', label: 'Hedef', title: 'Kantin defteri: günlük hedefler, başarımlar, istatistik, pazarlama, banka' },
-    { id: 'pause', ico: '⏸', label: 'Duraklat', title: 'Duraklat (P / Esc)', sep: true },
-    { id: 'speed', ico: '⏩', label: '1x', title: 'Oyun hızı (1x / 2x)' },
-    { id: 'sound', ico: '🔊', label: 'Ses', title: 'Sesi aç / kapat' },
+    { id: 'supply', label: 'Malzeme', acc: '#ffb35c', title: 'Malzeme siparişi (toptancı / bakkal)' },
+    { id: 'phone', label: 'Telefon', acc: '#7fd4ff', title: 'Hazır yemek siparişi (döner, çiğ köfte, pide...)' },
+    { id: 'menu', label: 'Menü', acc: '#ffd36a', title: 'Menü & fiyatlar' },
+    { id: 'upgrades', label: 'Geliştir', acc: '#8ff0a8', title: 'Ekipman geliştirmeleri' },
+    { id: 'staff', label: 'Personel', acc: '#c9adff', title: 'Personel işe al / çıkar' },
+    { id: 'recipes', label: 'Tarifler', acc: '#ffa48f', title: 'Tarif defteri ve kontroller' },
+    { id: 'kantin', label: 'Hedefler', acc: '#ff7b7b', title: 'Kantin defteri: günlük hedefler, başarımlar, istatistik, pazarlama, banka' },
+    { id: 'pause', label: '', acc: '#ffd36a', title: 'Duraklat (P / Esc)', group: 2 },
+    { id: 'speed', label: '1x', acc: '#7fd4ff', title: 'Oyun hızı (1x / 2x)', group: 2 },
+    { id: 'sound', label: '', acc: '#8ff0a8', title: 'Sesi aç / kapat', group: 2 },
   ];
   const hud = { money: 0, moneyShown: 0, lastMoney: null };
 
@@ -516,13 +533,18 @@
     q.deliv = h('div', { class: 'hd-chip hd-deliv ks-hide', title: 'Yoldaki siparişler' });
     q.btns = {};
     const right = h('div', { class: 'hd-right' });
+    const groups = { 1: h('div', { class: 'hud-group' }), 2: h('div', { class: 'hud-group ctl' }) };
     for (const b of HUD_BTNS) {
-      const lab = h('span', { class: 'hb-label' }, b.label), ico = h('span', { class: 'hb-ico' }, b.ico);
-      const el = h('button', { class: 'hud-btn hb-' + b.id + (b.sep ? ' sep' : ''), type: 'button', title: b.title }, ico, lab);
-      el._ico = ico; el._lab = lab;
+      const ico = h('span', { class: 'hb-ico', html: svgIco(b.id) });
+      const lab = h('span', { class: 'hb-label' + (b.label ? '' : ' ks-hide') }, b.label);
+      const badge = h('span', { class: 'hb-badge ks-hide' });
+      const el = h('button', { class: 'hud-btn hb-' + b.id + (b.group === 2 ? ' compact' : ''), type: 'button', title: b.title, 'aria-label': b.title }, ico, lab, badge);
+      el.style.setProperty('--acc', b.acc);
+      el._ico = ico; el._lab = lab; el._badge = badge;
       el.addEventListener('click', safe(() => { unlockAudio(); hudAction(b.id, el); }));
-      q.btns[b.id] = el; right.appendChild(el);
+      q.btns[b.id] = el; groups[b.group || 1].appendChild(el);
     }
+    right.appendChild(groups[1]); right.appendChild(groups[2]);
     const left = h('div', { class: 'hd-left' },
       h('div', { class: 'hd-day' }, q.dayLine, h('div', { class: 'hd-timeline' }, q.clock, q.period, q.busy)),
       q.weather, q.event, q.power, q.money, q.rep, q.level, q.clean, q.deliv);
@@ -612,17 +634,19 @@
     const canPause = s.phase === 'open' || s.phase === 'closing';
     setCls(q.btns.pause, 'is-disabled', !canPause);
     setCls(q.btns.pause, 'active', !!s.paused);
-    setText(q.btns.pause._ico, s.paused ? '▶️' : '⏸');
-    setText(q.btns.pause._lab, s.paused ? 'Devam' : 'Duraklat');
+    setHTML(q.btns.pause._ico, svgIco(s.paused ? 'play' : 'pause'));
+    q.btns.pause.title = s.paused ? 'Devam et (P / Esc)' : 'Duraklat (P / Esc)';
     const sp = (s.speedMult || 1) >= 2 ? 2 : 1;
     setText(q.btns.speed._lab, sp + 'x'); setCls(q.btns.speed, 'active', sp === 2);
     if (q.btns.kantin) {
       const gl = (KS.Meta && KS.Meta.goals()) || [];
       const dn = gl.filter(g => g.done).length;
-      setText(q.btns.kantin._lab, gl.length ? 'Hedef ' + dn + '/' + gl.length : 'Defter');
+      const bd = q.btns.kantin._badge;
+      setText(q.btns.kantin._lab, gl.length ? 'Hedefler' : 'Defter');
+      setText(bd, dn + '/' + gl.length); show(bd, gl.length > 0); setCls(bd, 'done', gl.length > 0 && dn === gl.length);
       setCls(q.btns.kantin, 'goal-all', gl.length > 0 && dn === gl.length);
     }
-    setText(q.btns.sound._ico, settings.sound ? '🔊' : '🔇');
+    setHTML(q.btns.sound._ico, svgIco(settings.sound ? 'sound' : 'mute'));
     setCls(q.btns.sound, 'off', !settings.sound);
   }
   function tickMoney(dt) {
@@ -1491,6 +1515,11 @@
       const row = (ico, label, sub, ctrl) => h('div', { class: 'set-row' }, h('span', { class: 'set-ico' }, ico), h('div', { class: 'set-l' }, h('b', null, label), h('small', null, sub)), ctrl);
       p.body.appendChild(row('🔊', 'Ses efektleri', 'Cızırtı, kasa, zil sesleri', toggle(settings.sound, on => { setSound(on); updateHUD(); })));
       p.body.appendChild(row('🎵', 'Müzik', 'Arka plan müziği', toggle(settings.music, on => setMusic(on))));
+      const fxOn = !(KS.Art && KS.Art.fxActive) || KS.Art.fxActive();
+      p.body.appendChild(row('💡', 'Işık & derinlik efektleri', 'Gölgeler, ışık, parıltılar (yavaş cihazda kapat)', toggle(fxOn, on => {
+        settings.fx = !!on; applySettings(true);
+        try { if (KS.Art && KS.Art.setFx) KS.Art.setFx(!!on, true); } catch (e) { /* */ }
+      })));
       const s = S();
       if (s && s.phase !== 'menu') {
         p.body.appendChild(row('⏩', 'Oyun hızı', 'Sakin saatleri hızlandır', toggle((s.speedMult || 1) >= 2, on => { s.speedMult = on ? 2 : 1; updateHUD(); }, ['2x', '1x'])));

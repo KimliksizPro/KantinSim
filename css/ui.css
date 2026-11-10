@@ -129,18 +129,43 @@
 .hd-clean.warn { color: #ffcf7a; box-shadow: inset 0 0 0 1.5px rgba(255, 180, 60, .5); }
 .hd-clean.bad { color: #fff; background: rgba(220, 50, 40, .55); animation: ks-blink 1.4s infinite; }
 .hd-deliv { color: #bfe6ff; box-shadow: inset 0 0 0 1.5px rgba(90, 176, 255, .45); background: rgba(90, 176, 255, .12); }
-.hud-btn { width: 60px; height: 50px; border: 0; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 1px; color: #ffe9cc; background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04));
-  box-shadow: inset 0 0 0 1.5px rgba(255, 220, 180, .14), 0 2px 0 rgba(0, 0, 0, .3); transition: transform .09s, background .15s; padding: 0; }
-.hud-btn .hb-ico { font-size: 21px; line-height: 1.05; }
-.hud-btn .hb-label { font: 800 11px var(--f-body); letter-spacing: .2px; white-space: nowrap; }
-.hud-btn:hover { background: linear-gradient(180deg, rgba(255, 170, 90, .38), rgba(240, 97, 43, .28)); transform: translateY(-1px); }
-.hud-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 1.5px rgba(255, 220, 180, .2); }
-.hud-btn.sep { margin-left: 10px; }
-.hud-btn.active { background: linear-gradient(180deg, #ffb35c, var(--orange2)); color: #fff; }
-.hud-btn.off { opacity: .6; }
-.hud-btn.is-disabled { opacity: .35; cursor: default; }
-.hud-btn.is-disabled:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)); transform: none; }
+/* HUD butonları: koyu tepsi içinde kabartma tuşlar, çizgi ikonlar, buton başına vurgu rengi (--acc) */
+.hd-right { gap: 8px; }
+.hud-group { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .34), rgba(0, 0, 0, .18));
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(0, 0, 0, .2), 0 1px 0 rgba(255, 220, 180, .12); }
+.hud-btn { --acc: #ffb35c; position: relative; width: 64px; height: 44px; border: 0; border-radius: 11px; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #f1d9bd;
+  background: linear-gradient(180deg, #6b4731 0%, #573925 55%, #4b3020 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 226, 192, .24), inset 0 -2px 0 rgba(0, 0, 0, .22), 0 2px 0 rgba(18, 9, 4, .6), 0 3px 6px rgba(0, 0, 0, .25);
+  transition: transform .1s ease, background .15s, color .15s, box-shadow .15s; }
+.hud-btn.compact { width: 46px; }
+.hud-btn .hb-ico { display: grid; place-items: center; width: 22px; height: 22px; transition: transform .16s cubic-bezier(.3, 1.6, .5, 1), color .15s; }
+.hud-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 1.5px 0 rgba(0, 0, 0, .4)); overflow: visible; }
+.hud-btn .hb-label { font: 800 10.5px/1 var(--f-body); letter-spacing: .3px; color: rgba(255, 233, 208, .78); white-space: nowrap; transition: color .15s; }
+.hud-btn::after { content: ''; position: absolute; left: 16px; right: 16px; bottom: 3px; height: 2px; border-radius: 2px; background: var(--acc);
+  box-shadow: 0 0 6px var(--acc); opacity: 0; transform: scaleX(.3); transition: opacity .18s, transform .18s; }
+.hud-btn:hover { color: #fff; background: linear-gradient(180deg, #7d5339 0%, #623f29 60%, #553624 100%); transform: translateY(-1px); }
+.hud-btn:hover .hb-ico { color: var(--acc); transform: translateY(-1px) scale(1.08); }
+.hud-btn:hover .hb-label { color: #fff; }
+.hud-btn:hover::after { opacity: 1; transform: scaleX(1); }
+.hud-btn:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .4), 0 0 0 rgba(0, 0, 0, 0); }
+.hud-btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.hud-btn.active { color: #fff; background: linear-gradient(180deg, #ffb35c, var(--orange2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 0 #9e3a14, 0 0 14px rgba(255, 140, 60, .5); }
+.hud-btn.active .hb-ico, .hud-btn.active:hover .hb-ico { color: #fff; }
+.hud-btn.active .hb-label { color: #fff; }
+.hud-btn.active::after { display: none; }
+.hud-btn.off { color: rgba(241, 217, 189, .45); }
+.hud-btn.is-disabled { opacity: .38; cursor: default; }
+.hud-btn.is-disabled:hover { color: #f1d9bd; background: linear-gradient(180deg, #6b4731 0%, #573925 55%, #4b3020 100%); transform: none; }
+.hud-btn.is-disabled:hover .hb-ico { color: inherit; transform: none; }
+.hud-btn.is-disabled::after { display: none; }
+.hb-badge { position: absolute; top: -6px; right: -5px; min-width: 22px; height: 17px; padding: 0 5px; border-radius: 9px; pointer-events: none;
+  font: 900 10.5px/17px var(--f-body); color: #fff; text-align: center; letter-spacing: .2px;
+  background: linear-gradient(180deg, #ff7a6b, #d8362c); box-shadow: 0 0 0 2px #3a2316, 0 2px 4px rgba(0, 0, 0, .4); }
+.hb-badge.done { background: linear-gradient(180deg, #6fe39a, #20a257); }
 
 /* ---------------------------------------------------------------- BİLDİRİMLER */
 #ks-notifs { position: absolute; right: 14px; top: 196px; width: 380px; z-index: 80; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -593,7 +618,8 @@
 .tut-ring.ring2 { border-color: #7dffa8; box-shadow: 0 0 22px rgba(125,255,168,.7); animation-delay: .5s; }
 
 /* ---------------------------------------------------------------- KANTİN DEFTERİ (hedef / başarım / istatistik / pazarlama / banka) */
-.hud-btn.goal-all { background: linear-gradient(180deg, rgba(79, 209, 127, .55), rgba(32, 162, 87, .45)); color: #fff; }
+.hud-btn.goal-all { background: linear-gradient(180deg, #3f9a62, #276e44 60%, #215d3a); color: #fff; }
+.hud-btn.goal-all .hb-ico { color: #b6ffd0; }
 .hud-btn.bump { animation: hbBump .6s ease; }
 @keyframes hbBump { 0% { transform: scale(1); } 30% { transform: scale(1.22) rotate(-4deg); } 60% { transform: scale(.95); } 100% { transform: scale(1); } }
 

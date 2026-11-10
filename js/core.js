@@ -749,14 +749,32 @@ window.KS = window.KS || {};
   }
   KS.roundRectPath = roundRectPath;
 
+  // Elde tutulan eşya: kaldırma animasyonu, harekete göre eğilme, yüksekliğe göre yumuşak gölge
+  const heldFx = { uid: null, t0: 0, px: 0, lastT: 0, vx: 0, tilt: 0 };
   function drawHeld(ctx, time) {
-    const h = KS.held; if (!h) return;
+    const h = KS.held; if (!h) { heldFx.uid = null; return; }
+    const uid = h.item && h.item.uid;
+    if (heldFx.uid !== uid) { heldFx.uid = uid; heldFx.t0 = time; heldFx.px = h.x; heldFx.vx = 0; heldFx.tilt = 0; heldFx.lastT = time; }
+    const dt = Math.max(0.001, Math.min(0.1, time - heldFx.lastT));
+    heldFx.lastT = time;
+    const v = (h.x - heldFx.px) / dt; heldFx.px = h.x;
+    heldFx.vx += (v - heldFx.vx) * Math.min(1, dt * 14);
+    const targetTilt = util.clamp(heldFx.vx * 0.00045, -0.3, 0.3);
+    heldFx.tilt += (targetTilt - heldFx.tilt) * Math.min(1, dt * 12);
+    const k = Math.min(1, (time - heldFx.t0) * 4.5);
+    const lift = util.easeOutBack(k);                 // 0 → 1 (hafif taşmalı)
+    const bob = Math.sin(time * 6) * 2 * k;
+    const hgt = 18 + 22 * lift;                       // sanal yükseklik
     ctx.save();
-    ctx.globalAlpha = 0.25; ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.ellipse(h.x + 10, h.y + 40, 45, 12, 0, 0, Math.PI * 2); ctx.fill();
+    // gölge: yükseldikçe uzaklaşır, büyür ve soluklaşır
+    const sx = h.x + hgt * 0.35, sy = h.y + 30 + hgt * 0.45, rx = 34 + hgt * 0.35, ry = 9 + hgt * 0.1;
+    ctx.fillStyle = '#000';
+    ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.ellipse(sx, sy, rx * 1.25, ry * 1.4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.16; ctx.beginPath(); ctx.ellipse(sx, sy, rx * 0.8, ry * 0.85, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const bob = Math.sin(time * 8) * 2;
-    if (KS.Art && KS.Art.drawItem) KS.Art.drawItem(ctx, h.item, h.x, h.y - 6 + bob, 1.05);
+    ctx.translate(h.x, h.y - 6 + bob - lift * 4);
+    ctx.rotate(heldFx.tilt);
+    if (KS.Art && KS.Art.drawItem) KS.Art.drawItem(ctx, h.item, 0, 0, 0.95 + 0.12 * lift);
     ctx.restore();
   }
   let tipText = null;
@@ -827,11 +845,17 @@ window.KS = window.KS || {};
     if (A && A.drawBackground) A.drawBackground(ctx, s.time, s.today ? s.today.weather : 'gunesli', KS.time);
     const layer = name => { for (const m of KS.modules) if (m.draw) { try { m.draw(ctx, name); } catch (e) { console.error(m.name, e); } } };
     layer('back');
+    const PX = A && A.parallax;
+    // müşteriler tezgahın arkasında: tezgah ön panelinin altına taşmasınlar (istasyon aralarından görünüyordu)
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, 422); ctx.clip();
+    if (PX) ctx.translate(PX.cx || 0, PX.cy || 0);
     layer('customers');
+    ctx.restore();
     if (A && A.drawCounterFront) A.drawCounterFront(ctx, KS.time);
     layer('counter');
     if (A && A.drawWorkspace) A.drawWorkspace(ctx, KS.time);
     layer('stations');
+    if (A && A.drawLighting) A.drawLighting(ctx, KS.time);
     drawHighlights(ctx, KS.time);
     layer('fx');
     drawFx(ctx);

@@ -642,7 +642,7 @@
 (function (KS) {
   'use strict';
   const Art = KS.Art, H = Art._h;
-  const { TAU, FONT_D, FONT_T, clamp, rr, ell, circ, shade, mix, rgba, lin, rad, rng, h01, layer, layerRes, blit, paintMetal, paintWood, brushedTexture, sprite } = H;
+  const { TAU, FONT_D, FONT_T, clamp, lerp, rr, ell, circ, shade, mix, rgba, lin, rad, rng, h01, layer, layerRes, blit, paintMetal, paintWood, brushedTexture, sprite, newCanvas } = H;
 
   const OPEN = { x: 330, y: 76, w: 1142, h: 276 };      // servis penceresi açıklığı (koridor)
   const WINS = [{ x: 555, y: 104, w: 170, h: 104 }, { x: 1115, y: 104, w: 170, h: 104 }];
@@ -1179,6 +1179,39 @@
     g.fillStyle = lin(g, 1600, 0, 1586, 0, [[0, 'rgba(0,0,0,0.25)'], [1, 'rgba(0,0,0,0)']]); g.fillRect(1586, y0, 14, h);
   }
 
+  // ---------------------------------------------------------------------------
+  // DERİNLİK: parallax + toz zerreleri
+  // ---------------------------------------------------------------------------
+  const PX = { x: 0, y: 0, cx: 0, cy: 0, lastT: -1 };   // x,y: koridor; cx,cy: müşteriler
+  let _lastSky = null;
+  function updParallax(t) {
+    const dt = PX.lastT < 0 ? 0.016 : clamp(t - PX.lastT, 0, 0.1);
+    PX.lastT = t;
+    const p = KS.pointer, on = p && p.inside && !(KS.ui && KS.ui.modalOpen);
+    let tx = Math.sin(t * 0.21) * 1.5, ty = Math.sin(t * 0.17 + 1) * 0.6;   // boşta hafif nefes
+    if (on) { tx = clamp((p.x - 800) / 800, -1, 1) * 9; ty = clamp((p.y - 450) / 450, -1, 1) * 3; }
+    const f = 1 - Math.exp(-dt * 3.2);
+    PX.x += (tx - PX.x) * f; PX.y += (ty - PX.y) * f;
+    PX.cx = PX.x * 0.55; PX.cy = PX.y * 0.55;
+    return PX;
+  }
+  function drawDust(ctx, S, t) {
+    if (!S || S.sunA < 0.15) return;
+    ctx.save();
+    for (const w of WINS) {
+      const dx = clamp((w.x + w.w / 2 - S.sunX) * 0.35, -140, 140);
+      for (let i = 0; i < 14; i++) {
+        const u = h01(i, w.x), v = (h01(i, w.x + 7) + t * (0.015 + h01(i, 3) * 0.02)) % 1;
+        const yy = FLOOR_Y - 150 + v * 200;
+        if (yy < w.y + w.h) continue;
+        const sx = lerp(w.x, w.x + w.w, u) + dx * clamp((yy - FLOOR_Y) / 54, 0, 1) + Math.sin(t * 0.7 + i) * 6;
+        const a = Math.sin(v * Math.PI) * (0.25 + 0.35 * h01(i, 9)) * S.sunA;
+        circ(ctx, sx, yy, 0.8 + h01(i, 5) * 1.1); ctx.fillStyle = rgba(S.sunCol, a); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawBackground(ctx, gameMin, weather, t) {
     try {
       t = t || 0;
@@ -1189,12 +1222,19 @@
       const bucket = Math.round(clamp(gameMin || 480, 480, 1020) / 10) * 10;
       const S = skyAt(bucket, weather);
       const SR = { x: 500, y: 90, w: 820, h: 130 };
+      const P = updParallax(t);
+      _lastSky = S;
+      // koridor katmanı (derinlik): fare yönünde hafif kayar; çerçeve ve tezgah sabit kalır
+      ctx.save(); ctx.translate(P.x, P.y);
       const sky = layer('sky|' + bucket + '|' + weather, SR.w, SR.h, k, (g) => { g.translate(-SR.x, -SR.y); paintSky(g, S); });
+      const sdx = clamp(P.x * 0.9, -30, 30), sdy = clamp(P.y * 0.9, -10, 10); // gökyüzü daha uzakta: daha fazla kayar
       for (const w of WINS) {
-        try { ctx.drawImage(sky, (w.x - SR.x) * k, (w.y - SR.y) * k, w.w * k, w.h * k, w.x, w.y, w.w, w.h); } catch (e) { /* yok */ }
+        try { ctx.drawImage(sky, (w.x - SR.x - sdx) * k, (w.y - SR.y - sdy) * k, w.w * k, w.h * k, w.x, w.y, w.w, w.h); } catch (e) { /* yok */ }
       }
       drawWindowsWeather(ctx, S, t);
-      regionLayer(ctx, 'corridor', { x: 0, y: 56, w: 1600, h: 296 }, paintCorridor);
+      // dikeyde hafif taşma payı (kayınca kenar açılmasın)
+      const cc = layer('corridor@px', 1600, 296, k, (g) => { g.translate(0, -56); paintCorridor(g); });
+      blit(ctx, cc, 0, 53, 1600, 302);
       // pencerelerden zemine düşen ışık
       if (S.sunA > 0.15) {
         ctx.save();
@@ -1214,6 +1254,8 @@
       if (S.early > 0) { ctx.fillStyle = rgba('#fff0d0', 0.12 * S.early); ctx.fillRect(o.x, o.y, o.w, o.h); }
       if (S.ov > 0) { ctx.fillStyle = rgba('#34465e', 0.16 * S.ov); ctx.fillRect(o.x, o.y, o.w, o.h); }
       if (weather === 'sicak') { ctx.fillStyle = 'rgba(255,196,110,0.07)'; ctx.fillRect(o.x, o.y, o.w, o.h); }
+      drawDust(ctx, S, t);
+      ctx.restore();
       regionLayer(ctx, 'frame', { x: 0, y: 54, w: 1600, h: 298 }, paintFrame);
       // menü tahtası içeriği (menü değişince yeniden)
       if (_menuSig === null || Math.floor(t * 2) !== _menuCheck) {
@@ -1372,15 +1414,26 @@
   const ST_KEYS = ['bins', 'yogurma', 'bekleme', 'tezgah', 'tost', 'izgara', 'fritoz', 'temizlik', 'semaver', 'cop'];
   function paintStationShadows(g) {
     const L = KS.layout || {};
+    // 1) yönlü gölge (ışık sol üstten): yumuşak geniş + sıkı temas gölgesi
     for (const key of ST_KEYS) {
       const r = L[key]; if (!r) continue;
       g.save();
-      g.shadowColor = 'rgba(10,10,20,0.5)'; g.shadowBlur = 16; g.shadowOffsetY = 6;
+      g.shadowColor = 'rgba(8,8,18,0.45)'; g.shadowBlur = 22; g.shadowOffsetX = 5; g.shadowOffsetY = 11;
       rr(g, r.x + 3, r.y + 3, r.w - 6, r.h - 6, 14); g.fillStyle = '#000'; g.fill();
+      g.shadowColor = 'rgba(8,8,18,0.55)'; g.shadowBlur = 5; g.shadowOffsetX = 1; g.shadowOffsetY = 4;
+      g.fill();
       g.restore();
       g.save(); g.globalCompositeOperation = 'destination-out';
       rr(g, r.x + 3, r.y + 3, r.w - 6, r.h - 6, 14); g.fill();
       g.restore();
+    }
+    // 2) kaide / kalınlık: istasyonun altından görünen koyu ön yüz (2.5D kutu hissi)
+    for (const key of ST_KEYS) {
+      const r = L[key]; if (!r) continue;
+      const y0 = r.y + r.h - 16, y1 = Math.min(r.y + r.h + 6, 899);
+      rr(g, r.x + 4, y0, r.w - 8, y1 - y0, 10);
+      g.fillStyle = lin(g, 0, y0, 0, y1, [[0, '#2a2f37'], [0.6, '#3a414b'], [0.85, '#4d5560'], [1, '#22262d']]); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(r.x + 14, y1 - 2.2, r.w - 28, 1);
     }
   }
   function drawWorkspace(ctx, t) {
@@ -1389,7 +1442,136 @@
     } catch (e) { /* yok */ }
   }
 
-  Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace });
+  // ---------------------------------------------------------------------------
+  // IŞIK GEÇİŞİ (istasyonlardan sonra, efektlerden önce)
+  //  Tek önbellekli katman, normal alfa karışımıyla (multiply/screen yazılımsal çizimde pahalı):
+  //  ortam tonu (saat/hava), tavan lambası ışık havuzları, istasyon hacim gölgelendirmesi, vinyet.
+  //  Üstüne aktif cihazların sıcak parıltısı ('lighter', küçük sprite'lar).
+  // ---------------------------------------------------------------------------
+  function paintLighting(g, S) {
+    const L = KS.layout || {};
+    // ortam tonu
+    if (S) {
+      if (S.late > 0) { g.fillStyle = rgba('#ff9a4a', 0.07 * S.late); g.fillRect(0, 56, 1600, 844); }
+      if (S.ov > 0) { g.fillStyle = rgba('#3a4a66', 0.07 * S.ov); g.fillRect(0, 56, 1600, 844); }
+    }
+    // tavan lambası ışık havuzları (çalışma alanı)
+    for (const p of [[480, 610], [950, 610], [1440, 610]]) {
+      g.fillStyle = rad(g, p[0], p[1], 0, 380, [[0, 'rgba(255,244,222,0.10)'], [0.5, 'rgba(255,240,215,0.04)'], [1, 'rgba(255,240,215,0)']]);
+      g.fillRect(p[0] - 380, Math.max(422, p[1] - 380), 760, 760);
+    }
+    // servis penceresinden tezgaha düşen gün ışığı
+    g.fillStyle = lin(g, 0, 352, 0, 440, [[0, 'rgba(255,248,230,0.10)'], [1, 'rgba(255,248,230,0)']]);
+    g.fillRect(330, 352, 1142, 88);
+    // istasyonlar: üstte parlak kenar, alta doğru kararan yüzey, sağ kenarda gölge (ışık sol üstten)
+    for (const key of ST_KEYS) {
+      const r = L[key]; if (!r) continue;
+      g.save(); rr(g, r.x, r.y, r.w, r.h, 14); g.clip();
+      g.fillStyle = lin(g, 0, r.y, 0, r.y + r.h, [[0, 'rgba(255,252,244,0.16)'], [0.09, 'rgba(255,252,244,0)'], [0.55, 'rgba(20,14,10,0.04)'], [1, 'rgba(20,14,10,0.20)']]);
+      g.fillRect(r.x, r.y, r.w, r.h);
+      g.fillStyle = lin(g, r.x, 0, r.x + r.w, 0, [[0, 'rgba(255,252,244,0.08)'], [0.07, 'rgba(255,252,244,0)'], [0.82, 'rgba(20,14,10,0)'], [1, 'rgba(20,14,10,0.11)']]);
+      g.fillRect(r.x, r.y, r.w, r.h);
+      g.restore();
+      rr(g, r.x + 1, r.y + 1, r.w - 2, r.h - 2, 13); g.strokeStyle = 'rgba(255,250,240,0.12)'; g.lineWidth = 1.5; g.stroke();
+    }
+    // çalışma alanının arka kenarı (tezgahın dibi) daha karanlık → derinlik
+    g.fillStyle = lin(g, 0, 422, 0, 500, [[0, 'rgba(30,22,20,0.16)'], [1, 'rgba(30,22,20,0)']]);
+    g.fillRect(0, 422, 1600, 78);
+    // koridor arka planı hafif bastırılır, karakterler öne çıkar
+    g.fillStyle = lin(g, 0, 80, 0, 352, [[0, 'rgba(60,45,40,0.10)'], [1, 'rgba(60,45,40,0)']]);
+    g.fillRect(330, 80, 1142, 272);
+    // vinyet
+    g.fillStyle = rad(g, 800, 560, 430, 1080, [[0, 'rgba(25,14,8,0)'], [0.5, 'rgba(25,14,8,0.10)'], [1, 'rgba(25,14,8,0.42)']]);
+    g.fillRect(0, 56, 1600, 844);
+  }
+  const _light = { key: null, c: null };   // tek girişli önbellek (büyük katman LRU'yu şişirmesin)
+  function bakeLighting(ctx, S) {
+    const k = layerRes(ctx), key = (S ? (Math.round(S.min / 10) + '|' + S.weather) : 'x') + '@' + k;
+    if (_light.key === key && _light.c) return _light.c;
+    const c = newCanvas(1600 * k, 900 * k), g = c.getContext('2d');
+    g.scale(k, k);
+    try { paintLighting(g, S); } catch (e) { /* yok */ }
+    _light.key = key; _light.c = c;
+    return c;
+  }
+  const _glow = new Map();
+  function glowSprite(col) {
+    let c = _glow.get(col);
+    if (c) return c;
+    c = newCanvas(128, 128);
+    const g = c.getContext('2d');
+    g.fillStyle = rad(g, 64, 64, 0, 64, [[0, rgba(col, 1)], [0.35, rgba(col, 0.45)], [1, rgba(col, 0)]]);
+    g.fillRect(0, 0, 128, 128);
+    _glow.set(col, c);
+    return c;
+  }
+  function glow(ctx, col, x, y, rx, ry, a) {
+    if (a <= 0.005) return;
+    ctx.globalAlpha = clamp(a, 0, 1);
+    try { ctx.drawImage(glowSprite(col), x - rx, y - ry, rx * 2, ry * 2); } catch (e) { /* yok */ }
+  }
+  // Kalite koruması: ışık açıkken FPS uzun süre düşük kalırsa (zayıf cihaz / GPU'suz çizim) ışığı oturumluk kapat.
+  const FXQ = { on: true, auto: true, autoOff: false, t0: -1, n: 0 };
+  function setFx(on, user) {
+    on = on !== false;
+    if (!user && on === FXQ.on) return;   // ayar yeniden uygulanıyor: durum değişmedi
+    FXQ.on = on; FXQ.autoOff = false; FXQ.t0 = -1; FXQ.n = 0;
+    if (user) FXQ.auto = false;   // oyuncu bizzat açtıysa otomatik kapatma yok
+  }
+  function fxWatch(t) {
+    if (!FXQ.auto || FXQ.autoOff) return;
+    const ph = KS.state && KS.state.phase;
+    if (document.hidden || (ph !== 'open' && ph !== 'prep')) { FXQ.t0 = -1; return; }
+    if (FXQ.t0 < 0) { FXQ.t0 = t; FXQ.n = 0; return; }
+    FXQ.n++;
+    const el = t - FXQ.t0;
+    if (el >= 6) {
+      if (FXQ.n / el < 38) {
+        FXQ.autoOff = true;
+        try { KS.notify && KS.notify('Akıcılık için ışık efektleri kapatıldı (Ayarlar\'dan açabilirsin).', 'info'); } catch (e) { /* yok */ }
+      } else FXQ.auto = false;   // cihaz kaldırıyor: bir daha ölçme
+    }
+  }
+  function drawLighting(ctx, t) {
+    if (!FXQ.on || FXQ.autoOff) return;
+    fxWatch(t);
+    try {
+      const st = KS.state || {}, S = _lastSky;
+      ctx.save();
+      blit(ctx, bakeLighting(ctx, S), 0, 0, 1600, 900);
+      // cihaz parıltıları
+      const L = KS.layout || {}, info = (KS.Stations && KS.Stations.cook && KS.Stations.cook.info) ? KS.Stations.cook.info() : null;
+      const live = st.phase === 'open' || st.phase === 'closing' || st.phase === 'prep';
+      const pw = st.power !== false;
+      ctx.globalCompositeOperation = 'lighter';
+      const fl = (sp, ph) => 0.85 + 0.15 * Math.sin(t * sp + ph) * Math.sin(t * sp * 1.7 + ph * 2);
+      if (info && live) {
+        const G = L.izgara;
+        if (G) {
+          const n = (info.izgara || []).filter(Boolean).length;
+          glow(ctx, '#ff6a1a', G.x + G.w / 2, G.y + G.h * 0.55, G.w * 0.75, G.h * 0.6, (0.10 + n * 0.035) * fl(5, 1));
+        }
+        const T = L.tost;
+        if (T && pw) {
+          const hot = (info.tost || []).some(M => M.closed && M.slots.some(v => v != null));
+          if (hot) glow(ctx, '#ff7a2a', T.x + T.w / 2, T.y + T.h * 0.55, T.w * 0.7, T.h * 0.55, 0.16 * fl(3, 2));
+        }
+        const F = L.fritoz;
+        if (F && pw && info.fritoz) {
+          const down = (info.fritoz.baskets || []).some(b => b.down && b.cook != null);
+          glow(ctx, '#ffc23a', F.x + F.w / 2, F.y + F.h * 0.35, F.w * 0.7, F.h * 0.5, (down ? 0.16 : 0.06) * fl(4, 3));
+        }
+        const M = L.semaver;
+        if (M && info.semaver && info.semaver.state && info.semaver.state !== 'empty') {
+          glow(ctx, '#5aa8ff', M.x + M.w / 2, M.y + M.h * 0.73, M.w * 0.42, 30, 0.20 * fl(9, 4));
+          glow(ctx, '#ff9a3a', M.x + M.w / 2, M.y + M.h * 0.66, M.w * 0.6, M.h * 0.35, 0.08 * fl(6, 5));
+        }
+      }
+      ctx.restore();
+    } catch (e) { /* ışık isteğe bağlı */ }
+  }
+
+  Object.assign(Art, { drawBackground, drawCounterFront, drawWorkspace, drawLighting, parallax: PX, setFx, fxActive: () => FXQ.on && !FXQ.autoOff });
   Object.assign(Art._h, { skyAt, WINS, OPEN });
 })(window.KS);
 /* ===== Art bölüm 3: malzemeler (drawIngredient) ve hazır ürünler (drawProduct) =====

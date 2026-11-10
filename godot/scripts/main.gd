@@ -1,15 +1,28 @@
 extends Node2D
-## Başlangıç sahnesi: web sürümünden aktarılan arka plan katmanlarını parallax ile dizer.
-## Geçişin ilk adımı; istasyonlar/müşteriler sırayla ayrı sahneler olarak eklenecek (bkz. CLAUDE.md).
+## Ana sahne: arka plan katmanlarını parallax ile dizer, aralarına müşteri / istasyon / efekt sahnelerini yerleştirir.
+## Çizim sırası (web ile aynı): gökyüzü → koridor → çerçeve → MÜŞTERİLER → tezgah önü → çalışma yüzeyi → İSTASYONLAR → FX → HUD.
+## Her istasyon kendi sahnesidir ve kökü (0,0)'da durur; kendi yerini GameData.rect(...) ile bulur.
 
 ## Katman adı -> parallax katsayısı (1 = farenin tam etkisi, 0 = sabit)
-const LAYERS := [
+const BACK_LAYERS := [
 	["sky_ogle", 1.6],
 	["corridor", 1.0],
 	["frame", 0.0],
+]
+const FRONT_LAYERS := [
 	["counter", 0.0],
 	["worktop", 0.0],
 	["station_shadows", 0.0],
+]
+const CUSTOMER_SCENES := ["res://scenes/customers/customer_slot.tscn"]
+const STATION_SCENES := [
+	"res://scenes/stations/bins.tscn",
+	"res://scenes/stations/tezgah.tscn",
+	"res://scenes/stations/tost.tscn",
+]
+const TOP_SCENES := [
+	"res://scenes/fx/fx_layer.tscn",
+	"res://scenes/ui/hud.tscn",
 ]
 const MAX_SHIFT := Vector2(9, 3)
 
@@ -18,16 +31,26 @@ var _offset := Vector2.ZERO
 
 
 func _ready() -> void:
+	_add_layers(BACK_LAYERS)
+	_add_scenes("Customers", CUSTOMER_SCENES)
+	_add_layers(FRONT_LAYERS)
+	_add_scenes("Stations", STATION_SCENES)
+	_add_scenes("Top", TOP_SCENES)
+	if OS.get_cmdline_user_args().has("--autoplay"):
+		add_child(preload("res://tools/autoplay.gd").new())
+
+
+func _add_layers(layers: Array) -> void:
 	var s := 1.0 / GameData.sprite_scale
-	for entry in LAYERS:
-		var name: String = entry[0]
-		var tex := load("res://assets/background/%s.png" % name) as Texture2D
-		var r: Dictionary = GameData.background_layers.get(name, {})
+	for entry in layers:
+		var layer_name: String = entry[0]
+		var tex := load("res://assets/background/%s.png" % layer_name) as Texture2D
+		var r: Dictionary = GameData.background_layers.get(layer_name, {})
 		if tex == null or r.is_empty():
-			push_warning("katman eksik: " + name)
+			push_warning("katman eksik: " + layer_name)
 			continue
 		var sp := Sprite2D.new()
-		sp.name = name
+		sp.name = layer_name
 		sp.texture = tex
 		sp.centered = false
 		sp.scale = Vector2(s, s)
@@ -39,6 +62,18 @@ func _ready() -> void:
 		sp.position = base
 		add_child(sp)
 		_nodes.append([sp, base, entry[1]])
+
+
+func _add_scenes(group_name: String, paths: Array) -> void:
+	var group := Node2D.new()
+	group.name = group_name
+	add_child(group)
+	for path in paths:
+		if not ResourceLoader.exists(path):
+			continue  # henüz yazılmamış sahne
+		var ps := load(path) as PackedScene
+		if ps != null:
+			group.add_child(ps.instantiate())
 
 
 func _process(dt: float) -> void:

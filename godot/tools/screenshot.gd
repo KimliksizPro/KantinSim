@@ -25,14 +25,17 @@ func _ready() -> void:
 			if p.size() == 2:
 				_fake_mouse.call_deferred(Vector2(float(p[0]), float(p[1])))
 	set_process(_shot != "")
+	if _shot != "":
+		# Pencere yöneticisi pencereyi küçültse bile (döşemeli WM) görüntü tam 1600x900 çıksın
+		get_window().content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 
 
 func _fake_mouse(pos: Vector2) -> void:
 	var ev := InputEventMouseMotion.new()
 	ev.position = pos
 	ev.global_position = pos
-	Input.parse_input_event(ev)
-	Input.warp_mouse(pos)
+	# 1600x900 mantıksal koordinat (pencere boyutundan bağımsız)
+	get_viewport().push_input(ev, true)
 
 
 func _process(_dt: float) -> void:

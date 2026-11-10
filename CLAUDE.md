@@ -9,7 +9,7 @@ malzemeleri sürükleyip birleştirerek yemek hazırlıyor (tost, köfte ekmek, 
 | Klasör | Ne | Durum |
 |---|---|---|
 | kök (`index.html`, `js/`, `css/`) | Çalışan **web prototipi** (HTML5 Canvas, ~14 bin satır JS) | **Referans.** Oynanış mantığının kaynağı. Değiştirme; sadece referans olarak oku. |
-| `godot/` | **Godot 4.7 projesi** (GDScript) | İskelet hazır: veriler, aktarılmış görseller, test ve ekran görüntüsü araçları, parallax'lı arka plan. |
+| `godot/` | **Godot 4.7 projesi** (GDScript) | Oynanabilir tost dilimi hazır: kutular, tezgah (2 tabak), tost makinesi, tek müşteri slotu, uçan para, mini HUD. |
 | `tools/export_assets.js` | Web sürümündeki çizimleri PNG'ye, verileri JSON'a aktarır | Çıktısı `godot/assets/` ve `godot/data/game_data.json` |
 
 Hedef: oyunu Godot'da, web sürümünden daha güzel görünecek şekilde (2D ışık/gölge, parallax, partiküller → "2D ama 3D hissi")
@@ -31,6 +31,10 @@ GODOT --headless --path godot -s res://tests/run_tests.gd
 # Ekran görüntüsü al (pencere açılır, N kare sonra kaydedip kapanır). --headless İLE ÇALIŞMAZ.
 GODOT --path godot -- --shot=res://../shots/main.png --frames=60
 #   isteğe bağlı: --scene=res://scenes/xyz.tscn   --mouse=800,450 (fare konumu; parallax/hover testi)
+#   demo durumları: --tost-demo=1.3 (yuvada o pişme değerinde tost)  --fx-demo  --patience-demo=0.2
+
+# Uçtan uca otomatik oynanış (sahte fareyle tost yapıp müşteriye verir; shots/auto_N.png kaydeder, çıkış kodu 0 = servis başarılı)
+GODOT --path godot -- --autoplay
 
 # Oyunu normal çalıştır (kullanıcı oynamak isterse)
 GODOT --path godot
@@ -62,8 +66,17 @@ godot/
     background/          konumlu arka plan katmanları (sky_*, corridor, frame, counter, worktop, station_shadows)
     reference/           web sürümünden ekran görüntüleri (scene_prep.png, station_*.png): görünüm referansı, oyunda kullanılmaz
   scripts/game_data.gd   autoload "GameData": GameData.recipes, .ingredients, .products, .layout, .rect("tost") ...
+  scripts/game.gd        autoload "Game": para, envanter, saat, earn/spend, sinyaller (money_changed, earned, float_text ...)
+  scripts/drag.gd        autoload "Drag": sürükle-bırak bölgeleri (protokol dosyanın başında: zone_rect, pick, drop, click ...)
+  scripts/recipes.gd     Recipes (statik): identify, evaluate, cook_quality, line_label  — web recipes.js karşılığı
+  scripts/items.gd       Items (statik): ing / dish / product fabrikaları (item = Dictionary)
+  scripts/item_view.gd   ItemView: herhangi bir item'ı çizer (ItemView.draw_item)
+  scripts/stations/      bins, tezgah, tost (+ *_logic.gd: sahneden bağımsız, testli saf mantık)
+  scripts/customers/     customer_slot + customer_logic (sabır, ödeme, bahşiş)
+  scripts/fx/ scripts/ui/   uçan yazı + para efekti, mini HUD
   tools/screenshot.gd    autoload "Shot": --shot argümanıyla otomatik ekran görüntüsü
-  scenes/main.tscn       ana sahne (şimdilik arka plan + parallax)
+  tools/autoplay.gd      --autoplay: uçtan uca otomatik oynanış denemesi
+  scenes/main.tscn       ana sahne: arka plan katmanları arasına müşteri / istasyon / fx / hud sahnelerini dizer (main.gd)
   tests/                 run_tests.gd (çalıştırıcı), test_case.gd (taban sınıf: check, check_eq, teardown), test_*.gd
 ```
 
@@ -74,7 +87,8 @@ godot/
 - Statik tip kullan (`var x: int`, `-> void`), sihirli sayılar yerine `GameData` veya sabitler.
 - Görsel: 2D ışık (`PointLight2D`, `LightOccluder2D`, `CanvasModulate` ile gün saati), `GPUParticles2D` (buhar, duman, cızırtı), `Tween` ile animasyon.
   Gölgelerde ışık sol üstten gelir (web sürümüyle tutarlı).
-- Ekran görüntüsünde HUD bölgesi (y 0–56) boş/gri görünüyorsa normal: HUD henüz yazılmadı.
+- Saf mantık autoload'a bağlı olmayan `*_logic.gd` scriptlerinde durur (testler `-s` modunda autoload'suz çalışır).
+- Yeni `class_name` ekleyince bir kez `--import` çalıştır (sınıf önbelleği). İncelen/bozulan çokgenler `Geometry2D.triangulate_polygon` ile korunur (bkz. tost.gd `_cpoly`).
 
 ## Web sürümünde mantığın nerede olduğu (taşırken oku)
 
@@ -95,7 +109,7 @@ Web sürümünü tarayıcıda açıp karşılaştırmak için: repo kökünde `p
 ## Yol haritası
 
 1. ~~Görselleri ve verileri aktar, Godot iskeleti, test + ekran görüntüsü araçları~~ ✅
-2. **Oynanabilir dilim (sıradaki iş):**
+2. ~~Oynanabilir dilim~~ ✅ (kullanıcı oynayıp geri bildirim verecek: oyun hissi, pişme süresi, sabır):
    - `Game` autoload: para, envanter, saat (08:00–17:00), `earn/spend`.
    - Sürükle-bırak sistemi: eldeki item, bırakma bölgeleri, geçersizse kaynağa dönüş (web `core.js` zone mantığı).
    - Malzeme kutuları (sadece tost ekmeği + kaşar yeterli), tezgahta 2 tabak, **tost makinesi** (kapak aç/kapa, pişme, yanma).
@@ -103,7 +117,7 @@ Web sürümünü tarayıcıda açıp karşılaştırmak için: repo kökünde `p
    - Görsel: arka plan parallax (hazır), istasyonlara gölge, tost makinesine `PointLight2D` parıltısı, buhar partikülü.
    - Testler: tarif tanıma, pişme kalitesi, ödeme. Ekran görüntüsü ile görsel kontrol.
    - Kullanıcıya oynatıp geri bildirim al.
-3. Kalan istasyonlar: ızgara (iki yüzlü köfte), fritöz, semaver, leğen, vitrin + hazır ürünler, temizlik, çöp.
+3. **(sıradaki iş)** Kalan istasyonlar: ızgara (iki yüzlü köfte), fritöz, semaver, leğen, vitrin + hazır ürünler, temizlik, çöp.
 4. Müşteri sistemi tam hali: 4 slot, kuyruk, tipler, sabır, özel istekler, itibar, müfettiş.
 5. HUD ve paneller (malzeme siparişi, telefon, menü & fiyat, geliştirme, personel, tarifler, hedefler), gün sonu raporu.
 6. Meta sistemler, kayıt/yükleme, ses (web sürümündeki sesler prosedüreldi: Godot'da `AudioStreamGenerator` veya ses dosyaları).

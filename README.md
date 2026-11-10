@@ -4,6 +4,13 @@ Okul kantininin içindesin. Servis penceresine gelen öğrencilere, öğretmenle
 malzemelerden kendi elinle yemek hazırla, dışarıdan hazır döner / çiğ köfte / lahmacun sipariş edip vitrinde sat,
 stok, fiyat, temizlik ve itibar yöneterek kantinini büyüt.
 
+## 3D koridor (deneysel)
+
+Servis penceresinin arkasındaki koridor artık **3D** (Three.js, projeye dahil — internet gerekmez): saate ve
+havaya göre değişen ışık, pencerelerde gökyüzü/yağmur, teneffüste kalabalıklaşan yürüyen öğrenciler.
+Müşteriler, tezgah ve mutfak 2D kalır; oynanış değişmez. Cihaz yavaşsa kalite kendiliğinden düşer, gerekirse
+2D'ye döner. **Ayarlar → 3D koridor** ile açılıp kapatılabilir.
+
 ## Nasıl oynanır?
 
 Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `python3 -m http.server` çalıştırıp

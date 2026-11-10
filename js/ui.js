@@ -1491,6 +1491,7 @@
       const row = (ico, label, sub, ctrl) => h('div', { class: 'set-row' }, h('span', { class: 'set-ico' }, ico), h('div', { class: 'set-l' }, h('b', null, label), h('small', null, sub)), ctrl);
       p.body.appendChild(row('🔊', 'Ses efektleri', 'Cızırtı, kasa, zil sesleri', toggle(settings.sound, on => { setSound(on); updateHUD(); })));
       p.body.appendChild(row('🎵', 'Müzik', 'Arka plan müziği', toggle(settings.music, on => setMusic(on))));
+      if (KS.Scene3D && KS.Scene3D.available()) p.body.appendChild(row('🧊', '3D koridor', 'Servis penceresinin arkası 3D çizilir (yavaş cihazda kapatın)', toggle(KS.Scene3D.enabled(), on => KS.Scene3D.setEnabled(on), ['3D', '2D'])));
       const s = S();
       if (s && s.phase !== 'menu') {
         p.body.appendChild(row('⏩', 'Oyun hızı', 'Sakin saatleri hızlandır', toggle((s.speedMult || 1) >= 2, on => { s.speedMult = on ? 2 : 1; updateHUD(); }, ['2x', '1x'])));

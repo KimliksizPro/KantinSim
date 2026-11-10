@@ -16,9 +16,10 @@ Oyun dili **Türkçe** (tüm metinler, etiketler, bildirimler Türkçe ve doğru
 | `js/customers.js` | Müşteriler | müşteri üretimi, sıra, sipariş, sabır, ödeme, itibar, müfettiş |
 | `js/ui.js`, `css/ui.css` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim |
 
+| `js/scene3d.js`, `js/lib/three.min.js` | 3D koridor | Servis penceresinin arkasındaki koridor Three.js (r149, MIT) ile 3D çizilir; `Art.drawBackground` `KS.Scene3D.draw` çağırır. WebGL yoksa / yavaşsa otomatik 2D. |
 | `js/meta.js` | Meta sistemler | günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş |
 
-Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → meta → ui → main.
+Yükleme sırası: data → core → recipes → audio → art → three → scene3d → stations_prep → stations_cook → customers → meta → ui → main.
 `KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
 Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmiştir). Başka modülün API'sini
 çağırmadan önce varlığını kontrol edin (`KS.Customers && ...`).

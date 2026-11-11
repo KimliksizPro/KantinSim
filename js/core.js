@@ -129,6 +129,7 @@ window.KS = window.KS || {};
       weekday: D.weekdays[(s.day - 1) % 5],
       weather: s.day === 1 ? 'gunesli' : util.weighted(wmap),
       event: ev,
+      featured: pickFeatured(s),
       revenue: 0, tips: 0, bonus: 0, served: 0, lost: 0, angry: 0, perfect: 0,
       expenses: { malzeme: 0, hazir: 0, nakliye: 0, geliştirme: 0, personel: 0, kira: 0, fatura: 0, reklam: 0, kredi: 0, ceza: 0, diger: 0 },
       campaign: null, goals: null, meta: {},
@@ -286,6 +287,38 @@ window.KS = window.KS || {};
     const t = KS.state.today; if (!t) return;
     const key = line.id; t.sales[key] = (t.sales[key] || 0) + qty;
   };
+
+  // ---------------------------------------------------------------------------
+  // GÜNÜN MENÜSÜ
+  // Her gün, açılmış yemek tariflerinden biri öne çıkar. O yemeği servis eden
+  // müşteri ekstra bahşiş bırakır; gün seçimi güne göre döner ve gün içinde sabit kalır.
+  // ---------------------------------------------------------------------------
+  const FEATURED_MIN_PRICE = 50;   // çay gibi ufak ürünler "menü" olmaz
+  const FEATURED_RATE = 0.25;      // servis başına ek bahşiş oranı
+  const FEATURED_MIN_BONUS = 3;
+  function pickFeatured(s) {
+    const R = (KS.DATA && KS.DATA.recipes) || {};
+    const ids = Object.keys(R)
+      .filter(id => R[id] && R[id].unlock <= s.level && (R[id].price || 0) >= FEATURED_MIN_PRICE)
+      .sort((a, b) => (R[a].unlock - R[b].unlock) || a.localeCompare(b));
+    if (!ids.length) return null;
+    return ids[((s.day || 1) - 1) % ids.length];
+  }
+  // Bugünün menüsü kimliği. Eski kayıtlarda alan yoksa gün içinde bir kez hesaplanır.
+  KS.featuredId = function () {
+    const s = KS.state, t = s && s.today;
+    if (!t) return null;
+    if (!t.featured) t.featured = pickFeatured(s);
+    return t.featured || null;
+  };
+  // Bir satır için günün menüsü ek bahşişi (yalnızca elle hazırlanan tarifler).
+  // priceOverride: sipariş alındığı andaki fiyat (menü fiyatı sonradan değişebilir).
+  KS.featuredBonus = function (line, priceOverride) {
+    const id = KS.featuredId();
+    if (!id || !line || line.type !== 'recipe' || line.id !== id) return 0;
+    const price = priceOverride != null ? priceOverride : KS.priceOf(line);
+    return Math.max(FEATURED_MIN_BONUS, Math.round(price * FEATURED_RATE));
+  };
   KS.addDirt = function (amount) {
     const mult = KS.hasStaff('temizlikci') ? 0.5 : 1;
     KS.state.cleanliness = util.clamp(KS.state.cleanliness - amount * mult, 0, 100);
@@ -423,6 +456,7 @@ window.KS = window.KS || {};
         served: t.served, lost: t.lost, angry: t.angry, perfect: t.perfect,
         repDelta: s.rep - t.repStart, xpDelta: s.xp - t.xpStart, rep: s.rep, level: s.level,
         money: s.money, spoiled, spoiledProd, sales: Object.assign({}, t.sales), cleanliness: s.cleanliness,
+        featured: t.featured || (KS.featuredId ? KS.featuredId() : null), featServ: (t.meta && t.meta.featServ) || 0, featTip: (t.meta && t.meta.featTip) || 0,
         bankrupt: s.money < D.costs.bankruptcy,
       };
       s.stats.total.served += t.served; s.stats.total.lost += t.lost; s.stats.total.days++;

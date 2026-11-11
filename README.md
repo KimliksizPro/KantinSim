@@ -20,6 +20,7 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Tarif yardımcısı** (H ile aç/kapat): elin boşken müşterinin üzerine gel, siparişi için gereken kutular ve istasyonlar altın renkle yanar.
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
+- **Günün menüsü**: her gün bir yemek öne çıkar (hazırlık kartında ve Menü panelinde ⭐ ile işaretli). O yemeği servis eden her müşteri, fiyatının %25'i kadar ekstra bahşiş bırakır (en az 3 ₺); gün sonu raporunda kaç servis yaptığın yazar.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
 
 ## Tarifler (elle yapılan)

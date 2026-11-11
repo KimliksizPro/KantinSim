@@ -46,6 +46,13 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 | `js/assist.js` | Tarif yardımcısı (H), klavye kısayolları, gün şeridi (zil programı) |
 | `js/audio.js` | Prosedürel WebAudio sesleri |
 
+## Günün menüsü
+
+- `rollToday()` her gün `today.featured` alanına açılmış, fiyatı ≥ 50 ₺ olan bir tarifi yazar; seçim gün numarasına göre döner ve gün içinde sabit kalır (eski kayıtlarda `KS.featuredId()` ilk çağrıda hesaplar).
+- `KS.featuredBonus(line, price?)` o tarifin her servisi için ek bahşiş verir (menü fiyatının %25'i, en az 3 ₺). `customers.js` ödemede `today.meta.featServ/featTip` sayaçlarını tutar ve uçan yazı gösterir.
+- Gün sonu raporu `featured/featServ/featTip` alanlarını taşır; hazırlık kartı (⭐ şerit), Menü paneli (rozet) ve gün sonu özeti bu alanlardan beslenir.
+- Duman testi menü seçimini, hazırlık şeridini, panel rozetini, gerçek servis→bahşiş akışını ve günler arası dönüşü doğrular.
+
 ## Kurallar
 
 - Modüller `KS.registerModule({name, order, init, update, draw})` ile kayıt olur; başka modülün API'sini çağırmadan önce varlığını kontrol et.

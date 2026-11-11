@@ -17,6 +17,9 @@ Mantıksal çözünürlük **1600x900**. (Godot'ya geçiş denemesi iptal edildi
 # Oyunu çalıştır (repo kökünde)
 python3 -m http.server 8000      # → http://localhost:8000
 
+# Yayın paketi (itch.io / GitHub Pages): dist/KantinSim-web.zip, index.html zip'in kökünde
+bash tools/paket.sh
+
 # Sözdizimi kontrolü (her değişiklikten sonra temiz olmalı)
 for f in js/*.js; do node --check "$f" || echo "HATA: $f"; done
 ```

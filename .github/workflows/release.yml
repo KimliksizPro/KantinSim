@@ -69,7 +69,7 @@ jobs:
             deger="${!ad}"
             if [ -z "$deger" ]; then echo "::error::$ad (ANDROID_KEYSTORE_PASS / ANDROID_KEY_ALIAS) Secret'ı boş."; exit 1; fi
             if printf '%s' "$deger" | LC_ALL=C grep -q '[^ -~]'; then
-              echo "::error::$ad Secret'ında ASCII olmayan ya da görünmez karakter (satır sonu, boşluk, Türkçe harf) var; yeniden yapıştırın."; exit 1
+              echo "::error::$ad Secret'ında ASCII olmayan karakter (Türkçe harf, görünmez boşluk vb.) var; yeniden yapıştırın."; exit 1
             fi
           done
 

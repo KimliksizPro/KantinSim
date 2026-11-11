@@ -541,6 +541,12 @@
   background: radial-gradient(ellipse at center, rgba(20, 10, 4, .25), rgba(20, 10, 4, .55)); }
 .prep-card { pointer-events: auto; width: 760px; padding: 20px 26px 22px; border-radius: 28px; display: flex; flex-direction: column; gap: 12px; align-items: stretch;
   background: linear-gradient(180deg, var(--cream), var(--cream2)); box-shadow: 0 8px 0 #c79e6c, var(--shadow), inset 0 0 0 3px #fff; animation: ks-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+/* Uzun gün (düşük stok listesi, dünkü özet, hedefler): kart ekrandan taşmasın.
+   Başlık ve "Kantini Aç" sabit kalır, ortadaki .prep-body kayar. */
+.prep-card { max-height: calc(100% - 16px); min-height: 0; }
+.prep-body { display: flex; flex-direction: column; gap: inherit; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.prep-body > * { flex-shrink: 0; }
+.prep-card > .prep-head, .prep-card > .prep-open { flex-shrink: 0; }
 .prep-head { display: flex; align-items: center; gap: 14px; }
 .prep-bell { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 38px; background: linear-gradient(145deg, #ffd27a, #ff9a3c); box-shadow: 0 4px 0 #c9661c; }
 .prep-day { font: 800 38px/1 var(--f-head); color: var(--ink); padding-top: 4px; }

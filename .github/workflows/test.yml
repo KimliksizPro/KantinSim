@@ -10,7 +10,7 @@ on:
 jobs:
   duman:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +18,9 @@ jobs:
           node-version: 22
       - name: Bağımlılıkları kur
         run: cd tools/smoke && npm install --no-package-lock --no-audit --no-fund
-      - name: Chromium'u indir
-        run: cd tools/smoke && npx playwright install --with-deps chromium
+      # Tarayıcı indirmiyoruz: ubuntu-latest imajında Chrome hazır.
+      # Böylece apt/indirme ağını gerektiren kırılgan adım kalkıyor.
       - name: Duman testini çalıştır
+        env:
+          PW_CHANNEL: chrome
         run: node tools/smoke/smoke.mjs

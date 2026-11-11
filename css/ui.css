@@ -893,6 +893,18 @@
     width: var(--hud-width, 1600px); height: var(--hud-vh, 900px);
     transform: scale(var(--hud-inv, 1)); transform-origin: top left;
   }
+  #ui > .ks-confirm {
+    inset: auto;
+    left: var(--hud-left, 0px); top: var(--hud-top, 0px);
+    width: var(--hud-width, 1600px); height: var(--hud-vh, 900px);
+    transform: scale(var(--hud-inv, 1)); transform-origin: top left; padding: 8px;
+  }
+  /* Sahne içindeki afiş/popup'lar HUD'un altına iner, kartları native boyutta */
+  .ks-banner { top: calc(var(--hud-top, 0px) + (var(--hud-h, 52px) + 8px) * var(--hud-inv, 1)); }
+  .ks-banner .bn-inner { transform: scale(var(--hud-inv, 1)); transform-origin: top center; }
+  #ks-ach { top: calc(var(--hud-top, 0px) + (var(--hud-h, 52px) + 8px) * var(--hud-inv, 1)); }
+  #ks-popup { top: calc(var(--hud-top, 0px) + (var(--hud-h, 52px) + 8px) * var(--hud-inv, 1)); z-index: 82; }
+  .ach-toast, .pp-card { transform: scale(var(--hud-inv, 1)); transform-origin: top center; min-width: 0; width: min(460px, calc(100vw - 32px)); }
   #ks-modal { padding: 8px; }
   #ks-prep {
     left: var(--hud-left, 0px); top: calc(var(--hud-top, 0px) + var(--hud-h, 52px) * var(--hud-inv, 1));

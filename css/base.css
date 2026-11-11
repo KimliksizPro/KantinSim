@@ -4,6 +4,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #120d18; tou
   font-family: 'Nunito', system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
 #game-root { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; }
 #game { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; display: block; cursor: default; }
+/* Sahne HUD şeridinin altına oturduğunda dünyanın kendi HUD bandı kırpılır (js/core.js resize).
+   Böylece native HUD sahnenin üstünü örtmez, balonlar da şeridin altında kalır. */
+body.ks-hud-fit #game { clip-path: inset(var(--scene-band, 56px) 0 0 0); }
 #ui { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; pointer-events: none; }
 #ui > * { pointer-events: auto; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

@@ -847,20 +847,51 @@ window.KS = window.KS || {};
   let canvas, ctx, dpr = 1, scale = 1, lastT = 0, elapsed = 0;
   KS.time = 0; // gerçek saniye (animasyon için)
 
+  // Gün şeridi: HUD'un hemen altında, 6 px (css/ui.css #ks-dayline). Ölçmek yerine
+  // sabit tutuluyor: şerit menüde gizli olsa da oyunda yerini korur.
+  const DAYLINE_H = 6;
+
+  // HUD'un ekrandaki (native) yüksekliği: sahne bu şeridin altına yerleşir.
+  function hudChrome() {
+    const ui = document.getElementById('ui');
+    let hudH = KS.layout.hud.h;
+    if (ui) {
+      const v = parseFloat(getComputedStyle(ui).getPropertyValue('--hud-h'));
+      if (isFinite(v) && v > 0) hudH = v;
+    }
+    return hudH + DAYLINE_H;
+  }
+
   function resize() {
     const root = document.getElementById('game-root');
     const vw = window.innerWidth, vh = window.innerHeight;
-    scale = Math.min(vw / W, vh / H);
-    const offx = (vw - W * scale) / 2, offy = (vh - H * scale) / 2;
-    root.style.transform = 'translate(' + offx + 'px,' + offy + 'px) scale(' + scale + ')';
-    // HUD sahneyle küçülmesin: küçük ekranda ters ölçekle native boyuta döner.
-    const hudInv = Math.max(1, 1 / scale), hudNative = scale < 1;
     const ds = document.documentElement.style;
+    // HUD sahneyle küçülmesin: küçük ekranda ters ölçekle native boyuta döner.
+    const hudNative = Math.min(vw / W, vh / H) < 1;
+    const band = KS.layout.hud.h;   // dünyanın kendi HUD bandı: native HUD'un arkasında kalır
+    let offx, offy;
+    if (hudNative) {
+      // Sahne HUD + gün şeridinin ALTINA oturur. Dünya y=0..56 bandı kırpıldığı için
+      // müşteri balonları (dünya y=64) her ekran boyutunda şeridin altında kalır;
+      // HUD native büyüdükçe sahne ona göre küçülür, üst üste binme olmaz.
+      const chrome = hudChrome();
+      scale = Math.max(0.1, Math.min(vw / W, (vh - chrome) / (H - band)));
+      offx = (vw - W * scale) / 2;
+      offy = chrome + (vh - chrome - (H - band) * scale) / 2 - band * scale;
+    } else {
+      scale = Math.min(vw / W, vh / H);
+      offx = (vw - W * scale) / 2;
+      offy = (vh - H * scale) / 2;
+    }
+    root.style.transform = 'translate(' + offx + 'px,' + offy + 'px) scale(' + scale + ')';
+    const hudInv = Math.max(1, 1 / scale);
     ds.setProperty('--hud-inv', String(hudInv));
     ds.setProperty('--hud-width', (hudNative ? vw : W) + 'px');
     ds.setProperty('--hud-left', (hudNative ? -offx * hudInv : 0) + 'px');
     ds.setProperty('--hud-top', (hudNative ? -offy * hudInv : 0) + 'px');
     ds.setProperty('--hud-vh', vh + 'px');
+    ds.setProperty('--scene-band', band + 'px');
+    document.body.classList.toggle('ks-hud-fit', hudNative);
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * scale * dpr);
     canvas.height = Math.round(H * scale * dpr);

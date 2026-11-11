@@ -56,6 +56,9 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 
 Oyun `android/` altındaki ince WebView kabuğuyla APK olarak kurulabilir.
 `tools/android/build.sh` aapt2 + javac + d8 + apksigner ile derler (Gradle yok).
+İmza anahtarı `~/.local/share/kantinsim/kantinsim-debug.jks` (ya da `KEYSTORE=...`) altında,
+derleme çıktısının dışında tutulur: aynı anahtar kaldığı için yeni APK eskisinin üzerine
+`adb install -r` ile kurulabilir.
 `android/src/.../MainActivity.java` tam ekran, yatay kilit, ekran açık ve geri tuşu
 davranışını yönetir; oyun dosyaları değişmez, APK'nın `assets/` klasörüne kopyalanır.
 Yazı tipleri `fonts/` altında yereldir; APK ağ izni istemez.
@@ -64,6 +67,7 @@ Yazı tipleri `fonts/` altında yereldir; APK ağ izni istemez.
 
 - Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD ve DOM ekranları sahneyle küçülmez**.
 - `js/core.js` → `resize()` beş CSS değişkeni yayınlar: `--hud-inv` (ters ölçek, en az 1), `--hud-width`, `--hud-left`, `--hud-top`, `--hud-vh`. `#ks-hud`, `#ks-dayline` ve `#ks-notifs` bu değişkenlerle native ölçekte konumlanır.
+- Sahne küçüldüğünde (`KS.scale < 1`) dünyanın kendi `0..56` HUD bandı `body.ks-hud-fit #game { clip-path }` ile kırpılır ve sahne HUD + gün şeridinin **altına** yerleşir (`scale = min(vw/1600, (vh-chrome)/844)`). Böylece HUD native büyürken sahnenin üstünü örtmez; dünya `y=64`te başlayan sipariş balonları her boyutta görünür kalır. `1600×900` ve üstünde eski davranış (tam sahne, kırpma yok) korunur.
 - `css/ui.css` içinde `1599px` altında olay chip'i, `1499px` altında veya `(pointer: coarse)` cihazlarda kompakt HUD (44×44 ikon düğmeler, gizli etiketler/chip'ler) devreye girer.
 - Aynı eşikte paneller, hazırlık kartı, gün sonu, ana menü ve duraklat/onay kartları da native: `#ks-modal`, `#ks-summary`, `#ks-mainmenu`, `#ks-pause`, `#ks-prep` ters ölçekle ekranı kaplar; panel `width: 100%` + `max-width: 1200px`, gövde kayar, başlık/sekme/alt satır sabittir.
 - Dar ekran ızgaraları: `.sup-grid` tek sütun, `.up-grid`/`.st-grid`/`.ach-grid` iki sütun, `.stt-tiles` üç sütun. `1000–1499px` arasında eski sütun sayıları korunur.

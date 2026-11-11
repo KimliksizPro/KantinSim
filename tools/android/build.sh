@@ -16,8 +16,13 @@ JDK=${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}
 JAR="$PLATFORM/android.jar"
 OUT="$ROOT/build/android"
 DIST="$ROOT/dist"
-KEYSTORE="$ROOT/build/android/kantinsim-debug.jks"
-KSPASS="kantinsim"
+# İmza anahtarı derleme çıktısının DIŞINDA durur: her derlemede yeniden üretilirse
+# aynı uygulamanın yeni APK'sı eskisinin üzerine kurulamaz (imza uyuşmazlığı).
+# Sabit yol (varsayılan): ~/.local/share/kantinsim/kantinsim-debug.jks
+# Başka bir anahtar kullanmak için: KEYSTORE=/yol/anahtar.jks tools/android/build.sh
+KEYSTORE=${KEYSTORE:-${XDG_DATA_HOME:-$HOME/.local/share}/kantinsim/kantinsim-debug.jks}
+KSPASS=${KSPASS:-kantinsim}
+LEGACY_KEYSTORE="$OUT/kantinsim-debug.jks"
 
 [ -n "$BT" ] || { echo "HATA: build-tools bulunamadı (ANDROID_HOME=$SDK)"; exit 1; }
 [ -f "$JAR" ] || { echo "HATA: $JAR yok"; exit 1; }
@@ -25,6 +30,13 @@ KSPASS="kantinsim"
 
 echo "SDK: $SDK"
 echo "build-tools: $(basename "$BT")   platform: $(basename "$PLATFORM")"
+
+# Eski sürümler anahtarı çıktı klasöründe tutuyordu; ilk derlemede oradan devral.
+if [ ! -f "$KEYSTORE" ] && [ -f "$LEGACY_KEYSTORE" ]; then
+  mkdir -p "$(dirname "$KEYSTORE")"
+  cp "$LEGACY_KEYSTORE" "$KEYSTORE"
+  echo "İmza anahtarı kalıcı konuma taşındı: $KEYSTORE"
+fi
 
 rm -rf "$OUT" "$DIST"
 mkdir -p "$OUT/assets" "$OUT/res" "$OUT/gen" "$OUT/classes" "$OUT/dex" "$DIST"
@@ -67,11 +79,13 @@ done
 
 if [ ! -f "$KEYSTORE" ]; then
   echo "Yerel imza anahtarı üretiliyor (yalnız geliştirme için): $KEYSTORE"
+  mkdir -p "$(dirname "$KEYSTORE")"
   "$JDK/bin/keytool" -genkeypair -keystore "$KEYSTORE" -alias kantinsim \
     -keyalg RSA -keysize 2048 -validity 10000 \
     -storepass "$KSPASS" -keypass "$KSPASS" \
     -dname "CN=KantinSim, OU=Gelistirme, O=KimliksizPro, L=Istanbul, C=TR" >/dev/null 2>&1
 fi
+echo "İmza anahtarı: $KEYSTORE"
 
 APK="$DIST/KantinSim-1.0.0.apk"
 "$BT/apksigner" sign \

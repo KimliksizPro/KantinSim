@@ -11,7 +11,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 SDK=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}
 BT=$(ls -d "$SDK"/build-tools/* 2>/dev/null | sort -V | tail -1)
-PLATFORM=$(ls -d "$SDK"/platforms/android-* 2>/dev/null | sort -V | tail -1)
+# Kararlı android-35 tercih edilir (runner'larda beta platform en yüksek sürüm olabiliyor).
+PLATFORM="$SDK/platforms/android-35"
+[ -d "$PLATFORM" ] || PLATFORM=$(ls -d "$SDK"/platforms/android-* 2>/dev/null | sort -V | tail -1)
 JDK=${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}
 JAR="$PLATFORM/android.jar"
 OUT="$ROOT/build/android"
@@ -91,7 +93,7 @@ fi
 
 APK="$DIST/KantinSim-$VERSION.apk"
 "$BT/apksigner" sign \
-  --ks "$KEYSTORE" --ks-alias "$KSALIAS" --ks-pass "pass:$KSPASS" --key-pass "pass:$KEYPASS" \
+  --ks "$KEYSTORE" --ks-key-alias "$KSALIAS" --ks-pass "pass:$KSPASS" --key-pass "pass:$KEYPASS" \
   --min-sdk-version 24 \
   --out "$APK" "$OUT/aligned.apk"
 

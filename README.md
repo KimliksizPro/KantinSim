@@ -140,10 +140,12 @@ APK davranışı: yatay yön kilidi, tam ekran (çubuklar gizli), ekran açık k
 geri tuşu açık paneli kapatır (panel yoksa oyundan çıkar), otomatik kayıt WebView
 depolamasında tutulur.
 
-**Otomatik yayın:** `v1.0.1` gibi bir etiket atılınca GitHub Actions (`.github/workflows/release.yml`)
-APK'yı derler ve Releases sayfasına ekler. Depo Secret'larında `ANDROID_KEYSTORE_BASE64`,
-`ANDROID_KEYSTORE_PASS`, `ANDROID_KEY_ALIAS` (ve istenirse `ANDROID_KEY_PASS`) tanımlı olmalı;
-böylece her sürüm aynı anahtarla imzalanır ve telefonda üstüne güncelleme kurulur.
+**Otomatik yayın** (`.github/workflows/release.yml`):
+- Ana dala her push'ta APK derlenir ve Releases'taki **"Son sürüm (otomatik)"** yayınındaki dosya yenilenir.
+- `v1.0.1` gibi bir etiket atılınca kalıcı bir sürüm olarak Releases'a eklenir.
+
+Depo Secret'larında `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASS`, `ANDROID_KEY_ALIAS` (ve istenirse
+`ANDROID_KEY_PASS`) tanımlı olmalı; böylece her APK aynı anahtarla imzalanır ve telefonda üstüne güncelleme kurulur.
 
 ## Lisans
 

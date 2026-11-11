@@ -108,7 +108,7 @@
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const el = document.activeElement;
-    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
     const k = e.key.length === 1 ? e.key.toLocaleLowerCase('tr') : e.key;
     const ui = KS.ui || {}, s = KS.state || {};
     if (k === 'f') { toggleFullscreen(); return; }

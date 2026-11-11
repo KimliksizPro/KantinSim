@@ -405,15 +405,21 @@
     if (curPanel) closePanel(true);
     if (E.popup) E.popup.classList.remove('show');
     unlockAudio();
+    const prevFocus = document.activeElement;
     const head = h('div', { class: 'pn-head' });
     const tabs = h('div', { class: 'pn-tabs ks-hide' });
     const body = h('div', { class: 'pn-body' });
     const foot = h('div', { class: 'pn-foot ks-hide' });
     const headExtra = h('div', { class: 'pn-head-extra' });
-    const xBtn = h('button', { class: 'pn-x', type: 'button', title: 'Kapat (Esc)' }, '✕');
+    const titleId = 'pn-title';
+    const xBtn = h('button', { class: 'pn-x', type: 'button', title: 'Kapat (Esc)', 'aria-label': 'Kapat' }, '✕');
     xBtn.addEventListener('click', safe(() => { sfx('click'); closePanel(); }));
-    add(head, [h('span', { class: 'pn-ico' }, cfg.icon), h('h2', null, cfg.title), headExtra, xBtn]);
+    add(head, [h('span', { class: 'pn-ico', 'aria-hidden': 'true' }, cfg.icon), h('h2', { id: titleId }, cfg.title), headExtra, xBtn]);
     const panel = h('div', { class: 'ks-panel ' + (cfg.cls || ''), style: { width: (cfg.width || 900) + 'px' } }, head, tabs, body, foot);
+    // Erişilebilirlik: panel bir iletişim kutusu gibi davranır; odak içinde kalır.
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', titleId);
     const p = {
       id, panel, head, tabs, body, foot, headExtra, arg,
       setTabs(list, active, onChange) {
@@ -436,9 +442,20 @@
     E.modal.appendChild(panel);
     show(E.modal, true);
     E.modal.classList.remove('anim'); void E.modal.offsetWidth; E.modal.classList.add('anim');
-    curPanel = { id, cfg, p };
+    curPanel = { id, cfg, p, prevFocus };
     syncModal();
     try { cfg.build(p, arg); } catch (e) { console.error('[ui panel]', id, e); body.appendChild(h('div', { class: 'pn-empty' }, 'Bu panel şu an açılamadı.')); }
+    // Escape/Tab ile gezinme: odak panelin içinde döner.
+    panel.addEventListener('keydown', safe(ev => {
+      if (ev.key !== 'Tab') return;
+      const list = [...panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.offsetParent !== null);
+      if (!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      if (ev.shiftKey && (document.activeElement === first || document.activeElement === panel)) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    }));
+    try { xBtn.focus({ preventScroll: true }); } catch (e) { /* odaklanamadı */ }
     sfx('pick');
     return true;
   }
@@ -448,6 +465,8 @@
     try { if (c.cfg.onClose) c.cfg.onClose(c.p); } catch (e) { console.error(e); }
     clear(E.modal); show(E.modal, false);
     syncModal();
+    // Odağı panele açan düğmeye geri ver.
+    try { if (!silent && c.prevFocus && c.prevFocus.focus && document.contains(c.prevFocus)) c.prevFocus.focus({ preventScroll: true }); } catch (e) { /* */ }
     if (!silent) { save(); refreshPrep(); }
     return true;
   }
@@ -1929,11 +1948,11 @@
     loadSettings();
     clear(root);
     E.prep = h('div', { id: 'ks-prep', class: 'ks-passive ks-hide' });
-    E.banner = h('div', { class: 'ks-banner ks-passive' });
-    E.popup = h('div', { id: 'ks-popup', class: 'ks-passive' });
-    E.ach = h('div', { id: 'ks-ach', class: 'ks-passive' });
-    E.notifs = h('div', { id: 'ks-notifs', class: 'ks-passive' });
-    E.fx = h('div', { id: 'ks-fx', class: 'ks-passive' });
+    E.banner = h('div', { class: 'ks-banner ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.popup = h('div', { id: 'ks-popup', class: 'ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.ach = h('div', { id: 'ks-ach', class: 'ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.notifs = h('div', { id: 'ks-notifs', class: 'ks-passive', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'false' });
+    E.fx = h('div', { id: 'ks-fx', class: 'ks-passive', 'aria-hidden': 'true' });
     E.modal = h('div', { id: 'ks-modal', class: 'ks-hide' });
     E.modal.addEventListener('pointerdown', ev => { if (ev.target === E.modal) { E.modal._down = true; } });
     E.modal.addEventListener('click', ev => { if (ev.target === E.modal && E.modal._down) { sfx('click'); closePanel(); } E.modal._down = false; });

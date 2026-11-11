@@ -122,6 +122,20 @@ try {
   });
   check('menü paneli günün menüsünü işaretliyor', menuChip.n === 1 && menuChip.rowHas, menuChip);
 
+  console.log('Haftalık sözleşme & kârlı gün serisi');
+  const wk = await page.evaluate(() => {
+    const KS = window.KS, w = KS.Meta.week(), st = KS.Meta.streak();
+    const el = document.querySelector('.prep-goals .wk-row');
+    return {
+      target: w.target, money: w.reward.money, xp: w.reward.xp, dayIndex: w.dayIndex, ratio: w.ratio,
+      next: st.next && st.next.days, best: st.best,
+      txt: el && el.textContent.replace(/\s+/g, ' ').trim(),
+    };
+  });
+  check('haftalık sözleşme hedefi hazırlıkta görünüyor',
+    wk.target >= 1000 && wk.money > 0 && wk.xp > 0 && wk.dayIndex === 1 && !!wk.txt && wk.txt.includes('Hafta 1'), wk);
+  check('kârlı gün serisi bir sonraki ödülü gösteriyor', wk.next === 3 && wk.best === 0, wk);
+
   console.log('Paneller');
   const panels = [['malzeme', 'supply'], ['telefon', 'phone'], ['menu', 'menu'], ['gelistir', 'upgrades'],
     ['personel', 'staff'], ['tarifler', 'recipes'], ['hedefler', 'kantin'], ['ayarlar', 'settings']];
@@ -162,9 +176,13 @@ try {
   }
   check('gün kapandı', phase !== 'open', phase);
   await page.waitForTimeout(4000);
-  const report = await page.evaluate(() => window.KS.lastReport && { day: window.KS.lastReport.day, net: window.KS.lastReport.net, featured: window.KS.lastReport.featured });
+  const report = await page.evaluate(() => window.KS.lastReport && { day: window.KS.lastReport.day, net: window.KS.lastReport.net, featured: window.KS.lastReport.featured, week: window.KS.lastReport.week, streak: window.KS.lastReport.streak });
   check('gün sonu raporu', !!report);
   check('gün sonu raporu günün menüsünü taşıyor', !!report && report.featured === feat.id, report);
+  check('gün sonu raporu haftalık sözleşmeyi taşıyor',
+    !!report && !!report.week && report.week.target >= 1000 && typeof report.week.revenue === 'number', report && report.week);
+  check('gün sonu raporu kârlı gün serisini taşıyor',
+    !!report && !!report.streak && typeof report.streak.days === 'number', report && report.streak);
   check('sonraki gün', await page.evaluate(() => { window.KS.game.nextDay(); return window.KS.state.phase === 'prep' && window.KS.state.day === 2; }));
   check('günün menüsü günden güne dönüyor', await page.evaluate(id => window.KS.state.today.featured && window.KS.state.today.featured !== id, feat.id));
 
@@ -189,6 +207,55 @@ try {
     (resumed.phase === 'open' || resumed.phase === 'closing') && resumed.money === savedAt.money && Math.abs(resumed.time - savedAt.time) <= 2,
     { savedAt, resumed });
   check('devam eden oyunda müşteri akışı var', await page.evaluate(() => window.KS.Customers.list().length > 0));
+
+  console.log('Kârlı gün serisi ödülleri');
+  const st1 = await page.evaluate(async () => {
+    const KS = window.KS;
+    KS.state.streak = { days: 2, best: 2, claimed: {}, lastDay: 0 };
+    KS.state.phase = 'open';
+    KS.state.today.bonus = 0; KS.state.today.revenue = 1000; KS.state.today.tips = 100;
+    KS.Customers.clear();
+    KS.game.endDay();
+    const r = KS.lastReport;
+    return { days: r.streak.days, milestone: r.streak.milestone, claimed: Object.keys(KS.state.streak.claimed) };
+  });
+  check('üçüncü kârlı günde seri ödülü bir kez ödeniyor',
+    st1.days === 3 && !!st1.milestone && st1.milestone.days === 3 && st1.claimed.length === 1, st1);
+  const st2 = await page.evaluate(async () => {
+    const KS = window.KS;
+    KS.game.nextDay(); KS.game.openShop();
+    KS.state.today.bonus = 0; KS.state.today.revenue = 1000; KS.state.today.tips = 100;
+    KS.Customers.clear();
+    KS.game.endDay();
+    const r = KS.lastReport;
+    return { days: r.streak.days, milestone: r.streak.milestone, claimed: Object.keys(KS.state.streak.claimed) };
+  });
+  check('seri büyürken aynı eşik yeniden ödenmiyor',
+    st2.days === 4 && !st2.milestone && st2.claimed.length === 1, st2);
+  const st3 = await page.evaluate(async () => {
+    const KS = window.KS;
+    KS.game.nextDay(); KS.game.openShop();
+    KS.state.today.bonus = 0; KS.state.today.revenue = 0; KS.state.today.tips = 0;
+    KS.Customers.clear();
+    KS.game.endDay();
+    const r = KS.lastReport;
+    return { days: r.streak.days, lost: r.streak.lost, profitable: r.streak.profitable };
+  });
+  check('zararlı gün kârlı gün serisini sıfırlıyor',
+    st3.days === 0 && st3.lost === 4 && st3.profitable === false, st3);
+  const wfail = await page.evaluate(() => {
+    const KS = window.KS;
+    KS.game.newGame(); KS.state.tutorialDone = true;
+    KS.state.day = 5; KS.state.week = null;
+    KS.game.openShop();
+    KS.state.today.bonus = 0; KS.state.today.revenue = 0; KS.state.today.tips = 0;
+    KS.Customers.clear();
+    KS.game.endDay();
+    const r = KS.lastReport;
+    return { day: r.day, week: r.week };
+  });
+  check('son gün hedef tutmazsa haftalık sözleşme yanıyor',
+    wfail.day === 5 && !!wfail.week && wfail.week.failed === true, wfail);
 
   console.log('Çevrimdışı (service worker)');
   const swReady = await page.evaluate(() => navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false));

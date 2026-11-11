@@ -21,6 +21,8 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Günün menüsü**: her gün bir yemek öne çıkar (hazırlık kartında ve Menü panelinde ⭐ ile işaretli). O yemeği servis eden her müşteri, fiyatının %25'i kadar ekstra bahşiş bırakır (en az 3 ₺); gün sonu raporunda kaç servis yaptığın yazar.
+- **Haftalık sözleşme**: her 5 okul günü bir haftadır. Hazırlık kartında haftanın ciro hedefi ve ödülü görünür; hedefi tutarsan hafta içinde bir kez para + XP alırsın, son güne kadar tutmazsa sözleşme yanar.
+- **Kârlı gün serisi**: net kârı pozitif biten her gün seriyi büyütür (🔥). 3, 5, 10 ve 20 günlük eşiklerde bir kez para + XP ödülü verilir; zararlı gün seriyi sıfırlar, rekor kalır.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
 
 ## Tarifler (elle yapılan)
@@ -62,6 +64,8 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 
 - **Günlük hedefler**: her sabah 3 rastgele hedef (ör. "70 müşteriye servis yap", "5 adet Köfte Ekmek sat",
   "günü hiç kızgın müşteri olmadan bitir"). Tamamlanınca anında para + XP ödülü.
+- **Haftalık sözleşme**: 5 günlük ciro hedefi; hazırlık kartında ve defterde ilerlemesi, kalan tutar ve ödülü yazar.
+- **Kârlı gün serisi**: üst üste kârlı günler, rekor ve sıradaki seri ödülü aynı satırda takip edilir.
 - **Başarımlar**: 32 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
 - **İstatistik**: günlük net kâr, müşteri, ciro ve itibar grafikleri; rekorlar; tüm zamanların en çok satanları.
 - **Pazarlama**: hazırlıkta günlük kampanya — okul panosuna afiş, okul radyosu, sosyal medya, bedava çay ikramı, sadakat kartı.

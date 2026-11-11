@@ -811,3 +811,36 @@
 .ab-lic { margin: 14px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(122, 82, 54, .08); font: 600 13px/1.45 var(--f-body); color: var(--ink2); text-align: center; }
 .ab-lic a { color: #c8541e; font-weight: 800; text-decoration: none; border-bottom: 1.5px solid rgba(200, 84, 30, .35); }
 .ab-lic a:hover { border-bottom-color: #c8541e; }
+
+/* ------------------------------------------------- DİKEY EKRAN UYARISI
+   Telefon dikey tutulduğunda 1600x900 oyun 390x219 şeride sıkışıyordu.
+   Oyun yatay olduğu için dikeyde oynanamıyor; kısa bir yönlendirme göster. */
+#rotate-hint { display: none; }
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-hint {
+    position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; padding: 32px 24px; text-align: center;
+    background: radial-gradient(circle at 50% 32%, #5a3a24, #1a110c 72%);
+    color: #fff3d6; font-family: 'Nunito', system-ui, sans-serif;
+  }
+  #rotate-hint b { font: 800 24px/1.2 'Baloo 2', 'Nunito', system-ui, sans-serif; letter-spacing: .2px; }
+  #rotate-hint span { max-width: 300px; font-size: 15px; line-height: 1.45; color: #d9c3a6; }
+  #rotate-hint .rh-phone {
+    position: relative;
+    width: 62px; height: 104px; border: 4px solid #f0c56a; border-radius: 12px;
+    box-shadow: inset 0 0 0 3px rgba(0, 0, 0, .25), 0 8px 22px rgba(0, 0, 0, .4);
+    animation: rh-turn 2.6s ease-in-out infinite;
+  }
+  #rotate-hint .rh-phone::after {
+    content: ''; position: absolute; left: 50%; top: 8px; width: 20px; height: 4px; margin-left: -10px;
+    border-radius: 2px; background: rgba(240, 197, 106, .6);
+  }
+}
+@keyframes rh-turn {
+  0%, 18% { transform: rotate(0deg); }
+  46%, 78% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #rotate-hint .rh-phone { animation: none; }
+}

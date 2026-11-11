@@ -6,3 +6,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #120d18; tou
 #game { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; display: block; cursor: default; }
 #ui { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; pointer-events: none; }
 #ui > * { pointer-events: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#ui :focus-visible { outline: 3px solid #2a78d6; outline-offset: 3px; }

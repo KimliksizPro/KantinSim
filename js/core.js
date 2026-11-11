@@ -361,14 +361,21 @@ window.KS = window.KS || {};
     continueGame() {
       if (!KS.load()) return KS.game.newGame();
       const s = KS.state;
-      // yarım kalan gün => hazırlık aşamasından yeniden başla
-      if (s.phase !== 'summary' && s.phase !== 'gameover') {
-        s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN;
-        if (!s.today) rollToday(s);
-        KS.game._enterPrep();
-      } else if (s.phase === 'summary') {
-        KS.game.nextDay();
+      if (s.phase === 'summary') { KS.game.nextDay(); return; }
+      if (s.phase === 'gameover') return;
+      // Gün ortasında kaydedilmişse günü kaldığı saatten sürdür: günü baştan
+      // oynatmak ciro giderlerini atlatıp günlük hedefleri şişiriyordu.
+      if (s.phase === 'open' || s.phase === 'closing') {
+        s.paused = false;
+        lastPeriod = KS.currentPeriod();
+        KS.bus.emit('open');                 // müşteri modülünü sıfırla, akını yeniden kur
+        KS.bus.emit('periodChange', lastPeriod);
+        if (s.phase === 'closing') { closingTimer = 0; KS.bus.emit('closing'); }
+        return;
       }
+      s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN;
+      if (!s.today) rollToday(s);
+      KS.game._enterPrep();
     },
     _enterPrep() {
       const s = KS.state;
@@ -874,6 +881,12 @@ window.KS = window.KS || {};
     resize();
     window.addEventListener('resize', resize);
     setupInput(canvas);
+    // Otomatik kayıt: oyun sırasında düzenli aralıklarla + sekme kapanırken.
+    // Böylece tarayıcı kapanması bir günlük ilerlemeyi silmiyor.
+    const autoSave = () => { const ph = KS.state.phase; if (ph === 'open' || ph === 'closing' || ph === 'prep') KS.save(); };
+    window.addEventListener('pagehide', autoSave);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autoSave(); });
+    setInterval(autoSave, 20000);
     for (const m of KS.modules) if (m.init) { try { m.init(); } catch (e) { console.error('[init]', m.name, e); } }
     KS._booted = true;
     KS.bus.emit('boot');

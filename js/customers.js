@@ -633,9 +633,26 @@
     let tipRate = 0;
     if (avgQ >= 0.55) tipRate = 0.2 * ((avgQ - 0.55) / 0.45) * (0.4 + 0.6 * pr);
     let tip = Math.round(total * tipRate * (c.type.tipMult || 1) * (ev.tip || 1) * hookMult('tipMult') * (c.tipBonus || 1));
+    // Günün menüsü: o yemeğin her servisi ekstra bahşiş getirir (kaliteden bağımsız).
+    const featId = KS.featuredId ? KS.featuredId() : null;
+    let featTip = 0, featN = 0;
+    if (featId) {
+      for (const L of c.lines) {
+        if (!L.done || !L.line || L.line.type !== 'recipe' || L.line.id !== featId) continue;
+        const b = KS.featuredBonus ? KS.featuredBonus(L.line, L.price) : 0;
+        featN++;
+        featTip += b;
+      }
+    }
+    tip += featTip;
+    if (featN && s.today) {
+      s.today.meta.featServ = (s.today.meta.featServ || 0) + featN;
+      s.today.meta.featTip = (s.today.meta.featTip || 0) + featTip;
+    }
     if (tip >= 1) {
       KS.earn(tip, 'bahsis', x, 268);
       audio('coin');
+      if (featTip > 0) KS.fx && KS.fx.floatText(x, 200, '⭐ Günün menüsü +' + featTip + ' ₺', '#ffd76a', 20);
     } else tip = 0;
     audio('ding');
     KS.fx && KS.fx.coins && KS.fx.coins(x, 330, 4 + Math.min(10, Math.round(total / 40)));

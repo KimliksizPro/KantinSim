@@ -742,6 +742,10 @@
   function showScreen(name) {
     screen = name;
     if (name && E.popup) E.popup.classList.remove('show');
+    if (name) { // ekran açılınca üstte kalan afiş/başarım kartları temizlenir
+      if (E.ach) E.ach.classList.remove('show');
+      if (E.banner) E.banner.classList.remove('show');
+    }
     show(E.mainmenu, name === 'mainmenu');
     show(E.summary, name === 'summary' || name === 'gameover');
     show(E.pause, name === 'pause');
@@ -822,6 +826,7 @@
           h('div', { class: 'pt-ico' }, EVENT_ICONS[evId] || '📌'),
           h('div', null, h('div', { class: 'pt-k' }, 'Günün olayı'), h('div', { class: 'pt-v' }, ev.name),
             h('div', { class: 'pt-d' }, ev.desc)))),
+      featuredStrip(t),
       hist ? h('div', { class: 'prep-yday' },
         h('span', null, '📊 Dün'),
         h('span', { class: hist.net >= 0 ? 'pos' : 'neg' }, 'Net ' + fmtSigned(hist.net)),
@@ -850,6 +855,18 @@
         syncPhase(true);
       }));
     clear(E.prep).appendChild(card);
+  }
+  function featuredStrip(t) {
+    const id = t && t.featured;
+    const r = id && D().recipes[id];
+    if (!r) return null;
+    const on = !!(S().menu && S().menu[id] && S().menu[id].on);
+    return h('div', { class: 'prep-feat' + (on ? '' : ' off') },
+      h('span', { class: 'pf-ico', 'aria-hidden': 'true' }, '⭐'),
+      h('div', { class: 'pf-body' },
+        h('div', { class: 'pf-k' }, 'GÜNÜN MENÜSÜ'),
+        h('div', { class: 'pf-v' }, r.name),
+        h('div', { class: 'pf-d' }, on ? 'Her servis +%25 ekstra bahşiş' : 'Menüde kapalı — 🍽️ Menü panelinden aç')));
   }
   function prepGoalsBlock() {
     if (!KS.Meta) return null;
@@ -1107,6 +1124,7 @@
       const sec1 = h('div', { class: 'mn-grid' });
       for (const [rid, r] of Object.entries(D().recipes)) {
         const unlocked = recipeUnlocked(rid);
+        const isFeat = rid === call(KS.featuredId);
         const m = s.menu[rid] = s.menu[rid] || { on: false, price: r.price };
         const cost = recipeCost(rid);
         const badge = h('span', { class: 'mn-badge' }), marg = h('div', { class: 'mn-marg' });
@@ -1121,7 +1139,7 @@
         const stp = stepper({ value: m.price, min: minP, max: maxP, step: 5, cls: 'price', fmt: fmt, onChange: v => { m.price = v; updInfo(); } });
         const row = h('div', { class: 'mn-row' + (unlocked ? '' : ' locked') + (unlocked && !m.on ? ' off' : '') },
           dishIcon(rid, 72, 60, 0.62),
-          h('div', { class: 'mn-name' }, h('b', null, r.name), h('small', null, '⏱ ' + (r.time || '') + ' · Önerilen ' + fmt(r.price))),
+          h('div', { class: 'mn-name' }, h('b', null, r.name), isFeat ? h('span', { class: 'mn-feat' }, '⭐ Günün menüsü') : null, h('small', null, '⏱ ' + (r.time || '') + ' · Önerilen ' + fmt(r.price))),
           unlocked ? toggle(m.on, on => { m.on = on; row.classList.toggle('off', !on); }, ['Menüde', 'Kapalı']) : h('div', { class: 'mn-lock' }, '🔒 Seviye ' + r.unlock),
           h('div', { class: 'mn-price' }, unlocked ? stp.el : h('b', null, fmt(r.price)), unlocked ? badge : null),
           unlocked ? marg : h('div', { class: 'mn-marg' }, 'Seviye ' + r.unlock + ' gerekli'));
@@ -1680,8 +1698,12 @@
   }
   function summaryMeta(r) {
     const goals = r.goals || [], ach = r.achievements || [], recs = r.records || [];
-    if (!goals.length && !ach.length && !recs.length) return null;
+    const feat = r.featured ? (D().recipes[r.featured] || null) : null;
+    if (!goals.length && !ach.length && !recs.length && !feat) return null;
     return h('div', { class: 'sm-box sm-meta' },
+      feat ? h('div', { class: 'smg-feat' }, h('span', { class: 'smf-ico' }, '⭐'),
+        h('span', { class: 'smf-t' }, 'Günün menüsü: ' + feat.name),
+        h('b', null, (r.featServ || 0) > 0 ? (r.featServ + ' servis · +' + fmt(r.featTip || 0)) : 'hiç servis edilmedi')) : null,
       goals.length ? h('div', { class: 'sm-h' }, '🎯 Günün hedefleri · ' + goals.filter(g => g.done).length + '/' + goals.length) : null,
       goals.map(g => h('div', { class: 'smg-row' + (g.done ? ' done' : ' fail') }, h('span', null, g.done ? '✅' : '❌'), h('span', { class: 'smg-t' }, g.text),
         h('b', null, g.done ? '+' + fmt(g.reward.money) : '—'))),

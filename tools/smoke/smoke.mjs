@@ -97,6 +97,31 @@ try {
   check('olay hazırlık kartında simgesiyle görünüyor',
     !!eventCard && eventCard.name === 'Sağlıklı Beslenme Haftası' && eventCard.icon === '🥗', eventCard);
 
+  console.log('Günün menüsü');
+  const feat = await page.evaluate(() => {
+    const KS = window.KS, id = KS.featuredId(), r = KS.DATA.recipes[id];
+    const strip = document.querySelector('.prep-feat');
+    return {
+      id, name: r && r.name, price: r && r.price, unlock: r && r.unlock, level: KS.state.level,
+      bonus: KS.featuredBonus({ type: 'recipe', id }), stored: KS.state.today.featured,
+      strip: strip && strip.textContent.replace(/\s+/g, ' ').trim(),
+    };
+  });
+  check('günün menüsü açılmış, fiyatlı bir tarif ve gün içinde sabit',
+    !!feat.name && feat.unlock <= feat.level && feat.price >= 50 && feat.stored === feat.id, feat);
+  check('günün menüsü ek bahşişi en az 3 ₺', feat.bonus >= 3, feat.bonus);
+  check('hazırlık kartı günün menüsünü gösteriyor', !!feat.strip && feat.strip.includes(feat.name), feat.strip);
+  const menuChip = await page.evaluate(() => {
+    const KS = window.KS;
+    KS.ui.open('menu');
+    const chips = [...document.querySelectorAll('.mn-feat')].map(c => c.closest('.mn-row'));
+    const name = KS.DATA.recipes[KS.featuredId()].name;
+    const out = { n: chips.length, rowHas: chips.length === 1 && chips[0].textContent.includes(name) };
+    KS.ui.close();
+    return out;
+  });
+  check('menü paneli günün menüsünü işaretliyor', menuChip.n === 1 && menuChip.rowHas, menuChip);
+
   console.log('Paneller');
   const panels = [['malzeme', 'supply'], ['telefon', 'phone'], ['menu', 'menu'], ['gelistir', 'upgrades'],
     ['personel', 'staff'], ['tarifler', 'recipes'], ['hedefler', 'kantin'], ['ayarlar', 'settings']];
@@ -112,6 +137,24 @@ try {
   await page.evaluate(() => { window.KS.game.openShop(); window.KS.state.speedMult = 20; });
   const started = await page.evaluate(() => window.KS.state.phase);
   check('kantin açıldı', started === 'open');
+  const featPay = await page.evaluate(async () => {
+    const KS = window.KS, wait = ms => new Promise(r => setTimeout(r, ms));
+    KS.state.speedMult = 8;
+    KS.Customers.clear(); await wait(500);
+    const id = KS.featuredId(), r = KS.DATA.recipes[id];
+    const c = KS.Customers.spawn({ type: 'ogrenci', lines: [{ type: 'recipe', id }] });
+    if (!c) return { err: 'müşteri yok' };
+    for (let i = 0; i < 40 && c.state !== 'wait' && c.state !== 'enter'; i++) await wait(100);
+    const item = KS.items.dish(r.base, { layers: r.required.map(x => Object.assign(KS.items.ing(x), { q: 1, cook: 1 })), toast: 1 });
+    const ok = KS.Customers.serve(c.slot, item);
+    for (let i = 0; i < 40 && c.state === 'pay'; i++) await wait(100);
+    await wait(400);
+    const meta = KS.state.today.meta || {};
+    KS.state.speedMult = 20;
+    return { ok, tip: meta.featTip || 0, n: meta.featServ || 0, bonus: KS.featuredBonus({ type: 'recipe', id }) };
+  });
+  check('günün menüsü servisi ekstra bahşiş getiriyor',
+    featPay.ok === true && featPay.n === 1 && featPay.tip === featPay.bonus && featPay.tip >= 3, featPay);
   let phase = 'open', waited = 0;
   while (phase === 'open' && waited < 45000) {
     await page.waitForTimeout(1000); waited += 1000;
@@ -119,9 +162,11 @@ try {
   }
   check('gün kapandı', phase !== 'open', phase);
   await page.waitForTimeout(4000);
-  const report = await page.evaluate(() => window.KS.lastReport && { day: window.KS.lastReport.day, net: window.KS.lastReport.net });
+  const report = await page.evaluate(() => window.KS.lastReport && { day: window.KS.lastReport.day, net: window.KS.lastReport.net, featured: window.KS.lastReport.featured });
   check('gün sonu raporu', !!report);
+  check('gün sonu raporu günün menüsünü taşıyor', !!report && report.featured === feat.id, report);
   check('sonraki gün', await page.evaluate(() => { window.KS.game.nextDay(); return window.KS.state.phase === 'prep' && window.KS.state.day === 2; }));
+  check('günün menüsü günden güne dönüyor', await page.evaluate(id => window.KS.state.today.featured && window.KS.state.today.featured !== id, feat.id));
 
   console.log('Kayıt ve devam');
   await page.evaluate(() => {

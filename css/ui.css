@@ -546,8 +546,23 @@
 .pl-chip { font: 800 13.5px var(--f-body); color: #a5361c; background: #fff; padding: 4px 10px; border-radius: 10px; box-shadow: 0 2px 0 #ffc4b8; }
 .pl-chip.zero { color: #fff; background: #e0463b; box-shadow: 0 2px 0 #a82920; }
 .prep-ok { font: 800 14.5px var(--f-body); color: #1f8a4c; background: #e3f8ea; padding: 9px 14px; border-radius: 14px; }
-.prep-hint { font: 700 14px var(--f-body); color: #8a4a12; background: #fff3dc; padding: 8px 14px; border-radius: 14px; }
-.prep-tip { font: 700 14px var(--f-body); color: var(--ink2); background: rgba(255, 207, 63, .22); padding: 8px 14px; border-radius: 14px; }
+.prep-hint { font: 700 14px var(--f-body); color: #8a4a12; background: #fff3dc; padding: 8px 14px; border-radius: 14px; }.prep-tip { font: 700 14px var(--f-body); color: var(--ink2); background: rgba(255, 207, 63, .22); padding: 8px 14px; border-radius: 14px; }
+/* Günün menüsü şeridi ve menü paneli rozeti */
+.prep-feat { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 16px;
+  background: linear-gradient(180deg, #fff6d6, #ffe9a8); box-shadow: 0 3px 0 #e8c65a, inset 0 0 0 2px rgba(240, 162, 12, .35); }
+.prep-feat.off { background: #f3ece2; box-shadow: 0 3px 0 #dfcfb8, inset 0 0 0 2px rgba(140, 120, 90, .2); }
+.pf-ico { font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .18)); }
+.pf-body { min-width: 0; }
+.pf-k { font: 900 11px var(--f-body); letter-spacing: 1px; color: #9a6410; }
+.prep-feat.off .pf-k { color: var(--ink3); }
+.pf-v { font: 800 20px/1.15 var(--f-head); color: var(--ink); }
+.pf-d { font: 700 13px var(--f-body); color: #7a5210; }
+.prep-feat.off .pf-d { color: #7d6a52; }
+.mn-feat { align-self: flex-start; display: inline-block; margin-top: 2px; padding: 2px 8px; border-radius: 8px; font: 900 11px var(--f-body);
+  letter-spacing: .4px; color: #7a4b00; background: linear-gradient(180deg, #ffe9a8, #ffd061); box-shadow: 0 2px 0 #d9a12e; }
+.smg-feat { display: flex; align-items: center; gap: 8px; font: 700 13.5px var(--f-body); color: var(--ink2); padding-bottom: 3px; border-bottom: 1px dashed #f0dfc6; }
+.smg-feat .smf-t { flex: 1; }
+.smg-feat b { color: #9a6410; }
 .prep-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 2px; }
 .prep-actions .ks-btn { font-size: 15px; padding: 10px 6px; }
 .prep-open { align-self: center; margin-top: 6px; min-width: 380px; animation: ks-breathe 1.8s ease-in-out infinite; }
@@ -934,10 +949,12 @@
   .sup-grid { grid-template-columns: 1fr; }
   .up-grid, .st-grid, .ach-grid { grid-template-columns: repeat(2, 1fr); }
   .stt-tiles { grid-template-columns: repeat(3, 1fr); }
+  .mn-feat { font-size: 12px; padding: 2px 8px; white-space: nowrap; }
 
   /* Bildirimler: HUD altında, native boyutta */
   #ks-notifs { left: var(--hud-left, 0px); top: calc(var(--hud-top, 0px) + (var(--hud-h, 52px) + 8px) * var(--hud-inv, 1));
-    width: var(--hud-width, 1600px); padding: 0 10px; transform: scale(var(--hud-inv, 1)); transform-origin: top left; }
+    width: var(--hud-width, 1600px); padding: 0 10px; transform: scale(var(--hud-inv, 1)); transform-origin: top left;
+    z-index: 36; /* açık panel/ekran bildirimleri örtmez, oyun sırasında HUD'un üstünde kalır */ }
   .ks-toast { max-width: min(380px, 100%); }
 
   /* Hazırlık kartı */
@@ -986,4 +1003,12 @@
   .sup-grid { grid-template-columns: 1fr 1fr; }
   .up-grid, .st-grid, .ach-grid { grid-template-columns: repeat(3, 1fr); }
   .stt-tiles { grid-template-columns: repeat(6, 1fr); }
+  .sm-cols, .stt-charts { grid-template-columns: 1fr 1fr; }
+  .stt-cols { grid-template-columns: 1fr 1.3fr; }
+  .sm-tiles { grid-template-columns: repeat(4, 1fr); }
+  .sm-tiles.five { grid-template-columns: repeat(5, 1fr); }
+  .sm-card { max-width: 1200px; }
+  .prep-card { max-width: 760px; }
+  .prep-tiles { grid-template-columns: 1fr 1.4fr; }
+  .prep-actions { grid-template-columns: repeat(5, 1fr); }
 }

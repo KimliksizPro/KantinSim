@@ -1,0 +1,72 @@
+# KantinSim — yayın APK'sı.
+# `v1.0.1` gibi bir etiket (tag) atılınca APK'yı derler, GitHub Releases'a ekler.
+# Elle de çalıştırılabilir (Actions → Yayın APK'sı → Run workflow); o zaman yalnız artifact olarak yüklenir.
+#
+# Gerekli depo Secret'ları (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  anahtar dosyasının base64'ü
+#   ANDROID_KEYSTORE_PASS    anahtar deposu şifresi
+#   ANDROID_KEY_ALIAS        anahtar takma adı
+#   ANDROID_KEY_PASS         anahtar şifresi (depo şifresiyle aynıysa boş bırakılabilir)
+name: Yayın APK'sı
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Sürümü belirle
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # versionCode: çalıştırma numarası (her derlemede artar, güncelleme kurulabilsin)
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: İmza anahtarını hazırla
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 Secret'ı tanımlı değil (başa bakın)."; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/ks"
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
+
+      - name: APK'yı derle
+        env:
+          KS_FILE: ${{ runner.temp }}/ks/release.jks
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: bash tools/android/build.sh
+
+      - name: Artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: KantinSim-${{ env.VERSION }}
+          path: dist/KantinSim-${{ env.VERSION }}.apk
+
+      - name: Release'e ekle
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/KantinSim-${{ env.VERSION }}.apk
+          generate_release_notes: true

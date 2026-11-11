@@ -261,6 +261,9 @@ window.KS = window.KS || {};
     gezi:         { name: 'Okul Gezisi', weight: 0.7, desc: 'Birkaç sınıf müzeye gitti: kantin bugün sakin. Hazır yemeği az söyle!', demand: 0.7 },
     ogretmenler:  { name: 'Öğretmenler Günü', weight: 0.6, desc: 'Öğretmenler kutlama yapıyor: daha çok öğretmen müşteri ve toplu çay siparişi.', demand: 1.1, typeMult: { ogretmen: 3 }, tip: 1.3, prefs: { cay: 1.5, sutlac: 1.6, pogaca: 1.3 } },
     kermes:       { name: 'Hayır Kermesi', weight: 0.6, desc: 'Bahçede kermes var: veliler ve misafirlerle kantin tıklım tıklım!', demand: 1.45, adultRatio: 0.35, prefs: { simit: 1.4, ayran: 1.4, kofte_ekmek: 1.3 } },
+    saglik:       { name: 'Sağlıklı Beslenme Haftası', weight: 1.0, desc: 'Öğrenciler hafif şeylere yöneliyor: ayran, meyve suyu ve limonata kapış kapış; cips ile kola yüzüne bakmıyor.', demand: 1.05, prefs: { ayran: 1.8, meyve_suyu: 1.6, limonata: 1.5, su: 1.4, cay: 0.9, cips: 0.5, kola: 0.6, cikolata: 0.7, gofret: 0.7, patates: 0.7 } },
+    bilim:        { name: 'Bilim Şenliği', weight: 0.9, desc: 'Çevre okullardan misafir öğrenciler geliyor: kantin kalabalık, tost ve ayran talebi yüksek.', demand: 1.3, adultRatio: 0.2, prefs: { kasarli_tost: 1.4, karisik_tost: 1.3, ayran: 1.4, simit: 1.3, cay: 1.2 } },
+    karne:        { name: 'Karne Günü', weight: 0.7, desc: 'Karneler alındı, harçlıklar cebe indi: bahşişler bol, atıştırmalık ve içecek talebi yüksek.', demand: 1.2, tip: 1.5, prefs: { kasarli_tost: 1.3, kola: 1.3, cips: 1.3, meyve_suyu: 1.2, gofret: 1.2 } },
   };
 
   // ---------------------------------------------------------------------------

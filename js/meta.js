@@ -213,6 +213,7 @@
     { id: 'mukemmel_200', icon: '👨‍🍳', name: 'Şef Dokunuşu', desc: '200 mükemmel servis yap.', p: () => [life().perfect, 200], xp: 300, money: 800 },
     { id: 'ciro_10k', icon: '💵', name: 'İlk On Bin', desc: 'Toplam 10.000 ₺ satış yap.', p: () => [T().revenue, 10000], xp: 100 },
     { id: 'ciro_100k', icon: '💰', name: 'Kantin İmparatorluğu', desc: 'Toplam 100.000 ₺ satış yap.', p: () => [T().revenue, 100000], xp: 500, money: 3000 },
+    { id: 'bahsis_5k', icon: '🪙', name: 'Bahşiş Şampiyonu', desc: 'Toplam 5.000 ₺ bahşiş topla.', p: () => [T().tips, 5000], xp: 200, money: 500 },
     { id: 'kasa_20k', icon: '🐷', name: 'Kumbara Dolu', desc: 'Kasada 20.000 ₺ biriktir.', p: () => [Math.max(0, S().money), 20000], xp: 250 },
     { id: 'net_2k', icon: '📈', name: 'Bereketli Gün', desc: 'Bir günde 2.000 ₺ net kâr et.', p: () => [life().bestNet, 2000], xp: 150 },
     { id: 'kusursuz', icon: '💎', name: 'Kusursuz Gün', desc: 'En az 20 müşteriyle, hiç kaçan ya da kızan olmadan bir gün bitir.', p: () => [life().flawlessDays, 1], xp: 200, money: 500 },
@@ -221,6 +222,7 @@
     { id: 'seviye_10', icon: '🏅', name: 'Kantin Ustası', desc: '10. seviyeye ulaş.', p: () => [S().level, 10], xp: 0, money: 5000 },
     { id: 'hafta_1', icon: '📅', name: 'İlk Hafta', desc: '5 okul günü tamamla.', p: () => [T().days, 5], xp: 100 },
     { id: 'donem', icon: '🗓️', name: 'Bir Dönem', desc: '20 okul günü tamamla.', p: () => [T().days, 20], xp: 400, money: 1500 },
+    { id: 'gun_50', icon: '🏛️', name: 'Kantinin Kurumu', desc: '50 okul günü tamamla.', p: () => [T().days, 50], xp: 600, money: 2500 },
     { id: 'yatirimci', icon: '🔧', name: 'Yatırımcı', desc: 'İlk geliştirmeni satın al.', p: () => [upgCount(), 1], xp: 60 },
     { id: 'son_model', icon: '🚀', name: 'Son Model', desc: 'Bir ekipmanı en üst seviyeye çıkar.', p: () => [anyUpgMax() ? 1 : 0, 1], xp: 150 },
     { id: 'teknoloji', icon: '🏭', name: 'Teknoloji Harikası', desc: 'Tüm ekipmanları en üst seviyeye çıkar.', p: () => [allUpgMax() ? 1 : 0, 1], xp: 800, money: 3000 },
@@ -234,6 +236,7 @@
     { id: 'reklam', icon: '📣', name: 'Reklamın Gücü', desc: '5 pazarlama kampanyası yap.', p: () => [life().campaigns, 5], xp: 100 },
     { id: 'borc', icon: '🏦', name: 'Sözünün Eri', desc: 'Bir banka kredisini tamamen öde.', p: () => [life().loansRepaid, 1], xp: 120 },
     { id: 'simsek', icon: '⚡', name: 'Şimşek Servis', desc: 'Toplam 100 müşteriyi sabrı %60\'tan fazlayken doyur.', p: () => [life().fast, 100], xp: 200 },
+    { id: 'combo_50', icon: '🧺', name: 'Tepsi Ustası', desc: 'Toplam 50 çoklu siparişi eksiksiz teslim et.', p: () => [life().combos, 50], xp: 150 },
   ];
   const ACH_BY_ID = {}; ACH.forEach(a => { ACH_BY_ID[a.id] = a; });
 

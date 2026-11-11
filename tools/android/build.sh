@@ -18,8 +18,16 @@ OUT="$ROOT/build/android"
 DIST="$ROOT/dist"
 # İmza anahtarı derleme çıktısının (OUT) dışında tutulur; her derlemede silinmez,
 # böylece APK'lar aynı anahtarla imzalanır ve telefonda üstüne kurulabilir.
-KEYSTORE="$ROOT/build/keystore/kantinsim-debug.jks"
-KSPASS="kantinsim"
+# Yerelde geliştirme anahtarı kullanılır. Yayın (CI) için ortam değişkenleriyle gerçek anahtar verilir:
+#   KS_FILE (jks yolu), KS_PASS (depo şifresi), KS_ALIAS, KS_KEY_PASS (yoksa KS_PASS)
+#   VERSION (ör. 1.0.1), VERSION_CODE (artan tam sayı)
+RELEASE_KEY=0; [ -n "${KS_FILE:-}" ] && RELEASE_KEY=1
+KEYSTORE="${KS_FILE:-$ROOT/build/keystore/kantinsim-debug.jks}"
+KSPASS="${KS_PASS:-kantinsim}"
+KSALIAS="${KS_ALIAS:-kantinsim}"
+KEYPASS="${KS_KEY_PASS:-$KSPASS}"
+VERSION="${VERSION:-1.0.0}"
+VERSION_CODE="${VERSION_CODE:-1}"
 
 [ -n "$BT" ] || { echo "HATA: build-tools bulunamadı (ANDROID_HOME=$SDK)"; exit 1; }
 [ -f "$JAR" ] || { echo "HATA: $JAR yok"; exit 1; }
@@ -30,7 +38,7 @@ echo "build-tools: $(basename "$BT")   platform: $(basename "$PLATFORM")"
 
 # Yalnız ara derleme klasörünü temizle; dist/ içindeki diğer dosyalar (ör. web zip'i) korunur.
 rm -rf "$OUT"
-rm -f "$DIST/KantinSim-1.0.0.apk"
+rm -f "$DIST/KantinSim-$VERSION.apk"
 mkdir -p "$OUT/assets" "$OUT/res" "$OUT/gen" "$OUT/classes" "$OUT/dex" "$DIST"
 
 # 1) Oyun varlıkları: yalnız çalışması için gereken dosyalar
@@ -51,8 +59,8 @@ done
   --java "$OUT/gen" \
   --min-sdk-version 24 \
   --target-sdk-version 35 \
-  --version-code 1 \
-  --version-name 1.0.0 \
+  --version-code "$VERSION_CODE" \
+  --version-name "$VERSION" \
   --auto-add-overlay
 
 # 4) Java kaynakları
@@ -69,18 +77,21 @@ done
 # 6) Hizalama + imza
 "$BT/zipalign" -f -p 4 "$OUT/base.apk" "$OUT/aligned.apk"
 
+if [ "$RELEASE_KEY" = 1 ] && [ ! -f "$KEYSTORE" ]; then
+  echo "HATA: KS_FILE verildi ama anahtar dosyası yok: $KEYSTORE"; exit 1
+fi
 if [ ! -f "$KEYSTORE" ]; then
   echo "Yerel imza anahtarı üretiliyor (yalnız geliştirme için): $KEYSTORE"
   mkdir -p "$(dirname "$KEYSTORE")"
-  "$JDK/bin/keytool" -genkeypair -keystore "$KEYSTORE" -alias kantinsim \
+  "$JDK/bin/keytool" -genkeypair -keystore "$KEYSTORE" -alias "$KSALIAS" \
     -keyalg RSA -keysize 2048 -validity 10000 \
-    -storepass "$KSPASS" -keypass "$KSPASS" \
+    -storepass "$KSPASS" -keypass "$KEYPASS" \
     -dname "CN=KantinSim, OU=Gelistirme, O=KimliksizPro, L=Istanbul, C=TR" >/dev/null 2>&1
 fi
 
-APK="$DIST/KantinSim-1.0.0.apk"
+APK="$DIST/KantinSim-$VERSION.apk"
 "$BT/apksigner" sign \
-  --ks "$KEYSTORE" --ks-pass "pass:$KSPASS" --key-pass "pass:$KSPASS" \
+  --ks "$KEYSTORE" --ks-alias "$KSALIAS" --ks-pass "pass:$KSPASS" --key-pass "pass:$KEYPASS" \
   --min-sdk-version 24 \
   --out "$APK" "$OUT/aligned.apk"
 

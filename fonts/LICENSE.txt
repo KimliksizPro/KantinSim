@@ -1,0 +1,12 @@
+Bu klasördeki yazı tipleri, SIL Open Font License 1.1 (OFL 1.1) altında dağıtılır.
+Lisans metni: https://openfontlicense.org
+
+Baloo 2
+  Telif: Ek Type
+  Lisans: SIL Open Font License 1.1 (https://openfontlicense.org)
+
+Nunito
+  Telif: Vernon Adams / Nunito Project Authors
+  Lisans: SIL Open Font License 1.1 (https://openfontlicense.org)
+
+Kaynak: Bu yazı tipleri Google Fonts üzerinden alınmıştır.

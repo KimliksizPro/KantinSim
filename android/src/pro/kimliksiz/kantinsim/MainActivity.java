@@ -12,6 +12,7 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 /**
  * KantinSim Android kabuğu.
@@ -23,6 +24,8 @@ public class MainActivity extends Activity {
 
     private static final String START_URL = "file:///android_asset/index.html";
     private WebView web;
+    /** Son geri tuşu basışının zamanı (ms); çift basışla çıkmak için kullanılır. */
+    private long lastBack;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -85,7 +88,10 @@ public class MainActivity extends Activity {
         if (hasFocus) hideSystemBars();
     }
 
-    /** Geri tuşu: açık panel varsa kapatır, yoksa oyundan çıkar. */
+    /**
+     * Geri tuşu: açık panel varsa kapatır. Panel yoksa iki kez basılmadıkça çıkılmaz;
+     * ilk basışta kısa bir uyarı gösterilir, 2 saniye içinde ikinci basışta oyun kapanır.
+     */
     @Override
     public void onBackPressed() {
         web.evaluateJavascript(
@@ -94,7 +100,16 @@ public class MainActivity extends Activity {
                 new android.webkit.ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(String value) {
-                        if (value == null || value.contains("cik")) finish();
+                        if (value == null || value.contains("cik")) {
+                            long now = System.currentTimeMillis();
+                            if (now - lastBack < 2000) {
+                                finish();
+                            } else {
+                                lastBack = now;
+                                Toast.makeText(MainActivity.this,
+                                        "Çıkmak için tekrar geri'ye bas", Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     }
                 });
     }

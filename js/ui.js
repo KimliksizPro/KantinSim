@@ -154,8 +154,8 @@
   // ---------------------------------------------------------------------------
   // SABİT METİNLER
   // ---------------------------------------------------------------------------
-  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰', gezi: '🚌', ogretmenler: '🍎', kermes: '🎪' };
-  const EVENT_SHORT = { gezi: 'Okul Gezisi', ogretmenler: 'Öğretmenler Günü', kermes: 'Kermes', mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü' };
+  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰', gezi: '🚌', ogretmenler: '🍎', kermes: '🎪', saglik: '🥗', bilim: '🔬', karne: '🎒' };
+  const EVENT_SHORT = { gezi: 'Okul Gezisi', ogretmenler: 'Öğretmenler Günü', kermes: 'Kermes', mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü', saglik: 'Sağlıklı Beslenme', bilim: 'Bilim Şenliği', karne: 'Karne Günü' };
   const UPG_ICONS = { tost: '🥪', izgara: '🔥', fritoz: '🍟', semaver: '🫖', tezgah: '🔪', bekleme: '🗄️', yogurma: '🥣', buzdolabi: '🧊', kasa: '💳', dekor: '🪴' };
   const STAFF_ICONS = { cirak: '🧑‍🍳', temizlikci: '🧹', kasiyer: '🧾', sef: '👨‍🍳' };
   const EXP_LABELS = [

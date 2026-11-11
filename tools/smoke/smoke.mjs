@@ -71,6 +71,32 @@ try {
   await page.waitForTimeout(500);
   check('hazırlık aşaması', await page.evaluate(() => window.KS.state.phase === 'prep'));
 
+  console.log('İçerik bütünlüğü');
+  const content = await page.evaluate(() => {
+    const D = window.KS.DATA;
+    const items = new Set([...Object.keys(D.recipes), ...Object.keys(D.products)]);
+    const badEvents = Object.entries(D.events)
+      .filter(([, e]) => !e.name || !e.desc || !(e.weight > 0) || Object.keys(e.prefs || {}).some(id => !items.has(id)))
+      .map(([id]) => id);
+    const ach = window.KS.Meta.achievements();
+    const ids = ach.map(a => a.id);
+    const badAch = ach.filter(a => { try { const p = a.p(); return !Array.isArray(p) || p.length !== 2 || !(p[1] > 0); } catch (e) { return true; } }).map(a => a.id);
+    return { events: Object.keys(D.events).length, badEvents, ach: ids.length, unique: new Set(ids).size, badAch };
+  });
+  check('olay verileri tutarlı', content.badEvents.length === 0, content.badEvents);
+  check('başarımlar benzersiz ve ölçülebilir',
+    content.ach === content.unique && content.badAch.length === 0, content);
+
+  console.log('Yeni olay kartı');
+  const eventCard = await page.evaluate(() => {
+    window.KS.state.today.event = 'saglik';
+    window.KS.ui.refresh();
+    const tile = document.querySelector('.prep-tile.event');
+    return tile && { icon: tile.querySelector('.pt-ico').textContent.trim(), name: tile.querySelector('.pt-v').textContent.trim() };
+  });
+  check('olay hazırlık kartında simgesiyle görünüyor',
+    !!eventCard && eventCard.name === 'Sağlıklı Beslenme Haftası' && eventCard.icon === '🥗', eventCard);
+
   console.log('Paneller');
   const panels = [['malzeme', 'supply'], ['telefon', 'phone'], ['menu', 'menu'], ['gelistir', 'upgrades'],
     ['personel', 'staff'], ['tarifler', 'recipes'], ['hedefler', 'kantin'], ['ayarlar', 'settings']];

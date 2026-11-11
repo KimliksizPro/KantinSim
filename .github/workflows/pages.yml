@@ -35,7 +35,7 @@ jobs:
           touch _site/.nojekyll
           # Önbellek sürümü: her yayında değişsin ki oyuncular eski dosyaları görmesin
           sed -i "s/const CACHE_VERSION = 'dev';/const CACHE_VERSION = '${GITHUB_SHA::8}';/" _site/sw.js
-          grep -q "kantinsim-${GITHUB_SHA::8}" _site/sw.js
+          grep -q "CACHE_VERSION = '${GITHUB_SHA::8}'" _site/sw.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

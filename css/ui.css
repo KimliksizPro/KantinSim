@@ -780,3 +780,28 @@
   padding: 3px 8px 4px; border-radius: 0 0 9px 9px; background: linear-gradient(180deg, rgba(46, 26, 16, .96), rgba(74, 44, 28, .92));
   box-shadow: 0 3px 6px rgba(0, 0, 0, .35), inset 0 -1px 0 rgba(255, 190, 120, .25); letter-spacing: .2px; }
 #ks-dayline.busy .dl-tag { background: linear-gradient(180deg, #e8532b, #c8321c); color: #fff; }
+
+/* ---------------------------------------------------------------- HAKKIMDA (about) */
+.ab-card { display: flex; flex-direction: column; gap: 16px; padding: 4px 4px 2px; }
+.ab-head { display: flex; align-items: center; gap: 16px; }
+.ab-avatar { width: 80px; height: 80px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 42px;
+  border-radius: 26px; background: linear-gradient(180deg, #ffb35c, var(--orange2)); box-shadow: 0 5px 0 #b8441a, inset 0 2px 0 rgba(255, 255, 255, .45); }
+.ab-name { font: 800 36px/1.05 var(--f-head); color: var(--ink); }
+.ab-role { font: 700 16px var(--f-body); color: var(--orange2); margin-top: 3px; }
+.ab-text { margin: 0; padding: 14px 16px; border-radius: 18px; background: #fff; box-shadow: 0 3px 0 #ead2ab;
+  font: 600 15.5px/1.5 var(--f-body); color: var(--ink2); }
+.ab-links { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.ab-link { display: inline-flex; flex-direction: column; text-decoration: none; transition: transform .12s ease, filter .15s ease; }
+.ab-link:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.ab-link:active { transform: translateY(1px); }
+.ab-gh { flex-direction: row; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 14px;
+  font: 800 17px var(--f-body); color: #fff; letter-spacing: .2px;
+  background: linear-gradient(180deg, #4a525c, #24292f); box-shadow: 0 4px 0 #0d1014, 0 6px 14px rgba(20, 24, 30, .3), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.ab-gh:active { box-shadow: 0 1px 0 #0d1014; }
+.ab-gh-ico { display: inline-flex; }
+.ab-gh-ico svg { width: 24px; height: 24px; fill: currentColor; display: block; }
+.ab-src { padding: 2px 4px; color: var(--orange2); }
+.ab-src span { font: 800 16px var(--f-body); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.ab-src small { font: 600 13px var(--f-body); color: var(--ink3); margin-top: 2px; }
+.ab-note { margin: 2px 2px 0; font: 700 14.5px/1.4 var(--f-body); color: var(--ink3); text-align: center; }
+.ab-set-foot { display: flex; justify-content: center; margin: 14px 0 4px; }

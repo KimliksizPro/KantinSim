@@ -697,7 +697,8 @@
       h('div', { class: 'mm-btns' },
         E.mmContinue, E.mmNew,
         btn('❓ Nasıl Oynanır?', 'blue', () => openPanel('help')),
-        btn('⚙️ Ayarlar', 'ghost light', () => openPanel('settings'))),
+        btn('⚙️ Ayarlar', 'ghost light', () => openPanel('settings')),
+        btn('👋 Hakkımda', 'ghost light', () => openPanel('about'))),
       h('div', { class: 'mm-tgs' }, E.mmSound, E.mmMusic));
     E.mainmenu = h('div', { id: 'ks-mainmenu', class: 'ks-screen ks-hide' }, deco, box,
       h('div', { class: 'mm-foot' }, 'Teneffüs zili çalmadan tostlar hazır olsun! 🔔'));
@@ -1528,6 +1529,8 @@
         p.body.appendChild(row('⏩', 'Oyun hızı', 'Sakin saatleri hızlandır', toggle((s.speedMult || 1) >= 2, on => { s.speedMult = on ? 2 : 1; updateHUD(); }, ['2x', '1x'])));
         p.body.appendChild(row('🎓', 'Eğitim ipuçları', 'Bir sonraki açılışta ipuçlarını tekrar göster', toggle(!s.tutorialDone, on => { s.tutorialDone = !on; save(); }, ['Göster', 'Gizle'])));
       }
+      // Hakkımda paneline kısayol (ana menüye ek olarak burada da erişilsin)
+      p.body.appendChild(h('div', { class: 'ab-set-foot' }, btn('👋 Hakkımda', 'ghost', () => openPanel('about'))));
     },
   };
   PANELS.help = {
@@ -1549,6 +1552,29 @@
         sec('💸', 'Giderler', 'Her gün sonunda kira, faturalar ve yevmiyeler ödenir. Kasa ' + fmt(D().costs.bankruptcy) + ' altına düşerse iflas edersin.')));
       p.body.appendChild(h('div', { class: 'sg-title' }, '🎮 Kontroller'));
       p.body.appendChild(controlsBlock());
+    },
+  };
+
+  // ---------------------------------------------------------------------------
+  // PANEL: HAKKIMDA
+  // ---------------------------------------------------------------------------
+  // GitHub logosu (satır içi SVG, sabit içerik)
+  const AB_GH_LOGO = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+  PANELS.about = {
+    title: 'Hakkımda', icon: '👋', width: 640,
+    build(p) {
+      clear(p.body);
+      const ext = (href, cls, inner) => h('a', { class: 'ab-link ' + cls, href, target: '_blank', rel: 'noopener noreferrer' }, inner);
+      p.body.appendChild(h('div', { class: 'ab-card' },
+        h('div', { class: 'ab-head' },
+          h('div', { class: 'ab-avatar' }, '🏫'),
+          h('div', null, h('div', { class: 'ab-name' }, 'Semih Topak'), h('div', { class: 'ab-role' }, 'KantinSim\'in yapımcısı'))),
+        h('p', { class: 'ab-text' },
+          'KantinSim, bir okul kantinini yönettiğin simülasyon oyunu. Teneffüs zili çalar, öğrenciler ve öğretmenler kuyruğa girer; sen de malzemeleri birleştirip tost, köfte ekmek ve çay yetiştirirsin. Oyun okul kantininin teneffüs telaşından ilham aldı ve tarayıcıda ücretsiz oynanabiliyor.'),
+        h('div', { class: 'ab-links' },
+          ext('https://github.com/KimliksizPro', 'ab-gh', [h('span', { class: 'ab-gh-ico', html: AB_GH_LOGO }), h('span', null, 'GitHub: KimliksizPro')]),
+          ext('https://github.com/KimliksizPro/KantinSim', 'ab-src', [h('span', null, 'Kaynak kodu'), h('small', null, 'github.com/KimliksizPro/KantinSim')])),
+        h('p', { class: 'ab-note' }, 'Geri bildirim ve öneriler için GitHub\'dan ulaşabilirsin. İyi oyunlar! 🥪')));
     },
   };
 

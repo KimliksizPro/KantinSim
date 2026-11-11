@@ -16,7 +16,9 @@ JDK=${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}
 JAR="$PLATFORM/android.jar"
 OUT="$ROOT/build/android"
 DIST="$ROOT/dist"
-KEYSTORE="$ROOT/build/android/kantinsim-debug.jks"
+# İmza anahtarı derleme çıktısının (OUT) dışında tutulur; her derlemede silinmez,
+# böylece APK'lar aynı anahtarla imzalanır ve telefonda üstüne kurulabilir.
+KEYSTORE="$ROOT/build/keystore/kantinsim-debug.jks"
 KSPASS="kantinsim"
 
 [ -n "$BT" ] || { echo "HATA: build-tools bulunamadı (ANDROID_HOME=$SDK)"; exit 1; }
@@ -26,7 +28,9 @@ KSPASS="kantinsim"
 echo "SDK: $SDK"
 echo "build-tools: $(basename "$BT")   platform: $(basename "$PLATFORM")"
 
-rm -rf "$OUT" "$DIST"
+# Yalnız ara derleme klasörünü temizle; dist/ içindeki diğer dosyalar (ör. web zip'i) korunur.
+rm -rf "$OUT"
+rm -f "$DIST/KantinSim-1.0.0.apk"
 mkdir -p "$OUT/assets" "$OUT/res" "$OUT/gen" "$OUT/classes" "$OUT/dex" "$DIST"
 
 # 1) Oyun varlıkları: yalnız çalışması için gereken dosyalar
@@ -67,6 +71,7 @@ done
 
 if [ ! -f "$KEYSTORE" ]; then
   echo "Yerel imza anahtarı üretiliyor (yalnız geliştirme için): $KEYSTORE"
+  mkdir -p "$(dirname "$KEYSTORE")"
   "$JDK/bin/keytool" -genkeypair -keystore "$KEYSTORE" -alias kantinsim \
     -keyalg RSA -keysize 2048 -validity 10000 \
     -storepass "$KSPASS" -keypass "$KSPASS" \

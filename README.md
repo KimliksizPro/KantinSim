@@ -132,7 +132,7 @@ tools/android/build.sh
 
 Gereken: Android SDK (build-tools + `platforms/android-35`) ve JDK 17+. Betik sırayla
 `aapt2` → `javac` → `d8` → `zipalign` → `apksigner` çalıştırır; Gradle kullanmaz.
-Çıktı: `dist/KantinSim-1.0.0.apk`. İmza için `build/android/kantinsim-debug.jks`
+Çıktı: `dist/KantinSim-1.0.0.apk`. İmza için `build/keystore/kantinsim-debug.jks`
 yoksa üretilir — bu **geliştirme anahtarıdır**, mağazaya çıkmadan önce kendi
 anahtarınızla değiştirin.
 

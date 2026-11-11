@@ -132,9 +132,12 @@ tools/android/build.sh
 
 Gereken: Android SDK (build-tools + `platforms/android-35`) ve JDK 17+. Betik sırayla
 `aapt2` → `javac` → `d8` → `zipalign` → `apksigner` çalıştırır; Gradle kullanmaz.
-Çıktı: `dist/KantinSim-1.0.0.apk`. İmza için `build/keystore/kantinsim-debug.jks`
-yoksa üretilir — bu **geliştirme anahtarıdır**, mağazaya çıkmadan önce kendi
-anahtarınızla değiştirin.
+Çıktı: `dist/KantinSim-$VERSION.apk` (varsayılan `1.0.0`). Geliştirme imza anahtarı
+`~/.local/share/kantinsim/kantinsim-debug.jks` konumunda tutulur (yoksa üretilir); depo
+dışında durduğu için taze bir klonda da aynı kalır ve yeni APK eskisinin üzerine
+`adb install -r` ile kurulabilir. Yayın anahtarı `KS_FILE` / `KS_PASS` / `KS_ALIAS`
+(ve `VERSION`, `VERSION_CODE`) ortam değişkenleriyle verilir. Varsayılan anahtar bir
+**geliştirme anahtarıdır**, mağazaya çıkmadan önce kendi anahtarınızla değiştirin.
 
 APK davranışı: yatay yön kilidi, tam ekran (çubuklar gizli), ekran açık kalır,
 geri tuşu açık paneli kapatır (panel yoksa oyundan çıkar), otomatik kayıt WebView

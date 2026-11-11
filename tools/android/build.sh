@@ -20,16 +20,21 @@ OUT="$ROOT/build/android"
 DIST="$ROOT/dist"
 # İmza anahtarı derleme çıktısının (OUT) dışında tutulur; her derlemede silinmez,
 # böylece APK'lar aynı anahtarla imzalanır ve telefonda üstüne kurulabilir.
-# Yerelde geliştirme anahtarı kullanılır. Yayın (CI) için ortam değişkenleriyle gerçek anahtar verilir:
+# Yerelde geliştirme anahtarı kullanılır; taze bir klonda da AYNI anahtar kalsın diye
+# varsayılan yol depo değil kullanıcı dizinidir (~/.local/share/kantinsim).
+# Yayın (CI) için ortam değişkenleriyle gerçek anahtar verilir:
 #   KS_FILE (jks yolu), KS_PASS (depo şifresi), KS_ALIAS, KS_KEY_PASS (yoksa KS_PASS)
 #   VERSION (ör. 1.0.1), VERSION_CODE (artan tam sayı)
 RELEASE_KEY=0; [ -n "${KS_FILE:-}" ] && RELEASE_KEY=1
-KEYSTORE="${KS_FILE:-$ROOT/build/keystore/kantinsim-debug.jks}"
+KEYSTORE="${KS_FILE:-${XDG_DATA_HOME:-$HOME/.local/share}/kantinsim/kantinsim-debug.jks}"
 KSPASS="${KS_PASS:-kantinsim}"
 KSALIAS="${KS_ALIAS:-kantinsim}"
 KEYPASS="${KS_KEY_PASS:-$KSPASS}"
 VERSION="${VERSION:-1.0.0}"
 VERSION_CODE="${VERSION_CODE:-1}"
+# Eski sürümler anahtarı depo içinde tutuyordu (build/android, build/keystore):
+# kalıcı konumda anahtar yoksa ilk derlemede oradan devralınır.
+LEGACY_KEYSTORES=("$OUT/kantinsim-debug.jks" "$ROOT/build/keystore/kantinsim-debug.jks")
 
 [ -n "$BT" ] || { echo "HATA: build-tools bulunamadı (ANDROID_HOME=$SDK)"; exit 1; }
 [ -f "$JAR" ] || { echo "HATA: $JAR yok"; exit 1; }
@@ -38,7 +43,18 @@ VERSION_CODE="${VERSION_CODE:-1}"
 echo "SDK: $SDK"
 echo "build-tools: $(basename "$BT")   platform: $(basename "$PLATFORM")"
 
-# Yalnız ara derleme klasörünü temizle; dist/ içindeki diğer dosyalar (ör. web zip'i) korunur.
+# Kalıcı konumda anahtar yoksa eski yerlerden devral, sonra yalnız ara derleme
+# klasörünü temizle; dist/ içindeki diğer dosyalar (ör. web zip'i) korunur.
+if [ "$RELEASE_KEY" = 0 ] && [ ! -f "$KEYSTORE" ]; then
+  for old in "${LEGACY_KEYSTORES[@]}"; do
+    if [ -f "$old" ]; then
+      mkdir -p "$(dirname "$KEYSTORE")"
+      cp "$old" "$KEYSTORE"
+      echo "İmza anahtarı kalıcı konuma devralındı: $KEYSTORE"
+      break
+    fi
+  done
+fi
 rm -rf "$OUT"
 rm -f "$DIST/KantinSim-$VERSION.apk"
 mkdir -p "$OUT/assets" "$OUT/res" "$OUT/gen" "$OUT/classes" "$OUT/dex" "$DIST"
@@ -90,6 +106,7 @@ if [ ! -f "$KEYSTORE" ]; then
     -storepass "$KSPASS" -keypass "$KEYPASS" \
     -dname "CN=KantinSim, OU=Gelistirme, O=KimliksizPro, L=Istanbul, C=TR" >/dev/null 2>&1
 fi
+echo "İmza anahtarı: $KEYSTORE"
 
 APK="$DIST/KantinSim-$VERSION.apk"
 "$BT/apksigner" sign \

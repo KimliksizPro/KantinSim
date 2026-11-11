@@ -445,6 +445,12 @@ try {
       labels: getComputedStyle(document.querySelector('.hud-btn .hb-label')).display,
       chips: { event: disp('.hd-event'), weather: disp('.hd-weather'), clean: disp('.hd-clean'), deliv: disp('.hd-deliv') },
       scrollW: document.documentElement.scrollWidth, vw: window.innerWidth,
+      // Sipariş balonu dünya y=64'te başlar: sahne HUD'un altına oturduğu için
+      // bu nokta her boyutta HUD şeridinin altında kalmalı.
+      bubbleTop: (() => {
+        const m = new DOMMatrix(getComputedStyle(document.getElementById('game-root')).transform);
+        return m.f + 64 * window.KS.scale;
+      })(),
     };
   });
   check('mobil HUD sahne ölçeğinden bağımsız (ekran genişliği)',
@@ -457,6 +463,9 @@ try {
   check('gün şeridi HUD\'un altında, yatay taşma yok',
     hudGeo.barVisible && Math.abs(hudGeo.bar.y - hudGeo.hud.bottom) < 1 && hudGeo.scrollW <= hudGeo.vw,
     { barY: hudGeo.bar && hudGeo.bar.y, hudBottom: hudGeo.hud.bottom, scrollW: hudGeo.scrollW, vw: hudGeo.vw });
+  check('sipariş balonu HUD şeridinin altında başlıyor',
+    hudGeo.bubbleTop >= hudGeo.hud.bottom - 0.5,
+    { bubbleTop: +hudGeo.bubbleTop.toFixed(1), hudBottom: hudGeo.hud.bottom, scale: hudGeo.scale });
 
   const tutGeo = await mpage.evaluate(() => {
     const b = document.querySelector('.tut-bubble');
@@ -521,7 +530,9 @@ try {
     await spage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; window.KS.state.level = 5; window.KS.ui.close(); });
     await spage.waitForTimeout(500);
     const g = await spage.evaluate(() => {
-      const shown = id => { const el = document.querySelector('.hb-' + id); if (!el) return false; const r = el.getBoundingClientRect(); return getComputedStyle(el).display !== 'none' && r.width >= 44 && r.height >= 44; };
+      // 44 px eşiği ölçüm toleranslı: HUD ters ölçekle büyütüldüğü için tarayıcı
+      // transform'u float32 ile hesaplıyor, 44 px 43.99999 olarak dönebiliyor.
+      const shown = id => { const el = document.querySelector('.hb-' + id); if (!el) return false; const r = el.getBoundingClientRect(); return getComputedStyle(el).display !== 'none' && r.width >= 43.5 && r.height >= 43.5; };
       const right = document.querySelector('.hd-right').getBoundingClientRect();
       return {
         scrollW: document.documentElement.scrollWidth, vw: innerWidth, right: right.right, more: shown('more'),

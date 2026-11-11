@@ -1,0 +1,24 @@
+# KantinSim — tarayıcı duman testi.
+# Oyunu gerçek Chromium'da açar: açılış, paneller, gün döngüsü, kayıt/devam, çevrimdışı.
+name: Duman testi
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  duman:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Bağımlılıkları kur
+        run: cd tools/smoke && npm install --no-package-lock --no-audit --no-fund
+      - name: Chromium'u indir
+        run: cd tools/smoke && npx playwright install --with-deps chromium
+      - name: Duman testini çalıştır
+        run: node tools/smoke/smoke.mjs

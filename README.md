@@ -36,6 +36,9 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 | Çiğ Köfte Dürüm | Leğende bulgur + isot + salça yoğur → lavaş + çiğ köfte + marul + nar ekşisi + limon |
 | Patates Kızartması | Fritözde kızart → keseye → tuz / ketçap / mayonez |
 | Çay | Semaverde demle → ince belli bardağa doldur |
+| Kaşarlı Sandviç *(Sv. 2)* | Yarım ekmek + kaşar + domates/marul (+ turşu, ketçap, mayonez) |
+| Sucuklu Sandviç *(Sv. 3)* | Yarım ekmek + sucuk + domates/turşu/mayonez (+ kaşar, marul) |
+| Lavaş Pizza *(Sv. 4)* | Lavaş + kaşar + sucuk + domates + ketçap → tost makinesi |
 | Ayvalık Tostu *(Sv. 5)* | Tost ekmeği + kaşar + sucuk + domates + turşu + ketçap/mayonez → tost makinesi |
 | Köfte Dürüm *(Sv. 6)* | Izgarada pişmiş köfte + lavaş + domates/soğan/maydanoz |
 
@@ -43,8 +46,8 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 
 ## Hazır ürünler
 
-- **Toptancı / Bakkal**: ayran, su, kola, meyve suyu, cips, çikolata, gofret, soğuk çay, fırın sütlaç, ev limonatası ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
-- **Telefonla sipariş (kurye)**: Dönerci (et/tavuk döner dürüm), Çiğköfteci (hazır dürüm), Fırın (simit, poğaça), Pideci (lahmacun, kıymalı pide).
+- **Toptancı / Bakkal**: ayran, su, süt, kola, meyve suyu, cips, çikolata, gofret, kek, soğuk çay, fırın sütlaç, ev limonatası ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
+- **Telefonla sipariş (kurye)**: Dönerci (et/tavuk döner dürüm), Çiğköfteci (hazır dürüm), Fırın (simit, poğaça, su böreği), Pideci (lahmacun, kıymalı pide).
   Hazır yemekler gün sonunda bozulur — doğru miktarda sipariş ver!
 
 ## Simülasyon mekanikleri

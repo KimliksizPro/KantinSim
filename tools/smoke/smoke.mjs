@@ -87,6 +87,82 @@ try {
   check('başarımlar benzersiz ve ölçülebilir',
     content.ach === content.unique && content.badAch.length === 0, content);
 
+  console.log('Yeni tarifler ve ürünler');
+  const newData = await page.evaluate(() => {
+    const KS = window.KS, D = KS.DATA;
+    const recipeIds = ['soguk_sandvic', 'sucuklu_sandvic', 'lavas_pizza'];
+    const productIds = ['sut', 'kek', 'borek'];
+    const badRecipes = recipeIds.filter(id => {
+      const r = D.recipes[id];
+      if (!r) return true;
+      const bases = Object.assign({}, D.ingredients, D.dishBases, D.prepared);
+      const need = [r.base].concat(r.required || []);
+      return !bases[r.base] || !(r.price > 0) || !(r.unlock >= 1) || need.some(x => !bases[x]);
+    });
+    const badProducts = productIds.filter(id => {
+      const p = D.products[id];
+      if (!p) return true;
+      if (!(p.buy > 0) || !(p.price > p.buy) || !(p.pack >= 1)) return true;
+      const sup = D.suppliers[p.supplier];
+      if (!sup) return true;
+      return p.group === 'hazir' && !(sup.items || []).includes(id);
+    });
+    const mk = (id, base, layers, toast, want) => KS.Recipes.evaluate(
+      { uid: 1, type: 'dish', id: base, layers: layers.map(L => typeof L === 'string' ? { id: L, q: 1 } : { id: L.id, q: 1, cook: L.cook }), toast },
+      { type: 'recipe', id, want });
+    const evals = {
+      soguk_sandvic: mk('soguk_sandvic', 'yarim_ekmek', ['kasar', 'domates', 'marul'], 0, ['domates', 'marul']),
+      sucuklu_sandvic: mk('sucuklu_sandvic', 'yarim_ekmek', ['sucuk', 'domates', 'tursu', 'mayonez'], 0, ['domates', 'tursu', 'mayonez']),
+      lavas_pizza: mk('lavas_pizza', 'lavas', ['kasar', 'sucuk', 'domates', 'ketcap'], 1, ['domates', 'ketcap']),
+    };
+    return {
+      badRecipes, badProducts,
+      evals: Object.fromEntries(Object.entries(evals).map(([k, v]) => [k, { ok: v.ok, q: Math.round(v.quality * 100) }])),
+    };
+  });
+  check('yeni tarifler veri olarak tutarlı', newData.badRecipes.length === 0, newData.badRecipes);
+  check('yeni ürünler fiyat ve tedarikçi olarak tutarlı', newData.badProducts.length === 0, newData.badProducts);
+  check('yeni tarifler doğru yapılırsa tam kalite veriyor',
+    Object.values(newData.evals).every(e => e.ok && e.q >= 80), newData.evals);
+
+  const newUI = await page.evaluate(() => {
+    const KS = window.KS, s = KS.state;
+    const keep = { level: s.level, xp: s.xp, products: Object.assign({}, s.products), menu: {} };
+    for (const id of ['soguk_sandvic', 'sucuklu_sandvic', 'lavas_pizza']) {
+      keep.menu[id] = s.menu[id];
+      s.menu[id] = { on: true, price: KS.DATA.recipes[id].price };
+    }
+    s.level = 6; s.xp = 5300;
+    for (const id of Object.keys(KS.DATA.products)) s.products[id] = Math.max(2, s.products[id] || 0);
+    const alphaOf = c => {
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 4) n++;
+      return n;
+    };
+    KS.ui.open('menu');
+    const rows = [...document.querySelectorAll('.mn-row')];
+    const rowName = r => { const b = r.querySelector('.mn-name b'); return b ? b.textContent.trim() : ''; };
+    const names = ['Kaşarlı Sandviç', 'Sucuklu Sandviç', 'Lavaş Pizza', 'Süt', 'Kek', 'Su Böreği'];
+    const missing = names.filter(n => !rows.some(r => rowName(r) === n));
+    const prodArts = rows.filter(r => r.classList.contains('prod') && names.includes(rowName(r)))
+      .map(r => r.querySelector('canvas')).filter(Boolean).map(alphaOf);
+    KS.ui.close();
+    KS.ui.open('recipes');
+    const cards = [...document.querySelectorAll('.bk-card')];
+    const cardName = c => { const b = c.querySelector('.bk-head b'); return b ? b.textContent.trim() : ''; };
+    const cardsOk = names.slice(0, 3).every(n => cards.some(c => cardName(c) === n));
+    const arts = cards.map(c => c.querySelector('.bk-art canvas')).filter(Boolean).map(alphaOf);
+    KS.ui.close();
+    s.level = keep.level; s.xp = keep.xp;
+    s.products = keep.products;
+    for (const id of Object.keys(keep.menu)) s.menu[id] = keep.menu[id];
+    return { missing, cardsOk, count: arts.length, blankArts: arts.filter(n => n < 1000).length, blankProds: prodArts.filter(n => n < 250).length, prodArts: prodArts.length };
+  });
+  check('yeni tarif ve ürünler menü ile tarif defterinde görünüyor',
+    newUI.missing.length === 0 && newUI.cardsOk, newUI);
+  check('yeni tarif ve ürün görselleri çiziliyor',
+    newUI.count >= 12 && newUI.blankArts === 0 && newUI.prodArts === 3 && newUI.blankProds === 0, newUI);
+
   console.log('Yeni olay kartı');
   const eventCard = await page.evaluate(() => {
     window.KS.state.today.event = 'saglik';
@@ -156,9 +232,15 @@ try {
     KS.state.speedMult = 8;
     KS.Customers.clear(); await wait(500);
     const id = KS.featuredId(), r = KS.DATA.recipes[id];
-    const c = KS.Customers.spawn({ type: 'ogrenci', lines: [{ type: 'recipe', id }] });
-    if (!c) return { err: 'müşteri yok' };
-    for (let i = 0; i < 40 && c.state !== 'wait' && c.state !== 'enter'; i++) await wait(100);
+    let c = null;
+    // yoğun saatte slotlar dolabiliyor: boş bir slotta müşteri yakalayana kadar dene
+    for (let k = 0; k < 6 && (!c || c.slot == null); k++) {
+      KS.Customers.clear();
+      c = KS.Customers.spawn({ type: 'ogrenci', lines: [{ type: 'recipe', id }] });
+      if (c && c.slot == null) await wait(120);
+    }
+    if (!c || c.slot == null) return { err: 'müşteri yok' };
+    for (let i = 0; i < 80 && c.state !== 'wait' && c.state !== 'enter'; i++) await wait(100);
     const item = KS.items.dish(r.base, { layers: r.required.map(x => Object.assign(KS.items.ing(x), { q: 1, cook: 1 })), toast: 1 });
     const ok = KS.Customers.serve(c.slot, item);
     for (let i = 0; i < 40 && c.state === 'pay'; i++) await wait(100);
@@ -169,6 +251,36 @@ try {
   });
   check('günün menüsü servisi ekstra bahşiş getiriyor',
     featPay.ok === true && featPay.n === 1 && featPay.tip === featPay.bonus && featPay.tip >= 3, featPay);
+  const newServe = await page.evaluate(async () => {
+    const KS = window.KS, wait = ms => new Promise(r => setTimeout(r, ms));
+    const cases = [
+      ['soguk_sandvic', 'yarim_ekmek', ['kasar', 'domates', 'marul'], ['domates', 'marul'], 0],
+      ['sucuklu_sandvic', 'yarim_ekmek', ['sucuk', 'domates', 'tursu', 'mayonez'], ['domates', 'tursu', 'mayonez'], 0],
+      ['lavas_pizza', 'lavas', ['kasar', 'sucuk', 'domates', 'ketcap'], ['domates', 'ketcap'], 1],
+    ];
+    const out = [];
+    for (const [id, base, layers, want, toast] of cases) {
+      KS.Customers.clear();
+      const c = KS.Customers.spawn({ type: 'ogrenci', lines: [{ type: 'recipe', id, want }] });
+      if (!c) { out.push({ id, err: 'müşteri yok' }); continue; }
+      for (let i = 0; i < 20 && c.state !== 'wait' && c.state !== 'enter'; i++) await wait(100);
+      const item = KS.items.dish(base, {
+        layers: layers.map(x => {
+          const L = KS.items.ing(x, { q: 1 });
+          const ing = KS.DATA.ingredients[x];
+          if (ing && ing.kind === 'cookable') { L.cook = 1; L.cookA = 1; L.cookB = 1; }
+          return L;
+        }),
+        toast,
+      });
+      const served = KS.Customers.serve(c.slot, item);
+      out.push({ id, served, done: !!c.lines[0].done, q: Math.round((c.lines[0].quality || 0) * 100) });
+    }
+    KS.Customers.clear();
+    return out;
+  });
+  check('yeni tarifler servis edilebiliyor ve tam kalite alıyor',
+    newServe.length === 3 && newServe.every(x => x.served && x.done && x.q >= 80), newServe);
   let phase = 'open', waited = 0;
   while (phase === 'open' && waited < 45000) {
     await page.waitForTimeout(1000); waited += 1000;

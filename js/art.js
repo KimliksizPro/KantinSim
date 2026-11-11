@@ -2358,6 +2358,66 @@
       g.strokeStyle = '#e8402f'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, 20); g.lineTo(-12, -44); g.stroke();
       g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(-6, 20); g.lineTo(-12, -44); g.stroke(); g.setLineDash([]);
     },
+    sut(g) {
+      // tetra süt kutusu
+      const body = () => { g.beginPath(); g.moveTo(-25, -18); g.lineTo(25, -18); g.lineTo(25, 38); g.quadraticCurveTo(0, 45, -25, 38); g.closePath(); };
+      body(); g.fillStyle = lin(g, -25, 0, 25, 0, [[0, '#cfdeea'], [0.3, '#ffffff'], [0.65, '#f4f9ff'], [1, '#c2d2e0']]); g.fill(); outline(g, '#8aa0b4', 1.8);
+      // çatı
+      g.beginPath(); g.moveTo(-25, -18); g.lineTo(0, -40); g.lineTo(25, -18); g.closePath();
+      g.fillStyle = lin(g, 0, -40, 0, -18, [[0, '#ffffff'], [1, '#dceaf6']]); g.fill(); outline(g, '#8aa0b4', 1.6);
+      g.beginPath(); g.moveTo(0, -40); g.lineTo(0, -18); g.strokeStyle = 'rgba(140,166,186,0.6)'; g.lineWidth = 1.2; g.stroke();
+      // mavi bant, damla ve parlama
+      g.save(); body(); g.clip();
+      g.fillStyle = '#3f8fd8'; g.fillRect(-28, 7, 56, 17);
+      g.fillStyle = '#ffffff'; g.font = '900 11px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SÜT', 0, 15.5);
+      g.beginPath(); g.moveTo(0, -12); g.quadraticCurveTo(10, 0, 0, 3); g.quadraticCurveTo(-10, 0, 0, -12); g.closePath();
+      g.fillStyle = '#9fd3ff'; g.fill(); outline(g, '#3f8fd8', 1.2);
+      g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(-19, -15, 5, 52);
+      g.restore();
+      // kapak
+      ell(g, 0, -39, 8, 2.5); g.fillStyle = '#e8f2fa'; g.fill(); outline(g, '#8aa0b4', 1);
+    },
+    kek(g) {
+      g.save(); g.rotate(-0.1);
+      // kek gövdesi
+      rr(g, -40, -20, 80, 46, 7);
+      g.fillStyle = lin(g, 0, -20, 0, 26, [[0, '#e8b060'], [0.45, '#c98a4b'], [1, '#9a5e28']]); g.fill(); outline(g, '#6e3c14', 1.8);
+      // üst çikolata
+      rr(g, -40, -20, 80, 14, 7); g.fillStyle = lin(g, 0, -20, 0, -6, [[0, '#6a3418'], [1, '#3e1c0a']]); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(-35, -18, 70, 3);
+      // mavi ambalaj
+      g.save(); rr(g, -42, 2, 84, 30, 5); g.clip();
+      g.fillStyle = lin(g, 0, 2, 0, 32, [[0, '#3f6fd8'], [1, '#244a9a']]); g.fillRect(-44, 0, 88, 36);
+      g.fillStyle = '#ffffff'; g.font = '900 12px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('KEK', 0, 17);
+      g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(-34, 4, 5, 24);
+      g.restore();
+      rr(g, -42, 2, 84, 30, 5); outline(g, '#1a3268', 1.3);
+      // kırıntı
+      const R = rng(313);
+      for (let i = 0; i < 12; i++) { circ(g, -36 + R() * 72, -16 + R() * 12, 0.7 + R() * 0.9); g.fillStyle = 'rgba(90,50,20,0.4)'; g.fill(); }
+      g.restore();
+    },
+    borek(g) {
+      g.save(); g.rotate(-0.08);
+      // yağlı kağıt
+      g.beginPath(); g.moveTo(-46, 30); g.lineTo(-34, -30); g.lineTo(38, -26); g.lineTo(46, 32); g.closePath();
+      g.fillStyle = '#fbeed6'; g.fill(); outline(g, '#d8bf94', 1.4);
+      // börek dilimi
+      g.beginPath(); g.moveTo(-38, 24); g.lineTo(-2, -30); g.lineTo(36, 22); g.quadraticCurveTo(0, 34, -38, 24); g.closePath();
+      g.fillStyle = lin(g, 0, -30, 0, 28, [[0, '#f6d488'], [0.45, '#e8b55e'], [1, '#c88f3a']]); g.fill(); outline(g, '#8a5a18', 1.8);
+      g.save(); g.clip();
+      // yufka katmanları
+      g.strokeStyle = 'rgba(255,244,205,0.75)'; g.lineWidth = 2;
+      for (let i = 1; i <= 4; i++) { g.beginPath(); g.moveTo(-38 + i * 2, 24 - i * 11); g.quadraticCurveTo(0, 30 - i * 12, 36 - i * 2, 22 - i * 10); g.stroke(); }
+      // beyaz peynir ve maydanoz
+      const R = rng(311);
+      for (let i = 0; i < 18; i++) { ell(g, -26 + R() * 56, -18 + R() * 36, 2.6, 1.8, R() * 3); g.fillStyle = R() < 0.65 ? '#fff6dc' : '#4fa83a'; g.fill(); }
+      g.restore();
+      // kızarmış benekler
+      const R2 = rng(312);
+      for (let i = 0; i < 14; i++) { circ(g, -30 + R2() * 62, -22 + R2() * 40, 0.9 + R2()); g.fillStyle = 'rgba(150,90,20,0.5)'; g.fill(); }
+      g.restore();
+    },
   });
   function fallbackProduct(g, id) {
     const c = colorOf(id);

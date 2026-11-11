@@ -550,10 +550,30 @@ try {
     return { hint: hs.display !== 'none' && hs.position === 'fixed', scrollW: document.documentElement.scrollWidth, vw: innerWidth };
   });
   await ppage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; });
-  await ppage.waitForTimeout(500);
+  await ppage.waitForTimeout(300);
+  // hazırlık kartının giriş animasyonu 1 px taşabiliyor; bitmesini bekle
+  await ppage.evaluate(async () => {
+    const card = document.querySelector('.prep-card');
+    if (card && card.getAnimations) await Promise.all(card.getAnimations().map(a => a.finished.catch(() => {})));
+  });
   const pgeo2 = await ppage.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, vw: innerWidth, hud: getComputedStyle(document.querySelector('#ks-hud')).display }));
   check('dikey telefonda çevir uyarısı var, HUD taşmıyor',
     pgeo.hint && pgeo2.scrollW <= pgeo2.vw && pgeo2.hud === 'none', Object.assign({}, pgeo, pgeo2));
+  const panelOver = await ppage.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const bad = [];
+    for (const id of ['supply', 'menu', 'upgrades', 'recipes', 'kantin']) {
+      window.KS.ui.open(id, id === 'kantin' ? 'bank' : undefined);
+      await wait(260);
+      const b = document.querySelector('#ks-modal .ks-panel .pn-body');
+      if (!b) { bad.push(id + ':panel yok'); continue; }
+      if (b.scrollWidth > b.clientWidth + 2) bad.push(id + ':' + b.scrollWidth + '/' + b.clientWidth);
+      window.KS.ui.close();
+      await wait(120);
+    }
+    return bad;
+  });
+  check('dikey telefonda panel satırları tek sütuna iniyor, yatay taşma yok', panelOver.length === 0, panelOver);
   await pctx.close();
 
   check('konsolda hata yok', errors.length === 0, errors.slice(0, 5));

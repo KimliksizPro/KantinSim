@@ -1079,3 +1079,32 @@
   .mm-tg { font-size: 12px; padding: 5px 10px; }
   .mm-foot { margin-top: 0; font-size: 11px; }
 }
+
+/* Dikey telefon: panellerdeki çok sütunlu satırlar tek sütuna iner.
+   (Yatayda 620 px altındaki telefonlar bu düzeni kullanmaz; orada satırlar yan yana kalır.) */
+@media (orientation: portrait) and (max-width: 620px) {
+  .sup-grid, .up-grid, .st-grid, .bk-grid, .ach-grid, .ct-grid, .mk-grid, .bk-offers { grid-template-columns: 1fr; }
+  /* Malzeme paneli: başlık şeridi ve sipariş satırı iki satıra sarılır */
+  .sup-intro { flex-wrap: wrap; gap: 8px 10px; }
+  .sup-intro > div { min-width: 0; }
+  .sup-intro > div:not(.si-meta) { flex: 1 1 160px; }
+  .si-meta { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .sup-row { grid-template-columns: 46px minmax(0, 1fr) auto auto; grid-template-rows: auto auto; gap: 2px 8px; }
+  .sup-row .ks-cv { grid-area: 1 / 1 / 3 / 2; }
+  .sup-row .sr-name { grid-area: 1 / 2 / 2 / 4; }
+  .sup-row .sr-step { grid-area: 1 / 4 / 3 / 5; align-self: center; }
+  .sup-row .sr-stock { grid-area: 2 / 2 / 3 / 3; flex-direction: row; align-items: baseline; justify-content: flex-start; gap: 5px; }
+  .sup-row .sr-pack { grid-area: 2 / 3 / 3 / 4; flex-direction: row; align-items: baseline; justify-content: flex-end; gap: 5px; }
+  /* Menü paneli: görsel üstte, ad + anahtar, fiyat, kâr alt alta */
+  .mn-row, .mn-row.prod { grid-template-columns: 76px minmax(0, 1fr); gap: 6px 10px; padding: 8px 12px 8px 8px; }
+  .mn-row .ks-cv { grid-area: 1 / 1 / 2 / 2; }
+  .mn-row .mn-name { grid-area: 1 / 2 / 2 / 3; }
+  .mn-row > :nth-child(3) { grid-area: 2 / 2 / 3 / 3; justify-self: start; }
+  .mn-row .mn-price { grid-area: 3 / 2 / 4 / 3; flex-wrap: wrap; }
+  .mn-row .mn-marg { grid-area: 4 / 2 / 5 / 3; }
+  /* Kantin defteri: haftalık sözleşme ödülü alt satıra geçer */
+  .wk-sub, .wk-foot { flex-wrap: wrap; }
+  .wk-sub .wk-rew, .wk-foot .wk-rew { margin-left: 0; white-space: normal; }
+  /* Tarif defteri: kart görseli daralır */
+  .bk-art { width: 116px; height: 100px; }
+}

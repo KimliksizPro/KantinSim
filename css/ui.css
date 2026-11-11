@@ -1066,18 +1066,18 @@
 /* Kısa ekran (telefon yatay): ana menünün beş düğmesi de tek ekrana sığsın.
    Eski boyutlarda 390 px yükseklikte son düğme ekranın altında kalıyordu. */
 @media (max-height: 460px) {
-  #ks-mainmenu { padding: 6px 10px; }
-  .mm-box { gap: 6px; }
+  #ks-mainmenu { padding: 2px 10px; }
+  .mm-box { gap: 3px; }
   .mm-badge { display: none; }
-  .mm-title { font-size: 40px; letter-spacing: -1px; padding-top: 0; }
-  .mm-sub { font-size: 12px; letter-spacing: 1.5px; padding: 3px 12px 1px; margin-top: 2px; }
-  .mm-btns { width: min(340px, 100%); gap: 5px; }
-  .mm-btns .ks-btn { font-size: 14px; padding: 6px 10px; min-height: 44px; }
+  .mm-title { font-size: 36px; letter-spacing: -1px; padding-top: 0; }
+  .mm-sub { font-size: 12px; letter-spacing: 1.5px; padding: 2px 12px 1px; margin-top: 0; }
+  .mm-btns { width: min(340px, 100%); gap: 4px; }
+  .mm-btns .ks-btn { font-size: 14px; padding: 5px 10px; min-height: 44px; }
   .mm-btns .ks-btn.big { flex-direction: row; gap: 8px; align-items: center; }
   .mm-saveinfo { font-size: 11px; }
-  .mm-tgs { gap: 6px; }
-  .mm-tg { font-size: 12px; padding: 5px 10px; }
-  .mm-foot { margin-top: 0; font-size: 11px; }
+  /* Kısa ekran: slogan ve hızlı ses/müzik düğmeleri yeri kaplamasın.
+     İkisi de Ayarlar panelinde ve HUD'da var. */
+  .mm-tgs, .mm-foot { display: none; }
 }
 
 /* Dikey telefon: panellerdeki çok sütunlu satırlar tek sütuna iner.

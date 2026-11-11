@@ -87,6 +87,8 @@ Vanilla JS + HTML5 Canvas, build adımı yok, tüm grafikler ve sesler prosedür
 ```
 index.html
 manifest.webmanifest  kurulabilir uygulama tanımı (PWA)
+fonts/                Baloo 2 + Nunito (yerel woff2, latin/latin-ext)
+css/fonts.css         yerel yazı tipi tanımları
 sw.js                 çevrimdışı önbellek (service worker)
 icons/                uygulama simgeleri (192/512/maskable/apple-touch)
 css/base.css, css/ui.css
@@ -103,7 +105,29 @@ js/ui.js              HUD, paneller, gün sonu raporu, eğitim
 js/assist.js          tarif yardımcısı, klavye kısayolları, gün şeridi
 js/depth.js           güneş huzmeleri, yansıma, bokeh gibi derinlik efektleri
 CONTRACT.md           modüller arası arayüz sözleşmesi
+android/              Android kabuğu (tam ekran WebView, ağ izni yok)
+tools/android/build.sh  APK derleme betiği (Gradle gerekmez)
 ```
+
+## Android (APK)
+
+Oyun APK olarak da kurulabilir: `android/` altındaki ince kabuk, oyunu tam ekran bir
+WebView'de `file:///android_asset/index.html` adresinden açar. İnternet izni istemez,
+yazı tipleri APK'nın içindedir.
+
+```
+tools/android/build.sh
+```
+
+Gereken: Android SDK (build-tools + `platforms/android-35`) ve JDK 17+. Betik sırayla
+`aapt2` → `javac` → `d8` → `zipalign` → `apksigner` çalıştırır; Gradle kullanmaz.
+Çıktı: `dist/KantinSim-1.0.0.apk`. İmza için `build/android/kantinsim-debug.jks`
+yoksa üretilir — bu **geliştirme anahtarıdır**, mağazaya çıkmadan önce kendi
+anahtarınızla değiştirin.
+
+APK davranışı: yatay yön kilidi, tam ekran (çubuklar gizli), ekran açık kalır,
+geri tuşu açık paneli kapatır (panel yoksa oyundan çıkar), otomatik kayıt WebView
+depolamasında tutulur.
 
 ## Lisans
 

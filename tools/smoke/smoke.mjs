@@ -386,6 +386,12 @@ try {
   mpage.on('pageerror', e => errors.push('mobil pageerror: ' + e.message));
   await mpage.goto(base, { waitUntil: 'load' });
   await mpage.waitForTimeout(1000);
+  // giriş animasyonu düğmeleri kaydırıyor; yerleşmiş düzeni ölç.
+  // (Yalnız menü düğmelerinin animasyonu bekleniyor: süs öğeleri sonsuz döngüde.)
+  await mpage.evaluate(async () => {
+    const btns = document.querySelector('.mm-btns');
+    if (btns && btns.getAnimations) await Promise.all(btns.getAnimations().map(a => a.finished.catch(() => {})));
+  });
   const menuGeo = await mpage.evaluate(() => {
     const title = document.querySelector('.mm-title').getBoundingClientRect();
     const rects = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => b.getBoundingClientRect());
@@ -500,6 +506,12 @@ try {
     spage.on('pageerror', e => errors.push('küçük telefon pageerror: ' + e.message));
     await spage.goto(base, { waitUntil: 'load' });
     await spage.waitForTimeout(900);
+    // Menünün giriş animasyonu düğmeleri 24 px aşağıdan kaydırıyor; ölçüm
+    // animasyon bitince yapılıyor, yoksa yavaş makinede taşma gibi görünüyor.
+    await spage.evaluate(async () => {
+      const btns = document.querySelector('.mm-btns');
+      if (btns && btns.getAnimations) await Promise.all(btns.getAnimations().map(a => a.finished.catch(() => {})));
+    });
     const menuFit = await spage.evaluate(() => {
       const rects = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => b.getBoundingClientRect());
       return { maxBottom: Math.max(...rects.map(r => r.bottom)), minH: Math.min(...rects.map(r => r.height)), vh: innerHeight };

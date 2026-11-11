@@ -1069,12 +1069,14 @@
   #ks-mainmenu { padding: 2px 10px; }
   .mm-box { gap: 3px; }
   .mm-badge { display: none; }
-  .mm-title { font-size: 36px; letter-spacing: -1px; padding-top: 0; }
-  .mm-sub { font-size: 12px; letter-spacing: 1.5px; padding: 2px 12px 1px; margin-top: 0; }
+  /* Satır yükseklikleri açıkça veriliyor: yazı tipi yüklenene kadar sistem
+     yazı tipiyle çizilse de menü yüksekliği değişmiyor. */
+  .mm-title { font-size: 34px; line-height: 1; letter-spacing: -1px; padding-top: 0; }
+  .mm-sub { font-size: 12px; line-height: 1.3; letter-spacing: 1.5px; padding: 2px 12px; margin-top: 0; }
   .mm-btns { width: min(340px, 100%); gap: 4px; }
-  .mm-btns .ks-btn { font-size: 14px; padding: 5px 10px; min-height: 44px; }
+  .mm-btns .ks-btn { font-size: 14px; line-height: 1.2; padding: 5px 10px; min-height: 44px; }
   .mm-btns .ks-btn.big { flex-direction: row; gap: 8px; align-items: center; }
-  .mm-saveinfo { font-size: 11px; }
+  .mm-saveinfo { font-size: 11px; line-height: 1.25; }
   /* Kısa ekran: slogan ve hızlı ses/müzik düğmeleri yeri kaplamasın.
      İkisi de Ayarlar panelinde ve HUD'da var. */
   .mm-tgs, .mm-foot { display: none; }

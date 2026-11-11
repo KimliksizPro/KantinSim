@@ -4,6 +4,17 @@ Okul kantininin içindesin. Servis penceresine gelen öğrencilere, öğretmenle
 malzemelerden kendi elinle yemek hazırla, dışarıdan hazır döner / çiğ köfte / lahmacun sipariş edip vitrinde sat,
 stok, fiyat, temizlik ve itibar yöneterek kantinini büyüt.
 
+![KantinSim oyun ekranı](docs/screenshots/03-oyun.png)
+
+## Ekran görüntüleri
+
+| | |
+|---|---|
+| ![Ana menü](docs/screenshots/01-ana-menu.png) **Ana menü** | ![Günlük hazırlık](docs/screenshots/02-hazirlik.png) **Günlük hazırlık**: hava, olay, günün menüsü, hedefler |
+| ![Malzeme siparişi](docs/screenshots/04-malzeme.png) **Malzeme siparişi** | ![Menü ve fiyatlar](docs/screenshots/05-menu.png) **Menü & fiyatlar** |
+| ![Geliştirmeler](docs/screenshots/06-gelistirmeler.png) **Geliştirmeler** | ![Kantin Defteri](docs/screenshots/07-kantin-defteri.png) **Kantin Defteri** |
+| ![Tarifler](docs/screenshots/08-tarifler.png) **Tarifler** | |
+
 ## Nasıl oynanır?
 
 **Tarayıcıda oyna:** https://kimliksizpro.github.io/KantinSim/

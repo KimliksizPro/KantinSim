@@ -29,10 +29,14 @@
   const DEMAND_SCALE = 0.5;        // period.rate'e uygulanan genel ölçek (akınlar ayrıca eklenir)
   const WALK_SPEED = 340;          // px / oyun saniyesi
   const BODY_OFFSET = 95;          // drawCustomer baseY = tezgah çizgisi + bu (bel altı tezgah arkasında)
-  const QUEUE_SCALE = 0.56;        // kuyruktaki siluetlerin ölçeği
-  const QUEUE_BASE = 334;          // kuyruktakilerin "ayak" çizgisi (koridor, daha uzakta)
-  const QUEUE_X0 = 1556, QUEUE_DX = 54;
-  const QUEUE_DRAIN = 0.45;        // kuyrukta sabır bu oranda düşer
+  const QUEUE_SCALE = 0.56;        // yeni müşterinin başlangıç ölçeği (sıraya girince yerine göre ayarlanır)
+  // Sıra koridorda derinliğe doğru uzanır: baştaki tezgaha yakın ve büyük, arkadakiler küçük ve uzakta
+  const QUEUE_SPOTS = [
+    { x: 1196, s: 0.70 }, { x: 1262, s: 0.62 }, { x: 1322, s: 0.555 }, { x: 1376, s: 0.50 },
+    { x: 1424, s: 0.455 }, { x: 1462, s: 0.42 }, { x: 1494, s: 0.39 }, { x: 1520, s: 0.365 },
+  ];
+  const FAR_FOOT = 300, FAR_S = 0.3;  // derinlik eşlemesi: ölçek 0.3 → ayak koridor zemininin dibinde (y 300)
+  const QUEUE_DRAIN = 0.3;         // kuyrukta sabır bu oranda düşer (tezgaha gelince tamamen yenilenir)
   const QUEUE_GIVEUP = 0.3;        // kuyrukta sabır oranı bunun altına inerse vazgeçer
   const BUBBLE_W = 252;
   const LINE_H = 34;
@@ -171,6 +175,9 @@
   function repMultiplier() { return 0.45 + (KS.state.rep / 5) * 0.9; }
   // meta modülünün (kampanya vb.) sağladığı çarpanlar
   function hookMult(name) { try { const f = KS.hooks && KS.hooks[name]; const v = f ? f() : 1; return isFinite(v) && v > 0 ? v : 1; } catch (e) { return 1; } }
+  // İlk günler kolay: daha az gişe açık (fazlası sıraya girer) ve daha uzun sabır
+  function openSlots() { const d = KS.state.day || 1; return d <= 1 ? 2 : d === 2 ? 3 : SLOT_N; }
+  function earlyPatience() { const d = KS.state.day || 1; return d <= 1 ? 1.5 : d === 2 ? 1.3 : d === 3 ? 1.15 : 1; }
   function dayMultiplier() { const d = KS.state.day; return d <= 1 ? 0.75 : d === 2 ? 0.9 : 1; }
 
   function demandPerMin() {
@@ -404,6 +411,7 @@
     base *= (t.patience || 1) * (ev.patience || 1) * (KS.upgVal('dekor', 'patience') || 1);
     if (KS.hasStaff('kasiyer')) base *= 1.15;
     base *= hookMult('patienceMult');
+    base *= earlyPatience();
     if (KS.state.cleanliness < 50) base *= 0.85;
     return base;
   }
@@ -444,12 +452,18 @@
 
   function freeSlotIndex() {
     const free = [];
-    for (let i = 0; i < SLOT_N; i++) if (!slots[i] && slotCooldown[i] <= 0) free.push(i);
+    for (let i = 0; i < openSlots(); i++) if (!slots[i] && slotCooldown[i] <= 0) free.push(i);
     if (!free.length) return -1;
     return U().pick(free);
   }
 
-  function queueX(i) { return QUEUE_X0 - i * QUEUE_DX; }
+  function queueSpot(i) {
+    const n = QUEUE_SPOTS.length;
+    if (i < n) return QUEUE_SPOTS[i];
+    const L = QUEUE_SPOTS[n - 1];
+    return { x: L.x + (i - n + 1) * 22, s: Math.max(FAR_S + 0.02, L.s - (i - n + 1) * 0.02) };
+  }
+  function queueX(i) { return queueSpot(i).x; }
 
   function spawn(opts) {
     opts = opts || {};
@@ -486,7 +500,7 @@
     } else {
       c.state = 'queue';
       c.x = 1700 + Math.random() * 40;
-      c.scale = QUEUE_SCALE;
+      c.scale = queueSpot(queue.length).s;
       if (c.inspector) queue.unshift(c); else queue.push(c);
       setAnim(c, 'walk');
     }
@@ -502,11 +516,8 @@
     c.dir = c.targetX < c.x ? -1 : 1;
     c.fromX = c.x; c.fromScale = c.scale;
     setAnim(c, 'walk');
-    // kuyruktan geliyorsa sabrın bir kısmı tazelenir
-    if (!c.inspector) {
-      const ratio = c.patience / c.patienceMax;
-      c.patience = c.patienceMax * (0.7 + 0.3 * clamp(ratio, 0, 1));
-    }
+    // kuyruktan geliyorsa tezgahta sabrı baştan başlar (sırada beklemek tezgah süresinden yemesin)
+    if (!c.inspector) c.patience = c.patienceMax;
   }
 
   function setAnim(c, st) { if (c.anim.state !== st) c.anim = { state: st, t: 0 }; }
@@ -782,8 +793,11 @@
     switch (c.state) {
       case 'queue': {
         const qi = queue.indexOf(c);
-        c.targetX = queueX(Math.max(0, qi));
+        const spot = queueSpot(Math.max(0, qi));
+        c.targetX = spot.x;
         const arrived = moveToward(c, dt);
+        // sıra ilerledikçe öne doğru yürür: ölçek de yumuşakça büyür
+        c.scale += (spot.s - c.scale) * (1 - Math.exp(-(realDt || dt) * 3.5));
         if (!c.holdState) setAnim(c, arrived ? 'idle' : 'walk');
         if (!c.inspector) {
           c.patience -= dt * QUEUE_DRAIN * lateDrain;
@@ -1014,11 +1028,13 @@
   function drawFigure(ctx, c, t, alpha, silhouette) {
     const Art = A();
     const sc = c.scale;
-    const prog = clamp((sc - QUEUE_SCALE) / (1 - QUEUE_SCALE), 0, 1);
-    const base = lerp(QUEUE_BASE + BODY_OFFSET * QUEUE_SCALE, KS.layout.customerSlots[0].baseY + BODY_OFFSET, prog);
+    const prog = clamp((sc - FAR_S) / (1 - FAR_S), 0, 1);
+    // ölçek = derinlik: küçüldükçe ayaklar koridorun dibine (yukarı) çekilir
+    const foot = lerp(FAR_FOOT, KS.layout.customerSlots[0].baseY, prog);
+    const base = foot + BODY_OFFSET * sc;
     ctx.save();
     ctx.globalAlpha *= alpha;
-    if (silhouette) { try { ctx.filter = 'saturate(0.55) brightness(0.82)'; } catch (e) { /* desteklenmiyor */ } }
+    void silhouette;
     // derinlik: uzaktaki (kuyruk) figürler koridorla birlikte daha çok kayar, tezgahtakiler daha az
     const PX = Art.parallax;
     ctx.translate(c.x + (PX ? (PX.x - PX.cx) * (1 - prog) : 0), base);
@@ -1058,13 +1074,40 @@
   function drawCustomersLayer(ctx) {
     const t = KS.time || 0;
     // kuyruk: arkadan öne (en sondaki en arkada)
-    for (let i = queue.length - 1; i >= 0; i--) drawFigure(ctx, queue[i], t, 0.62, true);
+    for (let i = queue.length - 1; i >= 0; i--) { drawFigure(ctx, queue[i], t, 1, false); drawQueuePatience(ctx, queue[i], i); }
     // kuyruktan vazgeçip gidenler
-    for (const c of leaving) if (c.leaveKind === 'queue') drawFigure(ctx, c, t, 0.55, true);
+    for (const c of leaving) if (c.leaveKind === 'queue') drawFigure(ctx, c, t, 0.85, false);
     // slot müşterileri + çıkanlar (çıkanlar arkada)
     for (const c of leaving) if (c.leaveKind !== 'queue') drawFigure(ctx, c, t, 1, false);
     for (const c of slots) if (c && c.state === 'enter') drawFigure(ctx, c, t, 1, false);
     for (const c of slots) if (c && c.state !== 'enter') drawFigure(ctx, c, t, 1, false);
+  }
+
+  // Sıradakilerin başının üstünde küçük sabır noktası (yeşil → kırmızı); baştakinde "Sıradaki" etiketi
+  function drawQueuePatience(ctx, c, i) {
+    if (c.inspector || c.state !== 'queue') return;
+    const PX = A().parallax;
+    const sc = c.scale, prog = clamp((sc - FAR_S) / (1 - FAR_S), 0, 1);
+    const x = c.x + (PX ? (PX.x - PX.cx) * (1 - prog) : 0);
+    const top = lerp(FAR_FOOT, KS.layout.customerSlots[0].baseY, prog) + BODY_OFFSET * sc - 262 * sc;
+    const ratio = clamp((c.patience / c.patienceMax - QUEUE_GIVEUP) / (1 - QUEUE_GIVEUP), 0, 1);
+    const col = ratio > 0.5 ? '#4cc96a' : ratio > 0.25 ? '#f2b32a' : '#e5483a';
+    const r = 3 + 3.5 * sc;
+    ctx.save();
+    const pulse = ratio < 0.25 ? 0.5 + 0.5 * Math.sin((KS.time || 0) * 8) : 1;
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = 'rgba(20,12,8,0.55)';
+    ctx.beginPath(); ctx.arc(x, top, r + 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(x, top, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9 * pulse;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.arc(x, top, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio); ctx.closePath(); ctx.fill();
+    if (i === 0) {
+      ctx.globalAlpha = 0.95;
+      txt(ctx, 'Sıradaki', x, top - r - 10, { size: 12, weight: 800, color: '#fff', align: 'center', stroke: 'rgba(30,18,10,0.8)' });
+    }
+    ctx.restore();
   }
 
   // Yalnız tezgahtaki (slot) müşteriler: mermer tezgah yansıması için (depth.js)
@@ -1445,6 +1488,10 @@
     if (ev.inspector) inspectorAt = U().randInt(570, 900);
     // açılışta kapıda bekleyen birkaç öğrenci
     scheduleRush(KS.state.day <= 1 ? 1 : U().randInt(1, 2), 1.2);
+    // gişe sayısı ilk günlerde artar: oyuncu kalabalığın neden büyüdüğünü bilsin
+    const n = openSlots(), d = KS.state.day || 1;
+    if (d <= 1) KS.notify('Bugün 2 gişe açık. Fazla gelenler sıraya girer, sırada sabırları yavaş azalır.', 'info');
+    else if (d <= 3 && n > 2) KS.notify('🧍 Yeni gişe açıldı: artık aynı anda ' + n + ' müşteri gelebilir.', 'info');
   }
 
   function init() {

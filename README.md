@@ -16,6 +16,7 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Boşluk / P / Esc** = duraklat. **1 / 2** = oyun hızı. **F** = tam ekran.
 - **Panel kısayolları**: M Malzeme · T Telefon · N Menü · G Geliştir · E Personel · R Tarifler · K Hedefler.
 - **Tarif yardımcısı** (H ile aç/kapat): elin boşken müşterinin üzerine gel, siparişi için gereken kutular ve istasyonlar altın renkle yanar.
+- **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
 

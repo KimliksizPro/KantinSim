@@ -4,3 +4,4 @@ node_modules/
 shots/
 package-lock.json
 dist/
+build/

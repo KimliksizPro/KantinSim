@@ -13,8 +13,23 @@ const ASSETS = [
   './index.html',
   './manifest.webmanifest',
   './favicon.svg',
+  './css/fonts.css',
   './css/base.css',
   './css/ui.css',
+  './fonts/baloo2-500-latin.woff2',
+  './fonts/baloo2-500-latin-ext.woff2',
+  './fonts/baloo2-700-latin.woff2',
+  './fonts/baloo2-700-latin-ext.woff2',
+  './fonts/baloo2-800-latin.woff2',
+  './fonts/baloo2-800-latin-ext.woff2',
+  './fonts/nunito-500-latin.woff2',
+  './fonts/nunito-500-latin-ext.woff2',
+  './fonts/nunito-600-latin.woff2',
+  './fonts/nunito-600-latin-ext.woff2',
+  './fonts/nunito-700-latin.woff2',
+  './fonts/nunito-700-latin-ext.woff2',
+  './fonts/nunito-800-latin.woff2',
+  './fonts/nunito-800-latin-ext.woff2',
   './js/data.js',
   './js/core.js',
   './js/recipes.js',
@@ -38,29 +53,9 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
       .then(c => c.addAll(ASSETS))
-      .then(cacheFonts)
       .then(() => self.skipWaiting())
   );
 });
-
-// İlk açılışta yazı tiplerini de sakla: tek ziyaretten sonra tam çevrimdışı olsun.
-const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;600;700;800&display=swap';
-async function cacheFonts() {
-  try {
-    const res = await fetch(FONT_CSS);
-    if (!res.ok) return;
-    const css = await res.text();
-    const cache = await caches.open(CACHE);
-    await cache.put(FONT_CSS, new Response(css, { headers: { 'content-type': 'text/css; charset=utf-8' } }));
-    const urls = [...css.matchAll(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/g)].map(m => m[1]);
-    await Promise.all(urls.map(async url => {
-      try {
-        const r = await fetch(url);
-        if (r.ok) await cache.put(url, r);
-      } catch (e) { /* tek dosya atlanır */ }
-    }));
-  } catch (e) { /* ağ yok: yazı tipleri sistemden gelir */ }
-}
 
 self.addEventListener('activate', e => {
   e.waitUntil(
@@ -115,10 +110,5 @@ self.addEventListener('fetch', e => {
   if (url.origin === self.location.origin) {
     e.respondWith(cacheFirst(req));
     return;
-  }
-
-  // Google Fonts: ilk çevrimiçi açılışta sakla, sonra çevrimdışı da yazı tipleri çalışsın.
-  if (/(^|\.)fonts\.googleapis\.com$/.test(url.hostname) || /(^|\.)fonts\.gstatic\.com$/.test(url.hostname)) {
-    e.respondWith(cacheFirst(req));
   }
 });

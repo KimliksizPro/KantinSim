@@ -89,3 +89,15 @@ js/meta.js            günlük hedefler, başarımlar, rekorlar, kampanyalar, ba
 js/ui.js              HUD, paneller, gün sonu raporu, eğitim
 CONTRACT.md           modüller arası arayüz sözleşmesi
 ```
+
+## Lisans
+
+KantinSim, **[PolyForm Noncommercial 1.0.0](LICENSE.md)** lisansıyla yayınlanmıştır. © 2026 Semih Topak
+
+- ✅ Oynamak, kaynak kodunu incelemek, öğrenmek, kişisel ve eğitim amaçlı değiştirmek serbest.
+- ✅ Okullar, kâr amacı gütmeyen kuruluşlar ve kişisel hobi projeleri kullanabilir.
+- ❌ Ticari kullanım yasak: satmak, ücretli dağıtmak, reklam/abonelik ile gelir elde etmek veya ticari bir ürünün parçası yapmak için yazılı izin gerekir.
+- Kopyalarda lisans metni ve `Required Notice` satırı korunmalıdır.
+
+Ticari kullanım izni için GitHub üzerinden ulaşın: https://github.com/KimliksizPro
+(Bağlayıcı olan, [LICENSE.md](LICENSE.md) içindeki İngilizce metindir; yukarıdaki özet bilgi amaçlıdır.)

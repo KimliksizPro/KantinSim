@@ -807,3 +807,7 @@
 .ab-src small { font: 600 13px var(--f-body); color: var(--ink3); margin-top: 2px; }
 .ab-note { margin: 2px 2px 0; font: 700 14.5px/1.4 var(--f-body); color: var(--ink3); text-align: center; }
 .ab-set-foot { display: flex; justify-content: center; margin: 14px 0 4px; }
+
+.ab-lic { margin: 14px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(122, 82, 54, .08); font: 600 13px/1.45 var(--f-body); color: var(--ink2); text-align: center; }
+.ab-lic a { color: #c8541e; font-weight: 800; text-decoration: none; border-bottom: 1.5px solid rgba(200, 84, 30, .35); }
+.ab-lic a:hover { border-bottom-color: #c8541e; }

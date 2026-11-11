@@ -29,7 +29,7 @@ jobs:
       - name: Oyun dosyalarını topla
         run: |
           mkdir -p _site
-          cp -r index.html favicon.svg css js _site/
+          cp -r index.html favicon.svg LICENSE.md css js _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

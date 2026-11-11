@@ -45,6 +45,12 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 | `js/ui.js`, `css/ui.css` | HUD, paneller, eğitim, gün sonu |
 | `js/assist.js` | Tarif yardımcısı (H), klavye kısayolları, gün şeridi (zil programı) |
 | `js/audio.js` | Prosedürel WebAudio sesleri |
+| `sw.js`, `manifest.webmanifest`, `icons/` | Çevrimdışı önbellek ve kurulabilir uygulama (PWA). Önbellek sürümü yayında otomatik damgalanır. |
+
+## Otomatik kayıt
+
+- Hazırlıkta ve gün sonunda kaydedilir; ayrıca oyun sırasında 20 saniyede bir ve sekme kapanırken kaydedilir.
+- Gün ortasında çıkılırsa oyun **kaldığı saatten** devam eder (gün baştan başlamaz), böylece ciro/gider dengesi bozulmaz.
 
 ## Kurallar
 

@@ -9,16 +9,18 @@ Oyun dili **Türkçe** (tüm metinler, etiketler, bildirimler Türkçe ve doğru
 
 | Dosya | Sahip | Not |
 |---|---|---|
-| `index.html`, `css/base.css`, `js/data.js`, `js/core.js`, `js/recipes.js`, `js/main.js` | Lead | Okuyun, değiştirmeyin. Eksik bir şey gerekirse kendi modülünüzde çözün ve rapor edin. |
-| `js/art.js`, `js/audio.js` | Art & Ses | Şu an stub. |
+| `index.html`, `css/base.css`, `js/data.js`, `js/core.js`, `js/recipes.js`, `js/main.js`, `sw.js`, `manifest.webmanifest`, `icons/` | Lead | Okuyun, değiştirmeyin. Eksik bir şey gerekirse kendi modülünüzde çözün ve rapor edin. |
+| `js/art.js`, `js/audio.js`, `js/depth.js` | Art & Ses | Prosedürel çizim, ses ve derinlik efektleri. |
 | `js/stations_prep.js` | Hazırlık İstasyonları | malzeme kutuları, tezgah (tabaklar), çiğ köfte leğeni, sıcak dolap, vitrin, temizlik, çöp |
 | `js/stations_cook.js` | Pişirme İstasyonları | tost makinesi, ızgara, fritöz, semaver |
 | `js/customers.js` | Müşteriler | müşteri üretimi, sıra, sipariş, sabır, ödeme, itibar, müfettiş |
-| `js/ui.js`, `css/ui.css` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim |
+| `js/ui.js`, `css/ui.css`, `js/assist.js` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim, tarif yardımcısı |
 
 | `js/meta.js` | Meta sistemler | günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş |
 
-Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → meta → ui → main.
+Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → depth → meta → ui → assist → main.
+`KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
+Boot ayrıca otomatik kayıt kurar (20 sn'de bir + sekme kapanırken); gün ortasında kapatılan oyun kaldığı saatten sürer.
 `KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
 Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmiştir). Başka modülün API'sini
 çağırmadan önce varlığını kontrol edin (`KS.Customers && ...`).

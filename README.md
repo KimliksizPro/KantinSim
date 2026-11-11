@@ -21,6 +21,8 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
+- **Telefon/tablet**: oyun yatay modda oynanır; dikey tutulduğunda ekranı çevirme uyarısı çıkar.
+- **Çevrimdışı / kurulabilir**: siteyi bir kez açtıktan sonra internet olmadan da oynanır. Chrome/Edge'de adres çubuğundaki "Yükle" ile uygulama gibi kurulabilir (PWA).
 
 ## Tarifler (elle yapılan)
 
@@ -76,6 +78,9 @@ Vanilla JS + HTML5 Canvas, build adımı yok, tüm grafikler ve sesler prosedür
 
 ```
 index.html
+manifest.webmanifest  kurulabilir uygulama tanımı (PWA)
+sw.js                 çevrimdışı önbellek (service worker)
+icons/                uygulama simgeleri (192/512/maskable/apple-touch)
 css/base.css, css/ui.css
 js/data.js            oyun verileri (malzeme, tarif, ürün, tedarikçi, geliştirme, zil programı, olaylar)
 js/core.js            motor: durum, kayıt, ekonomi, gün akışı, sürükle-bırak bölgeleri, efektler, döngü
@@ -87,6 +92,8 @@ js/stations_cook.js   tost makinesi, ızgara, fritöz, semaver
 js/customers.js       müşteri yapay zekâsı, sipariş, sabır, ödeme, müfettiş
 js/meta.js            günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş
 js/ui.js              HUD, paneller, gün sonu raporu, eğitim
+js/assist.js          tarif yardımcısı, klavye kısayolları, gün şeridi
+js/depth.js           güneş huzmeleri, yansıma, bokeh gibi derinlik efektleri
 CONTRACT.md           modüller arası arayüz sözleşmesi
 ```
 

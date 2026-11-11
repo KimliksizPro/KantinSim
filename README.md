@@ -6,6 +6,8 @@ stok, fiyat, temizlik ve itibar yöneterek kantinini büyüt.
 
 ## Nasıl oynanır?
 
+**Tarayıcıda oyna:** https://kimliksizpro.github.io/KantinSim/
+
 Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `python3 -m http.server` çalıştırıp
 `http://localhost:8000` adresine git). Fare ve dokunmatik ekranla oynanır.
 

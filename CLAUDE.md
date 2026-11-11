@@ -45,6 +45,38 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 | `js/ui.js`, `css/ui.css` | HUD, paneller, eğitim, gün sonu |
 | `js/assist.js` | Tarif yardımcısı (H), klavye kısayolları, gün şeridi (zil programı) |
 | `js/audio.js` | Prosedürel WebAudio sesleri |
+| `sw.js`, `manifest.webmanifest`, `icons/` | Çevrimdışı önbellek ve kurulabilir uygulama (PWA). Önbellek sürümü yayında otomatik damgalanır. |
+
+## Otomatik kayıt
+
+- Hazırlıkta ve gün sonunda kaydedilir; ayrıca oyun sırasında 20 saniyede bir ve sekme kapanırken kaydedilir.
+- Gün ortasında çıkılırsa oyun **kaldığı saatten** devam eder (gün baştan başlamaz), böylece ciro/gider dengesi bozulmaz.
+
+## Mobil HUD ve native ekranlar
+
+- Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD ve DOM ekranları sahneyle küçülmez**.
+- `js/core.js` → `resize()` beş CSS değişkeni yayınlar: `--hud-inv` (ters ölçek, en az 1), `--hud-width`, `--hud-left`, `--hud-top`, `--hud-vh`. `#ks-hud`, `#ks-dayline` ve `#ks-notifs` bu değişkenlerle native ölçekte konumlanır.
+- `css/ui.css` içinde `1599px` altında olay chip'i, `1499px` altında veya `(pointer: coarse)` cihazlarda kompakt HUD (44×44 ikon düğmeler, gizli etiketler/chip'ler) devreye girer.
+- Aynı eşikte paneller, hazırlık kartı, gün sonu, ana menü ve duraklat/onay kartları da native: `#ks-modal`, `#ks-summary`, `#ks-mainmenu`, `#ks-pause`, `#ks-prep` ters ölçekle ekranı kaplar; panel `width: 100%` + `max-width: 1200px`, gövde kayar, başlık/sekme/alt satır sabittir.
+- Dar ekran ızgaraları: `.sup-grid` tek sütun, `.up-grid`/`.st-grid`/`.ach-grid` iki sütun, `.stt-tiles` üç sütun. `1000–1499px` arasında eski sütun sayıları korunur.
+- Eğitim balonu `placeTutorial()` içinde `KS.scale < 0.95` iken alt kenara sabitlenir, ters ölçekle native boyutta çizilir; halka sahne koordinatında kalır.
+- DOM sahnenin içinde kaldığı için `logicalRect` (eğitim halkası, konfeti) çalışmaya devam eder; duman testi 844×390'da HUD, menü, hazırlık ve dokuz paneli ölçer.
+
+## Günün menüsü
+
+- `rollToday()` her gün `today.featured` alanına açılmış, fiyatı ≥ 50 ₺ olan bir tarifi yazar; seçim gün numarasına göre döner ve gün içinde sabit kalır (eski kayıtlarda `KS.featuredId()` ilk çağrıda hesaplar).
+- `KS.featuredBonus(line, price?)` o tarifin her servisi için ek bahşiş verir (menü fiyatının %25'i, en az 3 ₺). `customers.js` ödemede `today.meta.featServ/featTip` sayaçlarını tutar ve uçan yazı gösterir.
+- Gün sonu raporu `featured/featServ/featTip` alanlarını taşır; hazırlık kartı (⭐ şerit), Menü paneli (rozet) ve gün sonu özeti bu alanlardan beslenir.
+- Duman testi menü seçimini, hazırlık şeridini, panel rozetini, gerçek servis→bahşiş akışını ve günler arası dönüşü doğrular.
+
+## Haftalık sözleşme ve kârlı gün serisi
+
+- `js/meta.js` → `ensure()` eski kayıtlara `state.week` ve `state.streak` alanlarını ekler. Hafta 5 okul günüdür; `ensureWeek()` gün ilerleyince yeni haftayı açar (`{n, start, target, reward, done, paid, paidDay, failed}`).
+- `weeklyTarget()` son 3 günün ortalama cirosundan (yoksa seviyeden) hedef üretir: ortalama × 5 × 1,05, en az 1.000 ₺, 100'er yuvarlanır. Ödül hedefin ~%15'i kadar para + XP.
+- `settleWeek()` `beforeDayEnd` sırasında çalışır: hedef tuttuysa bir kez `KS.bonus` + `KS.addXP`; haftanın son günü hâlâ tutmuyorsa `failed` işaretlenir.
+- `updateStreak(report)` `dayEnd` sırasında net kârı (ciro + bahşiş + bonus − gider) hesaplar; pozitifse seriyi büyütür, değilse sıfırlar. 3/5/10/20 günde bir kez para + XP ödülü verir (`state.streak.claimed`).
+- Gün sonu raporuna `week{n,start,target,revenue,reward,done,paid,paidDay,failed}` ve `streak{days,best,profitable,net,lost,milestone,next}` alanları eklenir. Hazırlık kartı `.wk-row`, Kantin Defteri haftalık kart, gün sonu özeti bu alanları gösterir.
+- `KS.Meta.week()` ve `KS.Meta.streak()` arayüz için canlı bilgi döndürür. Duman testi hedef/şerit varlığını, 3. gün ödülünün bir kez ödendiğini, serinin büyüdüğünü, zararlı günde sıfırlandığını ve son gün yanan sözleşmeyi doğrular.
 
 ## Kurallar
 

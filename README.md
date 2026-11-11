@@ -20,7 +20,12 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Tarif yardımcısı** (H ile aç/kapat): elin boşken müşterinin üzerine gel, siparişi için gereken kutular ve istasyonlar altın renkle yanar.
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
+- **Günün menüsü**: her gün bir yemek öne çıkar (hazırlık kartında ve Menü panelinde ⭐ ile işaretli). O yemeği servis eden her müşteri, fiyatının %25'i kadar ekstra bahşiş bırakır (en az 3 ₺); gün sonu raporunda kaç servis yaptığın yazar.
+- **Haftalık sözleşme**: her 5 okul günü bir haftadır. Hazırlık kartında haftanın ciro hedefi ve ödülü görünür; hedefi tutarsan hafta içinde bir kez para + XP alırsın, son güne kadar tutmazsa sözleşme yanar.
+- **Kârlı gün serisi**: net kârı pozitif biten her gün seriyi büyütür (🔥). 3, 5, 10 ve 20 günlük eşiklerde bir kez para + XP ödülü verilir; zararlı gün seriyi sıfırlar, rekor kalır.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
+- **Telefon/tablet**: oyun yatay modda oynanır; dikey tutulduğunda ekranı çevirme uyarısı çıkar. Üst çubuk, paneller, hazırlık kartı, gün sonu ve ana menü sahneyle birlikte küçülmez: düğmeler 44×44 dokunma hedefine çıkar, etiketler ikona döner, dar ekranda listeler tek sütuna iner.
+- **Çevrimdışı / kurulabilir**: siteyi bir kez açtıktan sonra internet olmadan da oynanır. Chrome/Edge'de adres çubuğundaki "Yükle" ile uygulama gibi kurulabilir (PWA).
 
 ## Tarifler (elle yapılan)
 
@@ -33,6 +38,9 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 | Çiğ Köfte Dürüm | Leğende bulgur + isot + salça yoğur → lavaş + çiğ köfte + marul + nar ekşisi + limon |
 | Patates Kızartması | Fritözde kızart → keseye → tuz / ketçap / mayonez |
 | Çay | Semaverde demle → ince belli bardağa doldur |
+| Kaşarlı Sandviç *(Sv. 2)* | Yarım ekmek + kaşar + domates/marul (+ turşu, ketçap, mayonez) |
+| Sucuklu Sandviç *(Sv. 3)* | Yarım ekmek + sucuk + domates/turşu/mayonez (+ kaşar, marul) |
+| Lavaş Pizza *(Sv. 4)* | Lavaş + kaşar + sucuk + domates + ketçap → tost makinesi |
 | Ayvalık Tostu *(Sv. 5)* | Tost ekmeği + kaşar + sucuk + domates + turşu + ketçap/mayonez → tost makinesi |
 | Köfte Dürüm *(Sv. 6)* | Izgarada pişmiş köfte + lavaş + domates/soğan/maydanoz |
 
@@ -40,8 +48,8 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 
 ## Hazır ürünler
 
-- **Toptancı / Bakkal**: ayran, su, kola, meyve suyu, cips, çikolata, gofret, soğuk çay, fırın sütlaç, ev limonatası ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
-- **Telefonla sipariş (kurye)**: Dönerci (et/tavuk döner dürüm), Çiğköfteci (hazır dürüm), Fırın (simit, poğaça), Pideci (lahmacun, kıymalı pide).
+- **Toptancı / Bakkal**: ayran, su, süt, kola, meyve suyu, cips, çikolata, gofret, kek, soğuk çay, fırın sütlaç, ev limonatası ve tüm malzemeler (toptancı ucuz ama geç; bakkal pahalı ama hızlı).
+- **Telefonla sipariş (kurye)**: Dönerci (et/tavuk döner dürüm), Çiğköfteci (hazır dürüm), Fırın (simit, poğaça, su böreği), Pideci (lahmacun, kıymalı pide).
   Hazır yemekler gün sonunda bozulur — doğru miktarda sipariş ver!
 
 ## Simülasyon mekanikleri
@@ -53,7 +61,7 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 - **Fiyatlandırma**: menü fiyatlarını kendin belirle — pahalıysa talep düşer.
 - **Geliştirmeler**: tost makinesi, ızgara, fritöz, semaver, tezgah, sıcak dolap, çiğ köfte leğeni, buzdolabı, kasa, dekorasyon.
 - **Personel**: çaycı çırak, temizlikçi, kasiyer.
-- **Hava durumu & günlük olaylar**: yağmurda çay, sıcakta ayran; sağlık müfettişi denetimi, elektrik kesintisi, maç günü, veli toplantısı, sınav haftası, harçlık günü.
+- **Hava durumu & günlük olaylar**: yağmurda çay, sıcakta ayran; sağlık müfettişi denetimi, elektrik kesintisi, maç günü, veli toplantısı, sınav haftası, harçlık günü, sağlıklı beslenme haftası, bilim şenliği, karne günü.
 - **Temizlik**: tezgah kirlenir, müşteriler ve müfettiş fark eder.
 - **Seviye & kilitler**: XP ile yeni tarifler, restoranlar ve personel açılır. Oyun otomatik kaydedilir.
 
@@ -61,14 +69,16 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 
 - **Günlük hedefler**: her sabah 3 rastgele hedef (ör. "70 müşteriye servis yap", "5 adet Köfte Ekmek sat",
   "günü hiç kızgın müşteri olmadan bitir"). Tamamlanınca anında para + XP ödülü.
-- **Başarımlar**: 29 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
+- **Haftalık sözleşme**: 5 günlük ciro hedefi; hazırlık kartında ve defterde ilerlemesi, kalan tutar ve ödülü yazar.
+- **Kârlı gün serisi**: üst üste kârlı günler, rekor ve sıradaki seri ödülü aynı satırda takip edilir.
+- **Başarımlar**: 32 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
 - **İstatistik**: günlük net kâr, müşteri, ciro ve itibar grafikleri; rekorlar; tüm zamanların en çok satanları.
 - **Pazarlama**: hazırlıkta günlük kampanya — okul panosuna afiş, okul radyosu, sosyal medya, bedava çay ikramı, sadakat kartı.
 - **Banka**: esnaf / işletme / yatırım kredisi. Taksitler gün sonunda ödenir, erken kapamada faiz indirimi.
 - **Toplu sipariş**: ders saatlerinde öğretmenler odası, rehberlik servisi veya spor salonu arar; görevli gelince
   3 kalemlik siparişi eksiksiz ver — bahşiş ×1,8 ve ek XP.
 - **Usta Aşçı Nihat** *(Sv. 6 personel)*: ızgaradaki köfteyi zamanında çevirir, fritöz sepetini yanmadan kaldırır.
-- Yeni günlük olaylar: **Okul Gezisi**, **Öğretmenler Günü**, **Hayır Kermesi**.
+- Yeni günlük olaylar: **Okul Gezisi**, **Öğretmenler Günü**, **Hayır Kermesi**, **Sağlıklı Beslenme Haftası**, **Bilim Şenliği**, **Karne Günü**.
 
 ## Proje yapısı
 
@@ -76,6 +86,9 @@ Vanilla JS + HTML5 Canvas, build adımı yok, tüm grafikler ve sesler prosedür
 
 ```
 index.html
+manifest.webmanifest  kurulabilir uygulama tanımı (PWA)
+sw.js                 çevrimdışı önbellek (service worker)
+icons/                uygulama simgeleri (192/512/maskable/apple-touch)
 css/base.css, css/ui.css
 js/data.js            oyun verileri (malzeme, tarif, ürün, tedarikçi, geliştirme, zil programı, olaylar)
 js/core.js            motor: durum, kayıt, ekonomi, gün akışı, sürükle-bırak bölgeleri, efektler, döngü
@@ -87,6 +100,8 @@ js/stations_cook.js   tost makinesi, ızgara, fritöz, semaver
 js/customers.js       müşteri yapay zekâsı, sipariş, sabır, ödeme, müfettiş
 js/meta.js            günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş
 js/ui.js              HUD, paneller, gün sonu raporu, eğitim
+js/assist.js          tarif yardımcısı, klavye kısayolları, gün şeridi
+js/depth.js           güneş huzmeleri, yansıma, bokeh gibi derinlik efektleri
 CONTRACT.md           modüller arası arayüz sözleşmesi
 ```
 

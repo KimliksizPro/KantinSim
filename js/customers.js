@@ -45,6 +45,7 @@
   const SHORT_NAMES = {
     su: 'Su', et_doner: 'Et Döner', tavuk_doner: 'Tavuk Döner', hazir_cigkofte: 'Hazır Çiğ Köfte',
     patates: 'Patates', cigkofte_durum: 'Çiğ Köfte Dürüm', meyve_suyu: 'Meyve Suyu', kiymali_pide: 'Kıymalı Pide',
+    soguk_sandvic: 'Sandviç', sucuklu_sandvic: 'Sucuklu Sandviç', lavas_pizza: 'Lavaş Pizza', borek: 'Börek',
   };
 
   // Ürün/tarif sınıfları (kombinasyon mantığı için)
@@ -52,10 +53,12 @@
     // tarifler
     kasarli_tost: 'main', karisik_tost: 'main', kofte_ekmek: 'main', hamburger: 'main', cigkofte_durum: 'main',
     patates: 'side', cay: 'hot', ayvalik_tostu: 'main', kofte_durum: 'main',
+    soguk_sandvic: 'main', sucuklu_sandvic: 'main', lavas_pizza: 'main',
     gofret: 'snack', soguk_cay: 'drink', sutlac: 'snack', limonata: 'drink',
     // ürünler
     ayran: 'drink', su: 'drink', kola: 'drink', meyve_suyu: 'drink',
     cips: 'snack', cikolata: 'snack', simit: 'bakery', pogaca: 'bakery',
+    sut: 'drink', kek: 'snack', borek: 'bakery',
     et_doner: 'main', tavuk_doner: 'main', hazir_cigkofte: 'main', lahmacun: 'main', kiymali_pide: 'main',
   };
 
@@ -64,30 +67,37 @@
     ayran: 1.2, su: 1.0, kola: 1.3, meyve_suyu: 0.9, cips: 1.0, cikolata: 0.9, simit: 1.0, pogaca: 1.0,
     et_doner: 1.3, tavuk_doner: 1.3, hazir_cigkofte: 1.0, lahmacun: 1.1, kiymali_pide: 0.9,
     ayvalik_tostu: 1.3, kofte_durum: 1.4, gofret: 0.9, soguk_cay: 1.1, sutlac: 0.8, limonata: 1.0,
+    soguk_sandvic: 1.3, sucuklu_sandvic: 1.3, lavas_pizza: 1.3, sut: 1.1, kek: 1.0, borek: 0.9,
   };
 
   const PERIOD_PREFS = {
     sabah: { simit: 3, pogaca: 3, cay: 2.5, kasarli_tost: 2.2, karisik_tost: 1.5, meyve_suyu: 1.4, ayran: 0.8,
       kola: 0.5, cips: 0.4, cikolata: 0.6, kofte_ekmek: 0.35, hamburger: 0.3, et_doner: 0.3, tavuk_doner: 0.3,
-      lahmacun: 0.5, kiymali_pide: 0.6, patates: 0.3, cigkofte_durum: 0.4, hazir_cigkofte: 0.4 },
-    ders: { cay: 2.8, simit: 1.5, pogaca: 1.3, kasarli_tost: 1.2, su: 1.1, cips: 0.6, kola: 0.6 },
+      lahmacun: 0.5, kiymali_pide: 0.6, patates: 0.3, cigkofte_durum: 0.4, hazir_cigkofte: 0.4,
+      sut: 1.4, kek: 0.8, borek: 1.6, soguk_sandvic: 1.0, sucuklu_sandvic: 0.8, lavas_pizza: 0.5 },
+    ders: { cay: 2.8, simit: 1.5, pogaca: 1.3, kasarli_tost: 1.2, su: 1.1, cips: 0.6, kola: 0.6,
+      sut: 1.2, kek: 0.8, borek: 0.8, soguk_sandvic: 0.6, sucuklu_sandvic: 0.6, lavas_pizza: 0.4 },
     teneffus: { gofret: 2.2, soguk_cay: 1.8, limonata: 1.4, ayvalik_tostu: 1.3, kasarli_tost: 2.0, karisik_tost: 1.6, cips: 2.2, cikolata: 2.2, kola: 2.0, su: 1.8, meyve_suyu: 1.5,
       simit: 1.2, pogaca: 1.2, cay: 0.8, kofte_ekmek: 0.6, hamburger: 0.5, et_doner: 0.5, tavuk_doner: 0.5,
-      lahmacun: 0.5, kiymali_pide: 0.4, cigkofte_durum: 0.7, hazir_cigkofte: 0.7, patates: 0.9 },
+      lahmacun: 0.5, kiymali_pide: 0.4, cigkofte_durum: 0.7, hazir_cigkofte: 0.7, patates: 0.9,
+      sut: 1.4, kek: 2.0, borek: 1.2, soguk_sandvic: 1.1, sucuklu_sandvic: 1.0, lavas_pizza: 1.2 },
     ogle: { kofte_durum: 3.0, ayvalik_tostu: 1.8, limonata: 1.6, soguk_cay: 1.4, sutlac: 1.3, kofte_ekmek: 3.2, et_doner: 2.6, tavuk_doner: 2.6, hamburger: 2.6, kasarli_tost: 1.4, karisik_tost: 1.8,
       cigkofte_durum: 2.3, hazir_cigkofte: 2.1, ayran: 2.4, lahmacun: 2.3, kiymali_pide: 2.1, patates: 1.6,
-      kola: 1.3, cay: 0.6, cikolata: 0.5, simit: 0.5, pogaca: 0.5, cips: 0.6 },
+      kola: 1.3, cay: 0.6, cikolata: 0.5, simit: 0.5, pogaca: 0.5, cips: 0.6,
+      sut: 1.6, kek: 0.6, borek: 1.4, soguk_sandvic: 1.8, sucuklu_sandvic: 1.6, lavas_pizza: 2.0 },
     cikis: { kola: 2.5, cips: 2.2, patates: 2.5, hamburger: 1.4, cikolata: 1.6, meyve_suyu: 1.4, su: 1.2,
-      cay: 0.6, simit: 0.8, kofte_ekmek: 0.9 },
-    aksam: { cay: 3.0, simit: 1.5, pogaca: 1.2, kasarli_tost: 1.3, su: 1.2, cikolata: 1.3, kola: 0.8 },
+      cay: 0.6, simit: 0.8, kofte_ekmek: 0.9,
+      sut: 1.0, kek: 1.4, borek: 0.6, soguk_sandvic: 0.7, sucuklu_sandvic: 0.6, lavas_pizza: 0.8 },
+    aksam: { cay: 3.0, simit: 1.5, pogaca: 1.2, kasarli_tost: 1.3, su: 1.2, cikolata: 1.3, kola: 0.8,
+      sut: 1.0, kek: 0.9, borek: 0.7, soguk_sandvic: 0.5, sucuklu_sandvic: 0.4, lavas_pizza: 0.5 },
   };
 
   const TYPE_PREFS = {
-    ogrenci: { cay: 0.25, cips: 1.3, kola: 1.3, cikolata: 1.2, hamburger: 1.2, gofret: 1.5, soguk_cay: 1.4, sutlac: 0.6 },
-    ogretmen: { cay: 4, sutlac: 1.8, limonata: 1.2, gofret: 0.4, simit: 1.5, pogaca: 1.5, kasarli_tost: 1.3, cips: 0.3, cikolata: 0.4, kola: 0.4, su: 1.2 },
-    hizmetli: { cay: 4, simit: 3, pogaca: 1.6, ayran: 1.2, kola: 0.4, cips: 0.4 },
-    mudur: { cay: 3, kofte_ekmek: 1.6, karisik_tost: 1.5, cips: 0.2, kola: 0.3, cikolata: 0.3 },
-    veli: { cay: 2.5, kasarli_tost: 1.6, su: 1.3, pogaca: 1.3, simit: 1.3, cips: 0.4 },
+    ogrenci: { cay: 0.25, cips: 1.3, kola: 1.3, cikolata: 1.2, hamburger: 1.2, gofret: 1.5, soguk_cay: 1.4, sutlac: 0.6, kek: 1.5, sucuklu_sandvic: 1.0, lavas_pizza: 1.2, sut: 1.1 },
+    ogretmen: { cay: 4, sutlac: 1.8, limonata: 1.2, gofret: 0.4, simit: 1.5, pogaca: 1.5, kasarli_tost: 1.3, cips: 0.3, cikolata: 0.4, kola: 0.4, su: 1.2, borek: 1.5, sut: 1.3, soguk_sandvic: 1.2, sucuklu_sandvic: 1.3, kek: 0.7 },
+    hizmetli: { cay: 4, simit: 3, pogaca: 1.6, ayran: 1.2, kola: 0.4, cips: 0.4, borek: 1.6, sut: 1.2, sucuklu_sandvic: 1.0 },
+    mudur: { cay: 3, kofte_ekmek: 1.6, karisik_tost: 1.5, cips: 0.2, kola: 0.3, cikolata: 0.3, soguk_sandvic: 1.3, borek: 1.2 },
+    veli: { cay: 2.5, kasarli_tost: 1.6, su: 1.3, pogaca: 1.3, simit: 1.3, cips: 0.4, borek: 1.3, sut: 1.2, soguk_sandvic: 1.1 },
   };
 
   const NAMES = {
@@ -321,7 +331,9 @@
       if (hasDrink) f *= 0.08; else f *= hasMain ? 3.2 : 2.2;
       // çay + simit/poğaça klasik; köfte/döner + ayran klasik
       if (cand.id === 'cay' && (ids.includes('simit') || ids.includes('pogaca') || ids.includes('kasarli_tost'))) f *= 2.5;
-      if (cand.id === 'ayran' && (ids.includes('kofte_ekmek') || ids.includes('et_doner') || ids.includes('tavuk_doner') || ids.includes('lahmacun') || ids.includes('cigkofte_durum') || ids.includes('hazir_cigkofte'))) f *= 2.6;
+      if (cand.id === 'cay' && (ids.includes('borek') || ids.includes('soguk_sandvic') || ids.includes('sucuklu_sandvic') || ids.includes('lavas_pizza'))) f *= 2.2;
+      if (cand.id === 'sut' && (ids.includes('kek') || ids.includes('borek') || ids.includes('simit') || ids.includes('pogaca'))) f *= 2.2;
+      if (cand.id === 'ayran' && (ids.includes('kofte_ekmek') || ids.includes('et_doner') || ids.includes('tavuk_doner') || ids.includes('lahmacun') || ids.includes('cigkofte_durum') || ids.includes('hazir_cigkofte') || ids.includes('lavas_pizza'))) f *= 2.6;
       if (cand.id === 'kola' && (ids.includes('hamburger') || ids.includes('patates'))) f *= 2.2;
       if (cand.id === 'cay' && hasMain && !ids.includes('kasarli_tost') && !ids.includes('karisik_tost')) f *= 0.4;
     } else if (cand.cat === 'main') {
@@ -633,9 +645,26 @@
     let tipRate = 0;
     if (avgQ >= 0.55) tipRate = 0.2 * ((avgQ - 0.55) / 0.45) * (0.4 + 0.6 * pr);
     let tip = Math.round(total * tipRate * (c.type.tipMult || 1) * (ev.tip || 1) * hookMult('tipMult') * (c.tipBonus || 1));
+    // Günün menüsü: o yemeğin her servisi ekstra bahşiş getirir (kaliteden bağımsız).
+    const featId = KS.featuredId ? KS.featuredId() : null;
+    let featTip = 0, featN = 0;
+    if (featId) {
+      for (const L of c.lines) {
+        if (!L.done || !L.line || L.line.type !== 'recipe' || L.line.id !== featId) continue;
+        const b = KS.featuredBonus ? KS.featuredBonus(L.line, L.price) : 0;
+        featN++;
+        featTip += b;
+      }
+    }
+    tip += featTip;
+    if (featN && s.today) {
+      s.today.meta.featServ = (s.today.meta.featServ || 0) + featN;
+      s.today.meta.featTip = (s.today.meta.featTip || 0) + featTip;
+    }
     if (tip >= 1) {
       KS.earn(tip, 'bahsis', x, 268);
       audio('coin');
+      if (featTip > 0) KS.fx && KS.fx.floatText(x, 200, '⭐ Günün menüsü +' + featTip + ' ₺', '#ffd76a', 20);
     } else tip = 0;
     audio('ding');
     KS.fx && KS.fx.coins && KS.fx.coins(x, 330, 4 + Math.min(10, Math.round(total / 40)));

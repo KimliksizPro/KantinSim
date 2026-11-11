@@ -115,6 +115,21 @@ window.KS = window.KS || {};
       defaults: ['domates', 'sogan', 'maydanoz'], toast: false, price: 165, unlock: 6, time: 'Orta',
       steps: ['Köfteyi ızgarada iki yüzlü pişir', 'Tabağa lavaş koy', 'Pişmiş köfteyi ekle', 'Domates, soğan, maydanoz ekleyip sar'],
     },
+    soguk_sandvic: {
+      name: 'Kaşarlı Sandviç', base: 'yarim_ekmek', required: ['kasar'], optional: ['domates', 'marul', 'tursu', 'ketcap', 'mayonez'],
+      defaults: ['domates', 'marul'], toast: false, price: 90, unlock: 2, time: 'Hızlı',
+      steps: ['Tabağa yarım ekmek koy', 'Kaşar dilimlerini yerleştir', 'Domates ve marulu ekle', 'Sosunu sür, kapatmadan müşteriye ver'],
+    },
+    sucuklu_sandvic: {
+      name: 'Sucuklu Sandviç', base: 'yarim_ekmek', required: ['sucuk'], optional: ['kasar', 'domates', 'marul', 'tursu', 'mayonez'],
+      defaults: ['domates', 'tursu', 'mayonez'], toast: false, price: 95, unlock: 3, time: 'Hızlı',
+      steps: ['Tabağa yarım ekmek koy', 'Sucuk dilimlerini diz', 'Domates ve turşu ekle', 'Mayonezi sür, kapatmadan müşteriye ver'],
+    },
+    lavas_pizza: {
+      name: 'Lavaş Pizza', base: 'lavas', required: ['kasar', 'sucuk'], optional: ['domates', 'tursu', 'pul_biber', 'ketcap'],
+      defaults: ['domates', 'ketcap'], toast: true, price: 130, unlock: 4, time: 'Orta',
+      steps: ['Tabağa lavaş koy', 'Üzerine kaşar ve sucuk diz', 'Domates ve ketçap ekle', 'Tost makinesinde eriyene kadar bas'],
+    },
   };
 
   // ---------------------------------------------------------------------------
@@ -140,6 +155,9 @@ window.KS = window.KS || {};
     soguk_cay:    { name: 'Soğuk Çay',        group: 'paketli', buy: 16, price: 30, pack: 24, supplier: 'toptanci', start: 0, unlock: 3, drink: true, color: '#e0a23a' },
     sutlac:       { name: 'Fırın Sütlaç',     group: 'paketli', buy: 22, price: 40, pack: 12, supplier: 'toptanci', start: 0, unlock: 4, color: '#f6ead0' },
     limonata:     { name: 'Ev Limonatası',    group: 'paketli', buy: 14, price: 30, pack: 20, supplier: 'toptanci', start: 0, unlock: 5, drink: true, color: '#f7e86a' },
+    sut:          { name: 'Süt',              group: 'paketli', buy: 11, price: 20, pack: 20, supplier: 'toptanci', start: 10, unlock: 1, drink: true, color: '#eaf4ff' },
+    kek:          { name: 'Kek',              group: 'paketli', buy: 11, price: 22, pack: 20, supplier: 'toptanci', start: 8,  unlock: 1, color: '#c98a4b' },
+    borek:        { name: 'Su Böreği',        group: 'hazir',   buy: 22, price: 40, pack: 5,  supplier: 'firin',      start: 0,  unlock: 3, color: '#e8c07a' },
   };
 
   // ---------------------------------------------------------------------------
@@ -152,7 +170,7 @@ window.KS = window.KS || {};
   const suppliers = {
     toptanci:   { name: 'Toptancı Hali',       kind: 'toptan',   eta: 60, fee: 50, mult: 1.0,  minOrder: 0,   unlock: 1, icon: '🚚', desc: 'Ucuz ama geç gelir. Sabah hazırlıkta verirsen açılışta teslim.' },
     bakkal:     { name: 'Bakkal Mehmet Amca',  kind: 'bakkal',   eta: 8,  fee: 0,  mult: 1.35, minOrder: 0,   unlock: 1, icon: '🏪', desc: 'Köşedeki bakkal. Pahalı ama hemen getirir.' },
-    firin:      { name: 'Fırıncı Hasan Usta',  kind: 'restoran', eta: 20, fee: 0,  mult: 1.0,  minOrder: 100, unlock: 1, icon: '🥯', desc: 'Taze simit ve poğaça.', items: ['simit', 'pogaca'] },
+    firin:      { name: 'Fırıncı Hasan Usta',  kind: 'restoran', eta: 20, fee: 0,  mult: 1.0,  minOrder: 100, unlock: 1, icon: '🥯', desc: 'Taze simit, poğaça ve su böreği.', items: ['simit', 'pogaca', 'borek'] },
     donerci:    { name: 'Dönerci Ahmet Usta',  kind: 'restoran', eta: 30, fee: 40, mult: 1.0,  minOrder: 300, unlock: 1, icon: '🌯', desc: 'Yaprak döner dürüm. Gün sonunda bozulur!', items: ['et_doner', 'tavuk_doner'] },
     cigkofteci: { name: 'Çiğköfteci Ali',      kind: 'restoran', eta: 25, fee: 30, mult: 1.0,  minOrder: 200, unlock: 1, icon: '🌶️', desc: 'Hazır sarılmış çiğ köfte dürüm.', items: ['hazir_cigkofte'] },
     pideci:     { name: 'Karadeniz Pide Salonu', kind: 'restoran', eta: 40, fee: 40, mult: 1.0, minOrder: 300, unlock: 2, icon: '🫓', desc: 'Lahmacun ve kıymalı pide.', items: ['lahmacun', 'kiymali_pide'] },
@@ -261,6 +279,9 @@ window.KS = window.KS || {};
     gezi:         { name: 'Okul Gezisi', weight: 0.7, desc: 'Birkaç sınıf müzeye gitti: kantin bugün sakin. Hazır yemeği az söyle!', demand: 0.7 },
     ogretmenler:  { name: 'Öğretmenler Günü', weight: 0.6, desc: 'Öğretmenler kutlama yapıyor: daha çok öğretmen müşteri ve toplu çay siparişi.', demand: 1.1, typeMult: { ogretmen: 3 }, tip: 1.3, prefs: { cay: 1.5, sutlac: 1.6, pogaca: 1.3 } },
     kermes:       { name: 'Hayır Kermesi', weight: 0.6, desc: 'Bahçede kermes var: veliler ve misafirlerle kantin tıklım tıklım!', demand: 1.45, adultRatio: 0.35, prefs: { simit: 1.4, ayran: 1.4, kofte_ekmek: 1.3 } },
+    saglik:       { name: 'Sağlıklı Beslenme Haftası', weight: 1.0, desc: 'Öğrenciler hafif şeylere yöneliyor: ayran, meyve suyu ve limonata kapış kapış; cips ile kola yüzüne bakmıyor.', demand: 1.05, prefs: { ayran: 1.8, meyve_suyu: 1.6, limonata: 1.5, su: 1.4, cay: 0.9, cips: 0.5, kola: 0.6, cikolata: 0.7, gofret: 0.7, patates: 0.7 } },
+    bilim:        { name: 'Bilim Şenliği', weight: 0.9, desc: 'Çevre okullardan misafir öğrenciler geliyor: kantin kalabalık, tost ve ayran talebi yüksek.', demand: 1.3, adultRatio: 0.2, prefs: { kasarli_tost: 1.4, karisik_tost: 1.3, ayran: 1.4, simit: 1.3, cay: 1.2 } },
+    karne:        { name: 'Karne Günü', weight: 0.7, desc: 'Karneler alındı, harçlıklar cebe indi: bahşişler bol, atıştırmalık ve içecek talebi yüksek.', demand: 1.2, tip: 1.5, prefs: { kasarli_tost: 1.3, kola: 1.3, cips: 1.3, meyve_suyu: 1.2, gofret: 1.2 } },
   };
 
   // ---------------------------------------------------------------------------

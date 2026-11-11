@@ -25,12 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sözdizimi kontrolü
-        run: for f in js/*.js; do node --check "$f"; done
+        run: |
+          for f in js/*.js; do node --check "$f"; done
+          node --check sw.js
       - name: Oyun dosyalarını topla
         run: |
           mkdir -p _site
-          cp -r index.html favicon.svg LICENSE.md css js _site/
+          cp -r index.html favicon.svg LICENSE.md manifest.webmanifest sw.js icons css js _site/
           touch _site/.nojekyll
+          # Önbellek sürümü: her yayında değişsin ki oyuncular eski dosyaları görmesin
+          sed -i "s/const CACHE_VERSION = 'dev';/const CACHE_VERSION = '${GITHUB_SHA::8}';/" _site/sw.js
+          grep -q "CACHE_VERSION = '${GITHUB_SHA::8}'" _site/sw.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

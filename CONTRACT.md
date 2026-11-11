@@ -9,16 +9,18 @@ Oyun dili **Türkçe** (tüm metinler, etiketler, bildirimler Türkçe ve doğru
 
 | Dosya | Sahip | Not |
 |---|---|---|
-| `index.html`, `css/base.css`, `js/data.js`, `js/core.js`, `js/recipes.js`, `js/main.js` | Lead | Okuyun, değiştirmeyin. Eksik bir şey gerekirse kendi modülünüzde çözün ve rapor edin. |
-| `js/art.js`, `js/audio.js` | Art & Ses | Şu an stub. |
+| `index.html`, `css/base.css`, `js/data.js`, `js/core.js`, `js/recipes.js`, `js/main.js`, `sw.js`, `manifest.webmanifest`, `icons/` | Lead | Okuyun, değiştirmeyin. Eksik bir şey gerekirse kendi modülünüzde çözün ve rapor edin. |
+| `js/art.js`, `js/audio.js`, `js/depth.js` | Art & Ses | Prosedürel çizim, ses ve derinlik efektleri. |
 | `js/stations_prep.js` | Hazırlık İstasyonları | malzeme kutuları, tezgah (tabaklar), çiğ köfte leğeni, sıcak dolap, vitrin, temizlik, çöp |
 | `js/stations_cook.js` | Pişirme İstasyonları | tost makinesi, ızgara, fritöz, semaver |
 | `js/customers.js` | Müşteriler | müşteri üretimi, sıra, sipariş, sabır, ödeme, itibar, müfettiş |
-| `js/ui.js`, `css/ui.css` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim |
+| `js/ui.js`, `css/ui.css`, `js/assist.js` | Arayüz | HUD, menüler, paneller, gün özeti, bildirimler, eğitim, tarif yardımcısı |
 
 | `js/meta.js` | Meta sistemler | günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş |
 
-Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → meta → ui → main.
+Yükleme sırası: data → core → recipes → audio → art → stations_prep → stations_cook → customers → depth → meta → ui → assist → main.
+`KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
+Boot ayrıca otomatik kayıt kurar (20 sn'de bir + sekme kapanırken); gün ortasında kapatılan oyun kaldığı saatten sürer.
 `KS.boot()` main.js'de çağrılır; modüller `KS.registerModule({...})` ile kayıt olur, `init()` boot'ta çağrılır.
 Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmiştir). Başka modülün API'sini
 çağırmadan önce varlığını kontrol edin (`KS.Customers && ...`).
@@ -30,17 +32,20 @@ Modül kodunu **init() içinde** çalıştırın (o anda tüm dosyalar yüklenmi
 - `KS.registerModule({name, order, init(), update(dt, realDt), draw(ctx, layer)})`
   - `update(dt)`: `dt` = oyun saniyesi (duraklatılınca / gün kapalıyken **0**), `realDt` = gerçek saniye (animasyon).
   - `draw(ctx, layer)` çizim katmanları sırası: Art.drawBackground → **'back'** → **'customers'** → Art.drawCounterFront → **'counter'** → Art.drawWorkspace → **'stations'** → (core: bırakma vurguları) → **'fx'** → core efektleri → elde tutulan item → ipucu kutusu.
-- `KS.state` (bkz. core.js `newState`): `day, money, rep(0..5), xp, level, time(oyun dk; 480=08:00, 1020=17:00), phase('menu'|'prep'|'open'|'closing'|'summary'|'gameover'), paused, speedMult, inventory{ingId:n}, products{prodId:n}, menu{recipeId:{on,price}}, prices{prodId:price}, upgrades{id:lv}, staff{id:bool}, deliveries[], cleanliness(0..100), power, today{weekday, weather, event, revenue, tips, served, lost, angry, perfect, expenses{}, sales{}}, stats, tutorialDone, settings{sound,music}, history[]`
+- `KS.state` (bkz. core.js `newState`): `day, money, rep(0..5), xp, level, time(oyun dk; 480=08:00, 1020=17:00), phase('menu'|'prep'|'open'|'closing'|'summary'|'gameover'), paused, speedMult, inventory{ingId:n}, products{prodId:n}, menu{recipeId:{on,price}}, prices{prodId:price}, upgrades{id:lv}, staff{id:bool}, deliveries[], cleanliness(0..100), power, today{weekday, weather, event, featured, revenue, tips, served, lost, angry, perfect, expenses{}, sales{}, meta{}}, week{n,start,target,reward{},done,paid,paidDay,failed}, streak{days,best,claimed{},lastDay}, stats, tutorialDone, settings{sound,music}, history[]`
 - Ekonomi: `KS.earn(tl, 'satis'|'bahsis', x?, y?)` (x,y verilirse uçan yazı), `KS.spend(tl, kategori, force?) -> bool`, `KS.inv.get/has/add/take(id,n)`, `KS.prod.get/has/add/take(id,n)`, `KS.addRep(d)`, `KS.addXP(n)`, `KS.levelProgress()`, `KS.priceOf(line)`, `KS.priceRatio(line)`, `KS.recordSale(line)`, `KS.addDirt(n)`, `KS.clean(n)`
 - Geliştirme & personel: `KS.upg(id)` seviye, `KS.upgVal(id, alan)` (örn. `KS.upgVal('tost','slots')`), `KS.buyUpgrade(id)`, `KS.hasStaff(id)`, `KS.setStaff(id,on)`
 - Kilitler: `KS.isRecipeUnlocked(id)`, `KS.isRecipeOnMenu(id)`, `KS.isProductUnlocked(id)`
+- Günün menüsü: `KS.featuredId()` (gün içinde sabit kalan tarif kimliği), `KS.featuredBonus(line, price?)` (yalnızca o tarif için ek bahşiş; %25, en az 3 ₺). Alanlar: `today.featured`, `today.meta.featServ/featTip`, gün sonu raporunda `featured/featServ/featTip`.
+- Haftalık sözleşme: `KS.Meta.week()` → `{n, start, target, reward, revenue, ratio, dayIndex, daysLeft, done, paid, paidDay, failed}`; `KS.Meta.weekRevenue()`. 5 günlük ciro hedefi, tutunca bir kez para + XP. Kalıcı alan `state.week`.
+- Kârlı gün serisi: `KS.Meta.streak()` → `{days, best, claimed, next}`; gün sonu neti pozitifse büyür, 3/5/10/20 günde bir kez ödül verir. Kalıcı alan `state.streak`.
 - Sipariş: `KS.placeOrder({supplier, inv:{}, prod:{}, cost}) -> {ok, msg?, total}` (hazırlıkta verilen sipariş hemen gelir, açıkken `eta` dk sonra; tedarikçi `fee` eklenir)
 - Gün akışı: `KS.game.newGame() / continueGame() / openShop() / endDay() / nextDay() / togglePause(v?)`; `KS.currentPeriod()`, `KS.isBreak()`, `KS.inputEnabled()`, `KS.powerOn()`, `KS.todayEvent()`, `KS.todayWeather()`, `KS.lastReport`
 - Kayıt: `KS.save()`, `KS.load()`, `KS.hasSave()`, `KS.deleteSave()`
 - Kancalar: `KS.hooks.activeCustomerCount = () => n`, `KS.hooks.forceCustomersLeave = () => {}` (müşteri modülü üzerine yazar)
 - Meta kancaları (meta.js yazar, customers.js okur): `KS.hooks.demandMult/patienceMult/tipMult/studentMult = () => çarpan`
 - `KS.bonus(tl, x?, y?)`: satış dışı ödül geliri (`today.bonus`, gün netine dahil). `beforeDayEnd` olayı sabit giderlerden önce yayılır (kredi taksiti, hedef değerlendirme).
-- `KS.Meta = { goals(), goalProgress(g), achievements(), achProgress(a), isUnlocked(id), campaign(), canCampaign(id), runCampaign(id), loans(), loanOffer(id), canLoan(id), takeLoan(id), payOffLoan(uid), debt(), dailyInstallment(), lifeStats() }`
+- `KS.Meta = { goals(), goalProgress(g), achievements(), achProgress(a), isUnlocked(id), campaign(), canCampaign(id), runCampaign(id), loans(), loanOffer(id), canLoan(id), takeLoan(id), payOffLoan(uid), debt(), dailyInstallment(), week(), weekRevenue(), streak(), lifeStats() }`
   - Olaylar: `goalDone(goal)`, `achievement(ach)`, `campaign(id)`, `loanTaken(loan)`, `loanRepaid(loan)`, `bulkOrder(info)`
 - Efekt: `KS.fx.floatText(x,y,text,color,size)`, `KS.fx.burst(x,y,color,n,opts)`, `KS.fx.smoke(x,y,n,color)`, `KS.fx.coins(x,y,n)`, `KS.fx.shake(a)`
 - `KS.notify(msg, 'info'|'good'|'bad'|'warn')` → UI'ın `KS.ui.notify`'ına gider

@@ -154,8 +154,8 @@
   // ---------------------------------------------------------------------------
   // SABİT METİNLER
   // ---------------------------------------------------------------------------
-  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰', gezi: '🚌', ogretmenler: '🍎', kermes: '🎪' };
-  const EVENT_SHORT = { gezi: 'Okul Gezisi', ogretmenler: 'Öğretmenler Günü', kermes: 'Kermes', mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü' };
+  const EVENT_ICONS = { yok: '📅', mufettis: '🕵️', veli: '👪', mac: '⚽', sinav: '📝', elektrik: '⚡', burs: '💰', gezi: '🚌', ogretmenler: '🍎', kermes: '🎪', saglik: '🥗', bilim: '🔬', karne: '🎒' };
+  const EVENT_SHORT = { gezi: 'Okul Gezisi', ogretmenler: 'Öğretmenler Günü', kermes: 'Kermes', mufettis: 'Müfettiş', veli: 'Veli Toplantısı', mac: 'Maç Günü', sinav: 'Sınav Haftası', elektrik: 'Elektrik Kesintisi', burs: 'Harçlık Günü', saglik: 'Sağlıklı Beslenme', bilim: 'Bilim Şenliği', karne: 'Karne Günü' };
   const UPG_ICONS = { tost: '🥪', izgara: '🔥', fritoz: '🍟', semaver: '🫖', tezgah: '🔪', bekleme: '🗄️', yogurma: '🥣', buzdolabi: '🧊', kasa: '💳', dekor: '🪴' };
   const STAFF_ICONS = { cirak: '🧑‍🍳', temizlikci: '🧹', kasiyer: '🧾', sef: '👨‍🍳' };
   const EXP_LABELS = [
@@ -395,25 +395,32 @@
   const PANEL_ALIASES = {
     malzeme: 'supply', siparis: 'supply', toptanci: 'supply', bakkal: 'supply',
     telefon: 'phone', restoran: 'phone', fiyat: 'menu', menu: 'menu', gelistir: 'upgrades', gelistirme: 'upgrades',
-    personel: 'staff', hedef: 'kantin', hedefler: 'kantin', basarim: 'kantin', banka: 'kantin', istatistik: 'kantin', pazarlama: 'kantin', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
+    personel: 'staff', hedef: 'kantin', hedefler: 'kantin', basarim: 'kantin', banka: 'kantin', istatistik: 'kantin', stats: 'kantin', pazarlama: 'kantin', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
   };
   const PANELS = {};   // id -> {title, icon, width, cls, build(p)}
 
   function openPanel(id, arg) {
     id = PANELS[id] ? id : PANEL_ALIASES[id];
     const cfg = PANELS[id]; if (!cfg) return false;
+    closeHudMore();
     if (curPanel) closePanel(true);
     if (E.popup) E.popup.classList.remove('show');
     unlockAudio();
+    const prevFocus = document.activeElement;
     const head = h('div', { class: 'pn-head' });
     const tabs = h('div', { class: 'pn-tabs ks-hide' });
     const body = h('div', { class: 'pn-body' });
     const foot = h('div', { class: 'pn-foot ks-hide' });
     const headExtra = h('div', { class: 'pn-head-extra' });
-    const xBtn = h('button', { class: 'pn-x', type: 'button', title: 'Kapat (Esc)' }, '✕');
+    const titleId = 'pn-title';
+    const xBtn = h('button', { class: 'pn-x', type: 'button', title: 'Kapat (Esc)', 'aria-label': 'Kapat' }, '✕');
     xBtn.addEventListener('click', safe(() => { sfx('click'); closePanel(); }));
-    add(head, [h('span', { class: 'pn-ico' }, cfg.icon), h('h2', null, cfg.title), headExtra, xBtn]);
+    add(head, [h('span', { class: 'pn-ico', 'aria-hidden': 'true' }, cfg.icon), h('h2', { id: titleId }, cfg.title), headExtra, xBtn]);
     const panel = h('div', { class: 'ks-panel ' + (cfg.cls || ''), style: { width: (cfg.width || 900) + 'px' } }, head, tabs, body, foot);
+    // Erişilebilirlik: panel bir iletişim kutusu gibi davranır; odak içinde kalır.
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', titleId);
     const p = {
       id, panel, head, tabs, body, foot, headExtra, arg,
       setTabs(list, active, onChange) {
@@ -436,9 +443,20 @@
     E.modal.appendChild(panel);
     show(E.modal, true);
     E.modal.classList.remove('anim'); void E.modal.offsetWidth; E.modal.classList.add('anim');
-    curPanel = { id, cfg, p };
+    curPanel = { id, cfg, p, prevFocus };
     syncModal();
     try { cfg.build(p, arg); } catch (e) { console.error('[ui panel]', id, e); body.appendChild(h('div', { class: 'pn-empty' }, 'Bu panel şu an açılamadı.')); }
+    // Escape/Tab ile gezinme: odak panelin içinde döner.
+    panel.addEventListener('keydown', safe(ev => {
+      if (ev.key !== 'Tab') return;
+      const list = [...panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.offsetParent !== null);
+      if (!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      if (ev.shiftKey && (document.activeElement === first || document.activeElement === panel)) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    }));
+    try { xBtn.focus({ preventScroll: true }); } catch (e) { /* odaklanamadı */ }
     sfx('pick');
     return true;
   }
@@ -448,6 +466,8 @@
     try { if (c.cfg.onClose) c.cfg.onClose(c.p); } catch (e) { console.error(e); }
     clear(E.modal); show(E.modal, false);
     syncModal();
+    // Odağı panele açan düğmeye geri ver.
+    try { if (!silent && c.prevFocus && c.prevFocus.focus && document.contains(c.prevFocus)) c.prevFocus.focus({ preventScroll: true }); } catch (e) { /* */ }
     if (!silent) { save(); refreshPrep(); }
     return true;
   }
@@ -493,6 +513,7 @@
     speed: '<path d="M3.5 6.8v10.4l7.6-5.2z" fill="currentColor"/><path d="M12.4 6.8v10.4L20 12z" fill="currentColor"/>',
     sound: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="M15.4 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.4a7.8 7.8 0 0 1 0 11.2"/>',
     mute: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="m15.8 9.6 4.8 4.8M20.6 9.6l-4.8 4.8"/>',
+    more: '<circle cx="5" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.9" fill="currentColor" stroke="none"/>',
   };
   const svgIco = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (HUD_ICONS[name] || '') + '</svg>';
   const HUD_BTNS = [
@@ -503,6 +524,7 @@
     { id: 'staff', label: 'Personel', acc: '#c9adff', title: 'Personel işe al / çıkar' },
     { id: 'recipes', label: 'Tarifler', acc: '#ffa48f', title: 'Tarif defteri ve kontroller' },
     { id: 'kantin', label: 'Hedefler', acc: '#ff7b7b', title: 'Kantin defteri: günlük hedefler, başarımlar, istatistik, pazarlama, banka' },
+    { id: 'more', label: '', acc: '#ffd36a', title: 'Diğer paneller' },
     { id: 'pause', label: '', acc: '#ffd36a', title: 'Duraklat (P / Esc)', group: 2 },
     { id: 'speed', label: '1x', acc: '#7fd4ff', title: 'Oyun hızı (1x / 2x)', group: 2 },
     { id: 'sound', label: '', acc: '#8ff0a8', title: 'Sesi aç / kapat', group: 2 },
@@ -545,16 +567,79 @@
       q.btns[b.id] = el; groups[b.group || 1].appendChild(el);
     }
     right.appendChild(groups[1]); right.appendChild(groups[2]);
+    q.moreMenu = h('div', { class: 'hud-more', role: 'menu', 'aria-label': 'Diğer paneller' });
+    q.btns.more.setAttribute('aria-haspopup', 'true');
+    q.btns.more.setAttribute('aria-expanded', 'false');
     const left = h('div', { class: 'hd-left' },
       h('div', { class: 'hd-day' }, q.dayLine, h('div', { class: 'hd-timeline' }, q.clock, q.period, q.busy)),
       q.weather, q.event, q.power, q.money, q.rep, q.level, q.clean, q.deliv);
-    E.hud = h('div', { id: 'ks-hud', class: 'ks-hide' }, left, right);
+    E.hud = h('div', { id: 'ks-hud', class: 'ks-hide' }, left, right, q.moreMenu);
+    q.left = left; q.g1 = groups[1]; q.ctl = groups[2];
     E.hudQ = q;
     return E.hud;
   }
 
+  // ---------------------------------------------------------------------------
+  // HUD TAŞMA MENÜSÜ
+  // Telefon yatay tutulduğunda bütün panel düğmeleri tek satıra sığmıyor.
+  // Sığmayanlar "⋯" düğmesinin altında toplanır: önem sırasına göre görünen
+  // düğme sayısı azalır, hiçbir panel erişilmez kalmaz.
+  // ---------------------------------------------------------------------------
+  const HUD_PRIORITY = ['supply', 'phone', 'menu', 'kantin', 'recipes', 'upgrades', 'staff'];
+  function hudFitsRow() {
+    const q = E.hudQ, hud = E.hud;
+    if (!q || !hud || !hud.offsetWidth) return true;
+    const cs = getComputedStyle(hud);
+    const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const gap = parseFloat(cs.gap) || 0;
+    const right = q.g1.parentElement;
+    return q.left.offsetWidth + right.offsetWidth + gap <= hud.clientWidth - pad + 0.5;
+  }
+  function layoutHUD() {
+    const q = E.hudQ;
+    if (!q || !E.hud || !E.hud.offsetWidth) return;
+    if (q.moreMenu.classList.contains('show')) closeHudMore();
+    const showN = n => HUD_PRIORITY.forEach((id, i) => { q.btns[id].style.display = i < n ? '' : 'none'; });
+    showN(HUD_PRIORITY.length);
+    q.btns.more.classList.remove('on');
+    if (!hudFitsRow()) {
+      q.btns.more.classList.add('on');
+      let n = HUD_PRIORITY.length - 1;
+      showN(n);
+      while (n > 1 && !hudFitsRow()) { n--; showN(n); }
+    }
+  }
+  function openHudMore() {
+    const q = E.hudQ; if (!q || !q.moreMenu) return;
+    clear(q.moreMenu);
+    const hidden = HUD_BTNS.filter(b => b.group !== 2 && b.id !== 'more' && q.btns[b.id].style.display === 'none');
+    if (!hidden.length) return;
+    for (const b of hidden) {
+      const item = h('button', { class: 'hud-more-item', type: 'button', role: 'menuitem' },
+        h('span', { class: 'hb-ico', html: svgIco(b.id) }),
+        h('span', { class: 'hm-label' }, b.label));
+      item.addEventListener('click', safe(() => { closeHudMore(); unlockAudio(); sfx('click'); hudAction(b.id, q.btns[b.id]); }));
+      q.moreMenu.appendChild(item);
+    }
+    q.moreMenu.classList.add('show');
+    q.btns.more.setAttribute('aria-expanded', 'true');
+    const first = q.moreMenu.querySelector('button'); if (first) first.focus();
+  }
+  function closeHudMore() {
+    const q = E.hudQ; if (!q || !q.moreMenu) return;
+    q.moreMenu.classList.remove('show');
+    q.btns.more.setAttribute('aria-expanded', 'false');
+  }
+
   function hudAction(id, el) {
     const s = S();
+    if (id === 'more') {
+      unlockAudio(); sfx('click');
+      const q = E.hudQ;
+      if (q && q.moreMenu && q.moreMenu.classList.contains('show')) closeHudMore();
+      else openHudMore();
+      return;
+    }
     if (id === 'pause') {
       if (s.phase !== 'open' && s.phase !== 'closing') { sfx('error'); notify('Kantin açıkken duraklatabilirsin.', 'info'); return; }
       sfx('click'); call(KS.game.togglePause); return;
@@ -723,6 +808,10 @@
   function showScreen(name) {
     screen = name;
     if (name && E.popup) E.popup.classList.remove('show');
+    if (name) { // ekran açılınca üstte kalan afiş/başarım kartları temizlenir
+      if (E.ach) E.ach.classList.remove('show');
+      if (E.banner) E.banner.classList.remove('show');
+    }
     show(E.mainmenu, name === 'mainmenu');
     show(E.summary, name === 'summary' || name === 'gameover');
     show(E.pause, name === 'pause');
@@ -803,6 +892,7 @@
           h('div', { class: 'pt-ico' }, EVENT_ICONS[evId] || '📌'),
           h('div', null, h('div', { class: 'pt-k' }, 'Günün olayı'), h('div', { class: 'pt-v' }, ev.name),
             h('div', { class: 'pt-d' }, ev.desc)))),
+      featuredStrip(t),
       hist ? h('div', { class: 'prep-yday' },
         h('span', null, '📊 Dün'),
         h('span', { class: hist.net >= 0 ? 'pos' : 'neg' }, 'Net ' + fmtSigned(hist.net)),
@@ -832,6 +922,44 @@
       }));
     clear(E.prep).appendChild(card);
   }
+  function featuredStrip(t) {
+    const id = t && t.featured;
+    const r = id && D().recipes[id];
+    if (!r) return null;
+    const on = !!(S().menu && S().menu[id] && S().menu[id].on);
+    return h('div', { class: 'prep-feat' + (on ? '' : ' off') },
+      h('span', { class: 'pf-ico', 'aria-hidden': 'true' }, '⭐'),
+      h('div', { class: 'pf-body' },
+        h('div', { class: 'pf-k' }, 'GÜNÜN MENÜSÜ'),
+        h('div', { class: 'pf-v' }, r.name),
+        h('div', { class: 'pf-d' }, on ? 'Her servis +%25 ekstra bahşiş' : 'Menüde kapalı — 🍽️ Menü panelinden aç')));
+  }
+  function weekBlock(compact) {
+    const M = KS.Meta; if (!M || !M.week) return null;
+    const w = call(M.week), st = call(M.streak);
+    if (!w) return null;
+    const left = Math.max(0, w.target - w.revenue);
+    const reached = w.revenue >= w.target;
+    const state = w.paid || w.done ? 'done' : w.failed ? 'failed' : reached ? 'reached' : '';
+    const pill = w.paid || w.done ? '✅ Tuttu' : w.failed ? '❌ Yan' : reached ? '✅ Hedefte' : 'Gün ' + w.dayIndex + '/5';
+    const fire = st && st.days > 0 ? '🔥 ' + st.days + ' gün seri' : '💤 Seri yok';
+    return h('div', { class: 'wk-row ' + state + (compact ? ' compact' : '') },
+      h('div', { class: 'wk-head' },
+        h('span', { class: 'wk-k' }, '📅 Hafta ' + w.n + ' sözleşmesi'),
+        h('span', { class: 'wk-val' }, fmt(w.revenue) + ' / ' + fmt(w.target)),
+        h('span', { class: 'wk-pill' }, pill)),
+      bar(w.ratio, state),
+      compact
+        ? h('div', { class: 'wk-sub' },
+          h('span', null, w.paid ? 'Ödül kasada' : w.failed ? 'Hedef tutmadı' : reached ? 'Hedef tuttu — gün sonunda ödenir' : 'Hedefe ' + fmt(left)),
+          h('span', { class: 'wk-rew' }, '+' + fmt(w.reward.money) + ' · +' + w.reward.xp + ' XP'),
+          h('span', { class: 'wk-fire' + (st && st.days > 0 ? ' hot' : '') }, fire))
+        : h('div', { class: 'wk-foot' },
+          h('span', { class: 'wk-fire' + (st && st.days > 0 ? ' hot' : '') },
+            fire + (st && st.best > 0 ? ' · rekor ' + st.best : '') +
+            (st && st.next ? ' · ' + st.next.days + ' günde +' + fmt(st.next.money) : ' · tüm ödüller alındı')),
+          h('span', { class: 'wk-rew' }, w.paid ? 'Ödül ödendi' : w.failed ? 'Hafta yandı' : reached ? 'Hedef tuttu — gün sonunda +' + fmt(w.reward.money) : 'Hedefe ' + fmt(left) + ' · ödül +' + fmt(w.reward.money) + ' +' + w.reward.xp + ' XP')));
+  }
   function prepGoalsBlock() {
     if (!KS.Meta) return null;
     const list = KS.Meta.goals(), c = KS.Meta.campaign(), debt = KS.Meta.debt();
@@ -839,7 +967,8 @@
       h('div', { class: 'pg-head' }, h('span', null, '🎯 GÜNÜN HEDEFLERİ'),
         h('span', { class: 'pg-camp' + (c ? ' on' : '') }, c ? c.icon + ' ' + c.name : '📣 Kampanya yok'),
         debt > 0 ? h('span', { class: 'pg-debt' }, '🏦 Taksit ' + fmt(KS.Meta.dailyInstallment()) + '/gün') : null),
-      list.length ? list.map(g => goalRow(g, true)) : h('div', { class: 'sm-empty' }, 'Hedefler hazırlanıyor…'));
+      list.length ? list.map(g => goalRow(g, true)) : h('div', { class: 'sm-empty' }, 'Hedefler hazırlanıyor…'),
+      weekBlock(true));
   }
   function refreshPrep() { if (S() && S().phase === 'prep' && E.prep && !E.prep.classList.contains('ks-hide')) buildPrepCard(); }
 
@@ -1088,6 +1217,7 @@
       const sec1 = h('div', { class: 'mn-grid' });
       for (const [rid, r] of Object.entries(D().recipes)) {
         const unlocked = recipeUnlocked(rid);
+        const isFeat = rid === call(KS.featuredId);
         const m = s.menu[rid] = s.menu[rid] || { on: false, price: r.price };
         const cost = recipeCost(rid);
         const badge = h('span', { class: 'mn-badge' }), marg = h('div', { class: 'mn-marg' });
@@ -1102,7 +1232,7 @@
         const stp = stepper({ value: m.price, min: minP, max: maxP, step: 5, cls: 'price', fmt: fmt, onChange: v => { m.price = v; updInfo(); } });
         const row = h('div', { class: 'mn-row' + (unlocked ? '' : ' locked') + (unlocked && !m.on ? ' off' : '') },
           dishIcon(rid, 72, 60, 0.62),
-          h('div', { class: 'mn-name' }, h('b', null, r.name), h('small', null, '⏱ ' + (r.time || '') + ' · Önerilen ' + fmt(r.price))),
+          h('div', { class: 'mn-name' }, h('b', null, r.name), isFeat ? h('span', { class: 'mn-feat' }, '⭐ Günün menüsü') : null, h('small', null, '⏱ ' + (r.time || '') + ' · Önerilen ' + fmt(r.price))),
           unlocked ? toggle(m.on, on => { m.on = on; row.classList.toggle('off', !on); }, ['Menüde', 'Kapalı']) : h('div', { class: 'mn-lock' }, '🔒 Seviye ' + r.unlock),
           h('div', { class: 'mn-price' }, unlocked ? stp.el : h('b', null, fmt(r.price)), unlocked ? badge : null),
           unlocked ? marg : h('div', { class: 'mn-marg' }, 'Seviye ' + r.unlock + ' gerekli'));
@@ -1283,6 +1413,8 @@
   }
   function hubGoals(p) {
     const list = M().goals();
+    const wk = weekBlock(false);
+    if (wk) p.body.appendChild(wk);
     p.body.appendChild(h('div', { class: 'mn-hint' }, '🎯 Her sabah 3 yeni hedef gelir. Tamamladığın anda ödül kasana eklenir. Toplam tamamlanan hedef: ', h('b', null, String(S().goalsDone || 0))));
     if (!list.length) { p.body.appendChild(h('div', { class: 'pn-empty' }, 'Bugünün hedefleri hazırlık aşamasında belirlenir.')); return; }
     p.body.appendChild(h('div', { class: 'gl-list' }, list.map(g => goalRow(g))));
@@ -1546,7 +1678,7 @@
         sec('📦', 'Stok & sipariş', '<b>Toptancı</b> ucuzdur ama açıkken ~60 dk\'da gelir; <b>bakkal</b> pahalı ama hızlıdır. <b>Telefonla</b> hazır yemek söyle — gün sonunda bozulur!'),
         sec('⭐', 'İtibar & seviye', 'Mutlu müşteri itibar ve XP getirir. Seviye atladıkça yeni tarifler, ürünler ve personel açılır.'),
         sec('🧽', 'Temizlik', 'Tezgah kirlenir; bezle sil. Müfettiş günü kirli kantine <b>ceza</b> keser.'),
-        sec('🎯', 'Hedefler & başarımlar', 'Her gün 3 <b>günlük hedef</b> gelir; tamamlayınca para ve XP kazanırsın. 📒 <b>Kantin Defteri</b>\'nde başarımlarını ve istatistiklerini takip et.'),
+        sec('🎯', 'Hedefler & başarımlar', 'Her gün 3 <b>günlük hedef</b> gelir; tamamlayınca para ve XP kazanırsın. Her 5 okul gününde bir <b>haftalık sözleşme</b> hedefi var; ciro hedefini tutturursan ek ödül alırsın. Üst üste <b>kârlı günler</b> serini büyütür, 3/5/10/20 günde ödül verir. 📒 <b>Kantin Defteri</b>\'nde hepsini takip et.'),
         sec('📣', 'Pazarlama & banka', 'Hazırlıkta <b>kampanya</b> başlatıp talebi arttır. Zor günde <b>banka kredisi</b> çekebilirsin; taksitler gün sonunda ödenir.'),
         sec('🫖', 'Toplu sipariş', 'Ders saatlerinde öğretmenler odası arayıp toplu sipariş verebilir. Görevli gelince hepsini eksiksiz ver — bahşiş bol!'),
         sec('💸', 'Giderler', 'Her gün sonunda kira, faturalar ve yevmiyeler ödenir. Kasa ' + fmt(D().costs.bankruptcy) + ' altına düşerse iflas edersin.')));
@@ -1603,7 +1735,7 @@
     };
     const income = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💰 Gelirler'),
       row('🧾 Satışlar', r.revenue || 0, 'inc'), row('🪙 Bahşiş', r.tips || 0, 'inc'),
-      (r.bonus || 0) > 0 ? row('🎯 Hedef & başarım ödülü', r.bonus, 'inc') : null);
+      (r.bonus || 0) > 0 ? row('🎯 Hedef, sözleşme & başarım', r.bonus, 'inc') : null);
     const exp = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💸 Giderler'),
       expRows.map(([k, label]) => row(label, -((r.expenses || {})[k] || 0), 'exp')),
       h('div', { class: 'sm-row total', style: { animationDelay: d.toFixed(2) + 's' } }, h('span', null, 'Toplam gider'), h('b', { class: 'exp' }, '−' + fmt(r.expenseTotal || 0))));
@@ -1661,8 +1793,19 @@
   }
   function summaryMeta(r) {
     const goals = r.goals || [], ach = r.achievements || [], recs = r.records || [];
-    if (!goals.length && !ach.length && !recs.length) return null;
+    const feat = r.featured ? (D().recipes[r.featured] || null) : null;
+    const wk = r.week, st = r.streak;
+    if (!goals.length && !ach.length && !recs.length && !feat && !wk && !st) return null;
     return h('div', { class: 'sm-box sm-meta' },
+      feat ? h('div', { class: 'smg-feat' }, h('span', { class: 'smf-ico' }, '⭐'),
+        h('span', { class: 'smf-t' }, 'Günün menüsü: ' + feat.name),
+        h('b', null, (r.featServ || 0) > 0 ? (r.featServ + ' servis · +' + fmt(r.featTip || 0)) : 'hiç servis edilmedi')) : null,
+      wk ? h('div', { class: 'smg-row' + (wk.paid ? ' done' : wk.failed ? ' fail' : '') }, h('span', null, '📅'),
+        h('span', { class: 'smg-t' }, 'Hafta ' + wk.n + ' sözleşmesi · ' + fmt(wk.revenue || 0) + ' / ' + fmt(wk.target || 0)),
+        h('b', null, wk.paid ? (wk.paidDay === r.day ? '+' + fmt(wk.reward.money) : '✅ tamamlandı') : wk.failed ? 'tutmadı' : 'devam ediyor')) : null,
+      st ? h('div', { class: 'smg-row' + (st.profitable ? ' done' : ' fail') }, h('span', null, st.profitable ? '🔥' : '💤'),
+        h('span', { class: 'smg-t' }, st.profitable ? st.days + ' gün üst üste kârlı' : (st.lost ? 'Seri sıfırlandı (' + st.lost + ' gün)' : 'Kârlı gün serisi başlamadı')),
+        h('b', null, st.milestone ? '+' + fmt(st.milestone.money) : st.best ? 'rekor ' + st.best : '—')) : null,
       goals.length ? h('div', { class: 'sm-h' }, '🎯 Günün hedefleri · ' + goals.filter(g => g.done).length + '/' + goals.length) : null,
       goals.map(g => h('div', { class: 'smg-row' + (g.done ? ' done' : ' fail') }, h('span', null, g.done ? '✅' : '❌'), h('span', { class: 'smg-t' }, g.text),
         h('b', null, g.done ? '+' + fmt(g.reward.money) : '—'))),
@@ -1790,6 +1933,22 @@
     const r2 = st.extra ? call(st.extra) : null;
     show(E.tutRing2, !!r2);
     if (r2) Object.assign(E.tutRing2.style, { left: (r2.x - 4) + 'px', top: (r2.y - 4) + 'px', width: (r2.w + 8) + 'px', height: (r2.h + 8) + 'px' });
+    // Küçük ekranda balonu hedefin yanına sığdırmak yerine alt kenara sabitle ve native boyutta göster.
+    const sc = KS.scale || 1;
+    if (sc < 0.95 && root) {
+      const ur = root.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const bw = Math.min(vw - 16, 470);
+      Object.assign(E.tutBubble.style, {
+        left: ((8 - ur.left) / sc) + 'px', width: bw + 'px', maxWidth: 'none',
+        transform: 'scale(' + (1 / sc) + ')', transformOrigin: 'top left',
+      });
+      E.tutBubble.dataset.side = 'none';
+      const bh = E.tutBubble.offsetHeight || 150;
+      E.tutBubble.style.top = ((vh - 8 - bh - ur.top) / sc) + 'px';
+      return;
+    }
+    E.tutBubble.style.transform = ''; E.tutBubble.style.maxWidth = ''; E.tutBubble.style.transformOrigin = '';
     const bw = 340, bh = E.tutBubble.offsetHeight || 150, gap = 22;
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     let x, y, side = st.side;
@@ -1842,6 +2001,7 @@
     if (ph === lastPhase && !force) return;
     const prev = lastPhase; lastPhase = ph;
     show(E.hud, ph !== 'menu');
+    if (ph !== 'menu') layoutHUD();
     show(E.prep, ph === 'prep');
     if (ph === 'menu') { closePanel(true); hideTutorial(); tut.active = false; showScreen('mainmenu'); }
     else if (ph === 'prep') { if (screen) hideScreen(); buildPrepCard(); }
@@ -1929,11 +2089,11 @@
     loadSettings();
     clear(root);
     E.prep = h('div', { id: 'ks-prep', class: 'ks-passive ks-hide' });
-    E.banner = h('div', { class: 'ks-banner ks-passive' });
-    E.popup = h('div', { id: 'ks-popup', class: 'ks-passive' });
-    E.ach = h('div', { id: 'ks-ach', class: 'ks-passive' });
-    E.notifs = h('div', { id: 'ks-notifs', class: 'ks-passive' });
-    E.fx = h('div', { id: 'ks-fx', class: 'ks-passive' });
+    E.banner = h('div', { class: 'ks-banner ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.popup = h('div', { id: 'ks-popup', class: 'ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.ach = h('div', { id: 'ks-ach', class: 'ks-passive', role: 'status', 'aria-live': 'polite' });
+    E.notifs = h('div', { id: 'ks-notifs', class: 'ks-passive', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'false' });
+    E.fx = h('div', { id: 'ks-fx', class: 'ks-passive', 'aria-hidden': 'true' });
     E.modal = h('div', { id: 'ks-modal', class: 'ks-hide' });
     E.modal.addEventListener('pointerdown', ev => { if (ev.target === E.modal) { E.modal._down = true; } });
     E.modal.addEventListener('click', ev => { if (ev.target === E.modal && E.modal._down) { sfx('click'); closePanel(); } E.modal._down = false; });
@@ -1941,7 +2101,18 @@
     add(root, [E.prep, buildTutorial(), buildHUD(), E.banner, buildMainMenu(), E.summary, buildPause(), E.modal, E.popup, E.ach, E.notifs, E.fx]);
     // klavye: paneller için kısayollar yok; Esc çekirdekte
     window.addEventListener('pointerdown', () => unlockAudio(), { once: true });
-    window.addEventListener('resize', () => placeTutorial());
+    window.addEventListener('resize', () => { placeTutorial(); requestAnimationFrame(layoutHUD); });
+    // Açık taşma menüsü dışına dokununca / Esc ile kapanır.
+    document.addEventListener('pointerdown', ev => {
+      const q = E.hudQ; if (!q || !q.moreMenu.classList.contains('show')) return;
+      if (q.moreMenu.contains(ev.target) || q.btns.more.contains(ev.target)) return;
+      closeHudMore();
+    }, true);
+    document.addEventListener('keydown', ev => {
+      if (ev.key !== 'Escape') return;
+      const q = E.hudQ; if (!q || !q.moreMenu.classList.contains('show')) return;
+      closeHudMore(); q.btns.more.focus();
+    });
     wireBus();
     applySettings(false);
     lastPhase = null;

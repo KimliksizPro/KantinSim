@@ -108,7 +108,7 @@
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const el = document.activeElement;
-    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
     const k = e.key.length === 1 ? e.key.toLocaleLowerCase('tr') : e.key;
     const ui = KS.ui || {}, s = KS.state || {};
     if (k === 'f') { toggleFullscreen(); return; }
@@ -175,8 +175,9 @@
     bar.classList.toggle('ks-hide', !on);
     if (!on) return;
     const D = KS.DATA, t0 = D.OPEN_MIN || 480, span = (D.CLOSE_MIN || 1020) - t0;
+    const bw = bar.offsetWidth || 1600; // şerit artık ekran genişliğinde; işaretçi px'i buna göre
     const time = clamp(KS.state.time, t0, t0 + span), u = (time - t0) / span;
-    const x = (u * 1600).toFixed(1);
+    const x = (u * bw).toFixed(1);
     elPast.style.width = x + 'px';
     elNow.style.transform = 'translateX(' + x + 'px)';
     const cur = KS.currentPeriod();
@@ -185,7 +186,7 @@
     if (txt !== tagText) { tagText = txt; elTag.textContent = txt; }
     // etiket işaretçiyi izler ama ekrandan taşmaz
     const half = (elTag.offsetWidth || 120) / 2;
-    elTag.style.transform = 'translateX(' + clamp(u * 1600, half + 6, 1600 - half - 6).toFixed(1) + 'px) translateX(-50%)';
+    elTag.style.transform = 'translateX(' + clamp(u * bw, half + 6, bw - half - 6).toFixed(1) + 'px) translateX(-50%)';
   }
 
   // ---------------------------------------------------------------------------

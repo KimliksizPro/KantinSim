@@ -1,0 +1,12 @@
+{
+  "name": "kantinsim-smoke",
+  "private": true,
+  "type": "module",
+  "description": "KantinSim için tarayıcı duman testi (oyun kodunun parçası değil).",
+  "scripts": {
+    "test": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}

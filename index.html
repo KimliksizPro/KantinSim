@@ -11,6 +11,12 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="tr_TR">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="KantinSim">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -18,8 +24,16 @@
 </head>
 <body>
   <div id="game-root">
-    <canvas id="game"></canvas>
+    <canvas id="game" tabindex="0" role="application"
+      aria-label="Kantin oyun alanı: malzemeleri sürükleyip yemek hazırlayın. HUD düğmeleri ve paneller klavyeyle kullanılabilir; Escape ile paneller kapanır."></canvas>
     <div id="ui"></div>
+  </div>
+  <p id="game-a11y-help" class="sr-only">KantinSim görsel bir oyundur. Sürükle-bırak ile yemek hazırlanır.
+    M malzeme, T telefon, N menü, G geliştir, E personel, R tarifler, K hedefler panellerini açar; Escape kapatır.</p>
+  <div id="rotate-hint" role="status" aria-live="polite">
+    <div class="rh-phone" aria-hidden="true"></div>
+    <b>Telefonu yan çevir</b>
+    <span>KantinSim yatay modda oynanır. Ekranı yatay tutunca oyun açılır.</span>
   </div>
 
   <!-- Çekirdek -->

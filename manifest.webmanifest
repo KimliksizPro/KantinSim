@@ -1,0 +1,21 @@
+{
+  "name": "KantinSim — Okul Kantini Simülasyonu",
+  "short_name": "KantinSim",
+  "description": "Okul kantininde tost bas, köfte pişir, çay demle; teneffüs akınına yetiş, stok ve fiyatları yönet, kantinini büyüt.",
+  "lang": "tr",
+  "dir": "ltr",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#120d18",
+  "theme_color": "#4a2c1c",
+  "categories": ["games", "simulation"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -129,6 +129,7 @@ window.KS = window.KS || {};
       weekday: D.weekdays[(s.day - 1) % 5],
       weather: s.day === 1 ? 'gunesli' : util.weighted(wmap),
       event: ev,
+      featured: pickFeatured(s),
       revenue: 0, tips: 0, bonus: 0, served: 0, lost: 0, angry: 0, perfect: 0,
       expenses: { malzeme: 0, hazir: 0, nakliye: 0, geliştirme: 0, personel: 0, kira: 0, fatura: 0, reklam: 0, kredi: 0, ceza: 0, diger: 0 },
       campaign: null, goals: null, meta: {},
@@ -286,6 +287,38 @@ window.KS = window.KS || {};
     const t = KS.state.today; if (!t) return;
     const key = line.id; t.sales[key] = (t.sales[key] || 0) + qty;
   };
+
+  // ---------------------------------------------------------------------------
+  // GÜNÜN MENÜSÜ
+  // Her gün, açılmış yemek tariflerinden biri öne çıkar. O yemeği servis eden
+  // müşteri ekstra bahşiş bırakır; gün seçimi güne göre döner ve gün içinde sabit kalır.
+  // ---------------------------------------------------------------------------
+  const FEATURED_MIN_PRICE = 50;   // çay gibi ufak ürünler "menü" olmaz
+  const FEATURED_RATE = 0.25;      // servis başına ek bahşiş oranı
+  const FEATURED_MIN_BONUS = 3;
+  function pickFeatured(s) {
+    const R = (KS.DATA && KS.DATA.recipes) || {};
+    const ids = Object.keys(R)
+      .filter(id => R[id] && R[id].unlock <= s.level && (R[id].price || 0) >= FEATURED_MIN_PRICE)
+      .sort((a, b) => (R[a].unlock - R[b].unlock) || a.localeCompare(b));
+    if (!ids.length) return null;
+    return ids[((s.day || 1) - 1) % ids.length];
+  }
+  // Bugünün menüsü kimliği. Eski kayıtlarda alan yoksa gün içinde bir kez hesaplanır.
+  KS.featuredId = function () {
+    const s = KS.state, t = s && s.today;
+    if (!t) return null;
+    if (!t.featured) t.featured = pickFeatured(s);
+    return t.featured || null;
+  };
+  // Bir satır için günün menüsü ek bahşişi (yalnızca elle hazırlanan tarifler).
+  // priceOverride: sipariş alındığı andaki fiyat (menü fiyatı sonradan değişebilir).
+  KS.featuredBonus = function (line, priceOverride) {
+    const id = KS.featuredId();
+    if (!id || !line || line.type !== 'recipe' || line.id !== id) return 0;
+    const price = priceOverride != null ? priceOverride : KS.priceOf(line);
+    return Math.max(FEATURED_MIN_BONUS, Math.round(price * FEATURED_RATE));
+  };
   KS.addDirt = function (amount) {
     const mult = KS.hasStaff('temizlikci') ? 0.5 : 1;
     KS.state.cleanliness = util.clamp(KS.state.cleanliness - amount * mult, 0, 100);
@@ -361,14 +394,21 @@ window.KS = window.KS || {};
     continueGame() {
       if (!KS.load()) return KS.game.newGame();
       const s = KS.state;
-      // yarım kalan gün => hazırlık aşamasından yeniden başla
-      if (s.phase !== 'summary' && s.phase !== 'gameover') {
-        s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN;
-        if (!s.today) rollToday(s);
-        KS.game._enterPrep();
-      } else if (s.phase === 'summary') {
-        KS.game.nextDay();
+      if (s.phase === 'summary') { KS.game.nextDay(); return; }
+      if (s.phase === 'gameover') return;
+      // Gün ortasında kaydedilmişse günü kaldığı saatten sürdür: günü baştan
+      // oynatmak ciro giderlerini atlatıp günlük hedefleri şişiriyordu.
+      if (s.phase === 'open' || s.phase === 'closing') {
+        s.paused = false;
+        lastPeriod = KS.currentPeriod();
+        KS.bus.emit('open');                 // müşteri modülünü sıfırla, akını yeniden kur
+        KS.bus.emit('periodChange', lastPeriod);
+        if (s.phase === 'closing') { closingTimer = 0; KS.bus.emit('closing'); }
+        return;
       }
+      s.phase = 'prep'; s.time = KS.DATA.OPEN_MIN;
+      if (!s.today) rollToday(s);
+      KS.game._enterPrep();
     },
     _enterPrep() {
       const s = KS.state;
@@ -423,6 +463,7 @@ window.KS = window.KS || {};
         served: t.served, lost: t.lost, angry: t.angry, perfect: t.perfect,
         repDelta: s.rep - t.repStart, xpDelta: s.xp - t.xpStart, rep: s.rep, level: s.level,
         money: s.money, spoiled, spoiledProd, sales: Object.assign({}, t.sales), cleanliness: s.cleanliness,
+        featured: t.featured || (KS.featuredId ? KS.featuredId() : null), featServ: (t.meta && t.meta.featServ) || 0, featTip: (t.meta && t.meta.featTip) || 0,
         bankrupt: s.money < D.costs.bankruptcy,
       };
       s.stats.total.served += t.served; s.stats.total.lost += t.lost; s.stats.total.days++;
@@ -810,7 +851,16 @@ window.KS = window.KS || {};
     const root = document.getElementById('game-root');
     const vw = window.innerWidth, vh = window.innerHeight;
     scale = Math.min(vw / W, vh / H);
-    root.style.transform = 'translate(' + ((vw - W * scale) / 2) + 'px,' + ((vh - H * scale) / 2) + 'px) scale(' + scale + ')';
+    const offx = (vw - W * scale) / 2, offy = (vh - H * scale) / 2;
+    root.style.transform = 'translate(' + offx + 'px,' + offy + 'px) scale(' + scale + ')';
+    // HUD sahneyle küçülmesin: küçük ekranda ters ölçekle native boyuta döner.
+    const hudInv = Math.max(1, 1 / scale), hudNative = scale < 1;
+    const ds = document.documentElement.style;
+    ds.setProperty('--hud-inv', String(hudInv));
+    ds.setProperty('--hud-width', (hudNative ? vw : W) + 'px');
+    ds.setProperty('--hud-left', (hudNative ? -offx * hudInv : 0) + 'px');
+    ds.setProperty('--hud-top', (hudNative ? -offy * hudInv : 0) + 'px');
+    ds.setProperty('--hud-vh', vh + 'px');
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * scale * dpr);
     canvas.height = Math.round(H * scale * dpr);
@@ -874,6 +924,12 @@ window.KS = window.KS || {};
     resize();
     window.addEventListener('resize', resize);
     setupInput(canvas);
+    // Otomatik kayıt: oyun sırasında düzenli aralıklarla + sekme kapanırken.
+    // Böylece tarayıcı kapanması bir günlük ilerlemeyi silmiyor.
+    const autoSave = () => { const ph = KS.state.phase; if (ph === 'open' || ph === 'closing' || ph === 'prep') KS.save(); };
+    window.addEventListener('pagehide', autoSave);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autoSave(); });
+    setInterval(autoSave, 20000);
     for (const m of KS.modules) if (m.init) { try { m.init(); } catch (e) { console.error('[init]', m.name, e); } }
     KS._booted = true;
     KS.bus.emit('boot');

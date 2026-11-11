@@ -144,8 +144,7 @@ depolamasında tutulur.
 - Ana dala her push'ta APK derlenir ve Releases'taki **"Son sürüm (otomatik)"** yayınındaki dosya yenilenir.
 - `v1.0.1` gibi bir etiket atılınca kalıcı bir sürüm olarak Releases'a eklenir.
 
-Depo Secret'larında `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASS`, `ANDROID_KEY_ALIAS` (ve istenirse
-`ANDROID_KEY_PASS`) tanımlı olmalı; böylece her APK aynı anahtarla imzalanır ve telefonda üstüne güncelleme kurulur.
+Depo Secret'larında `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASS` ve `ANDROID_KEY_ALIAS` tanımlı olmalı (anahtar şifresi depo şifresiyle aynı kabul edilir); böylece her APK aynı anahtarla imzalanır ve telefonda üstüne güncelleme kurulur.
 
 ## Lisans
 

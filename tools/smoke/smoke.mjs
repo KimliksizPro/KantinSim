@@ -156,6 +156,45 @@ try {
   await offline.close();
   await ctx.setOffline(false);
 
+  console.log('Mobil HUD (844×390)');
+  const mctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const mpage = await mctx.newPage();
+  mpage.on('pageerror', e => errors.push('mobil pageerror: ' + e.message));
+  await mpage.goto(base, { waitUntil: 'load' });
+  await mpage.waitForTimeout(1000);
+  await mpage.evaluate(() => {
+    window.KS.game.newGame();
+    window.KS.state.tutorialDone = true;
+    window.KS.state.today.event = 'saglik';
+    window.KS.game.openShop();
+  });
+  await mpage.waitForTimeout(1000);
+  const hudGeo = await mpage.evaluate(() => {
+    const rect = el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right, bottom: r.bottom }; };
+    const hud = document.querySelector('#ks-hud');
+    const bar = document.querySelector('#ks-dayline');
+    const btns = [...document.querySelectorAll('.hud-btn')].map(b => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), t: (b.title || '').slice(0, 14) }; });
+    const disp = sel => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'yok'; };
+    return {
+      scale: window.KS.scale, hud: rect(hud), bar: bar ? rect(bar) : null, btns,
+      barVisible: !!(bar && !bar.classList.contains('ks-hide')),
+      labels: getComputedStyle(document.querySelector('.hud-btn .hb-label')).display,
+      chips: { event: disp('.hd-event'), weather: disp('.hd-weather'), clean: disp('.hd-clean'), deliv: disp('.hd-deliv') },
+      scrollW: document.documentElement.scrollWidth, vw: window.innerWidth,
+    };
+  });
+  check('mobil HUD sahne ölçeğinden bağımsız (ekran genişliği)',
+    hudGeo.scale < 0.5 && Math.abs(hudGeo.hud.w - hudGeo.vw) < 1 && Math.abs(hudGeo.hud.x) < 1, hudGeo.hud);
+  check('mobil HUD düğmeleri en az 44×44 px',
+    hudGeo.btns.length >= 6 && hudGeo.btns.every(b => b.w >= 44 && b.h >= 44), hudGeo.btns);
+  check('mobil HUD etiketleri ikona dönüşüyor', hudGeo.labels === 'none', hudGeo.labels);
+  check('mobil HUD isteğe bağlı chip\'leri gizliyor',
+    Object.values(hudGeo.chips).every(d => d === 'none'), hudGeo.chips);
+  check('gün şeridi HUD\'un altında, yatay taşma yok',
+    hudGeo.barVisible && Math.abs(hudGeo.bar.y - hudGeo.hud.bottom) < 1 && hudGeo.scrollW <= hudGeo.vw,
+    { barY: hudGeo.bar && hudGeo.bar.y, hudBottom: hudGeo.hud.bottom, scrollW: hudGeo.scrollW, vw: hudGeo.vw });
+  await mctx.close();
+
   check('konsolda hata yok', errors.length === 0, errors.slice(0, 5));
   await ctx.close();
 } finally {

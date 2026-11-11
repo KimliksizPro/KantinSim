@@ -21,7 +21,7 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
-- **Telefon/tablet**: oyun yatay modda oynanır; dikey tutulduğunda ekranı çevirme uyarısı çıkar.
+- **Telefon/tablet**: oyun yatay modda oynanır; dikey tutulduğunda ekranı çevirme uyarısı çıkar. Üst çubuk küçük ekranda sahneyle birlikte küçülmez: düğmeler 44×44 dokunma hedefine çıkar, etiketler ikona döner, isteğe bağlı chip'ler gizlenir.
 - **Çevrimdışı / kurulabilir**: siteyi bir kez açtıktan sonra internet olmadan da oynanır. Chrome/Edge'de adres çubuğundaki "Yükle" ile uygulama gibi kurulabilir (PWA).
 
 ## Tarifler (elle yapılan)

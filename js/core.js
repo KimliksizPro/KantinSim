@@ -817,7 +817,15 @@ window.KS = window.KS || {};
     const root = document.getElementById('game-root');
     const vw = window.innerWidth, vh = window.innerHeight;
     scale = Math.min(vw / W, vh / H);
-    root.style.transform = 'translate(' + ((vw - W * scale) / 2) + 'px,' + ((vh - H * scale) / 2) + 'px) scale(' + scale + ')';
+    const offx = (vw - W * scale) / 2, offy = (vh - H * scale) / 2;
+    root.style.transform = 'translate(' + offx + 'px,' + offy + 'px) scale(' + scale + ')';
+    // HUD sahneyle küçülmesin: küçük ekranda ters ölçekle native boyuta döner.
+    const hudInv = Math.max(1, 1 / scale), hudNative = scale < 1;
+    const ds = document.documentElement.style;
+    ds.setProperty('--hud-inv', String(hudInv));
+    ds.setProperty('--hud-width', (hudNative ? vw : W) + 'px');
+    ds.setProperty('--hud-left', (hudNative ? -offx * hudInv : 0) + 'px');
+    ds.setProperty('--hud-top', (hudNative ? -offy * hudInv : 0) + 'px');
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * scale * dpr);
     canvas.height = Math.round(H * scale * dpr);

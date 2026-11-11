@@ -52,6 +52,13 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 - Hazırlıkta ve gün sonunda kaydedilir; ayrıca oyun sırasında 20 saniyede bir ve sekme kapanırken kaydedilir.
 - Gün ortasında çıkılırsa oyun **kaldığı saatten** devam eder (gün baştan başlamaz), böylece ciro/gider dengesi bozulmaz.
 
+## Mobil HUD
+
+- Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD sahneyle küçülmez**.
+- `js/core.js` → `resize()` dört CSS değişkeni yayınlar: `--hud-inv` (ters ölçek, en az 1), `--hud-width`, `--hud-left`, `--hud-top`. `#ks-hud` ve `#ks-dayline` bu değişkenlerle konumlanır.
+- `css/ui.css` içinde `1599px` altında olay chip'i, `1499px` altında veya `(pointer: coarse)` cihazlarda kompakt HUD (44×44 ikon düğmeler, gizli etiketler/chip'ler) devreye girer. Dokunma hedefleri gerçek `getBoundingClientRect` ile ölçülür ve `tools/smoke` bunu doğrular.
+- **Paneller ve hazırlık kartı hâlâ sahneyle ölçekleniyor** (küçük ekranda ~7 px yazı). Native boyuta almak ayrı bir adımdır; HUD DOM'da sahnenin içinde kaldığı için `logicalRect` (eğitim halkası, konfeti) çalışmaya devam eder.
+
 ## Kurallar
 
 - Modüller `KS.registerModule({name, order, init, update, draw})` ile kayıt olur; başka modülün API'sini çağırmadan önce varlığını kontrol et.

@@ -52,6 +52,14 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 - Hazırlıkta ve gün sonunda kaydedilir; ayrıca oyun sırasında 20 saniyede bir ve sekme kapanırken kaydedilir.
 - Gün ortasında çıkılırsa oyun **kaldığı saatten** devam eder (gün baştan başlamaz), böylece ciro/gider dengesi bozulmaz.
 
+## Android kabuğu (APK)
+
+Oyun `android/` altındaki ince WebView kabuğuyla APK olarak kurulabilir.
+`tools/android/build.sh` aapt2 + javac + d8 + apksigner ile derler (Gradle yok).
+`android/src/.../MainActivity.java` tam ekran, yatay kilit, ekran açık ve geri tuşu
+davranışını yönetir; oyun dosyaları değişmez, APK'nın `assets/` klasörüne kopyalanır.
+Yazı tipleri `fonts/` altında yereldir; APK ağ izni istemez.
+
 ## Mobil HUD ve native ekranlar
 
 - Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD ve DOM ekranları sahneyle küçülmez**.

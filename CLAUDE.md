@@ -46,12 +46,15 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 | `js/assist.js` | Tarif yardımcısı (H), klavye kısayolları, gün şeridi (zil programı) |
 | `js/audio.js` | Prosedürel WebAudio sesleri |
 
-## Mobil HUD
+## Mobil HUD ve native ekranlar
 
-- Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD sahneyle küçülmez**.
-- `js/core.js` → `resize()` dört CSS değişkeni yayınlar: `--hud-inv` (ters ölçek, en az 1), `--hud-width`, `--hud-left`, `--hud-top`. `#ks-hud` ve `#ks-dayline` bu değişkenlerle konumlanır.
-- `css/ui.css` içinde `1599px` altında olay chip'i, `1499px` altında veya `(pointer: coarse)` cihazlarda kompakt HUD (44×44 ikon düğmeler, gizli etiketler/chip'ler) devreye girer. Dokunma hedefleri gerçek `getBoundingClientRect` ile ölçülür ve `tools/smoke` bunu doğrular.
-- **Paneller ve hazırlık kartı hâlâ sahneyle ölçekleniyor** (küçük ekranda ~7 px yazı). Native boyuta almak ayrı bir adımdır; HUD DOM'da sahnenin içinde kaldığı için `logicalRect` (eğitim halkası, konfeti) çalışmaya devam eder.
+- Sahne `1600x900` mantıksal uzayda `transform: scale(...)` ile küçülür; **HUD ve DOM ekranları sahneyle küçülmez**.
+- `js/core.js` → `resize()` beş CSS değişkeni yayınlar: `--hud-inv` (ters ölçek, en az 1), `--hud-width`, `--hud-left`, `--hud-top`, `--hud-vh`. `#ks-hud`, `#ks-dayline` ve `#ks-notifs` bu değişkenlerle native ölçekte konumlanır.
+- `css/ui.css` içinde `1599px` altında olay chip'i, `1499px` altında veya `(pointer: coarse)` cihazlarda kompakt HUD (44×44 ikon düğmeler, gizli etiketler/chip'ler) devreye girer.
+- Aynı eşikte paneller, hazırlık kartı, gün sonu, ana menü ve duraklat/onay kartları da native: `#ks-modal`, `#ks-summary`, `#ks-mainmenu`, `#ks-pause`, `#ks-prep` ters ölçekle ekranı kaplar; panel `width: 100%` + `max-width: 1200px`, gövde kayar, başlık/sekme/alt satır sabittir.
+- Dar ekran ızgaraları: `.sup-grid` tek sütun, `.up-grid`/`.st-grid`/`.ach-grid` iki sütun, `.stt-tiles` üç sütun. `1000–1499px` arasında eski sütun sayıları korunur.
+- Eğitim balonu `placeTutorial()` içinde `KS.scale < 0.95` iken alt kenara sabitlenir, ters ölçekle native boyutta çizilir; halka sahne koordinatında kalır.
+- DOM sahnenin içinde kaldığı için `logicalRect` (eğitim halkası, konfeti) çalışmaya devam eder; duman testi 844×390'da HUD, menü, hazırlık ve dokuz paneli ölçer.
 
 ## Kurallar
 

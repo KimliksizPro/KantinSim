@@ -1809,6 +1809,22 @@
     const r2 = st.extra ? call(st.extra) : null;
     show(E.tutRing2, !!r2);
     if (r2) Object.assign(E.tutRing2.style, { left: (r2.x - 4) + 'px', top: (r2.y - 4) + 'px', width: (r2.w + 8) + 'px', height: (r2.h + 8) + 'px' });
+    // Küçük ekranda balonu hedefin yanına sığdırmak yerine alt kenara sabitle ve native boyutta göster.
+    const sc = KS.scale || 1;
+    if (sc < 0.95 && root) {
+      const ur = root.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const bw = Math.min(vw - 16, 470);
+      Object.assign(E.tutBubble.style, {
+        left: ((8 - ur.left) / sc) + 'px', width: bw + 'px', maxWidth: 'none',
+        transform: 'scale(' + (1 / sc) + ')', transformOrigin: 'top left',
+      });
+      E.tutBubble.dataset.side = 'none';
+      const bh = E.tutBubble.offsetHeight || 150;
+      E.tutBubble.style.top = ((vh - 8 - bh - ur.top) / sc) + 'px';
+      return;
+    }
+    E.tutBubble.style.transform = ''; E.tutBubble.style.maxWidth = ''; E.tutBubble.style.transformOrigin = '';
     const bw = 340, bh = E.tutBubble.offsetHeight || 150, gap = 22;
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     let x, y, side = st.side;

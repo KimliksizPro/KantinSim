@@ -3,7 +3,7 @@
  *         banka kredileri, toplu (öğretmenler odası) siparişleri, usta aşçı vb. kancalar.
  * Dışa açılan: KS.Meta = { goals(), goalProgress(g), achievements(), achProgress(a), isUnlocked(id),
  *   campaign(), canCampaign(id), runCampaign(id), loans(), loanOffer(id), takeLoan(id), payOffLoan(uid),
- *   debt(), dailyInstallment(), records(), lifeStats() }
+ *   debt(), dailyInstallment(), week(), weekRevenue(), streak(), records(), lifeStats() }
  * Olaylar (bus): 'goalDone'(goal), 'achievement'(ach), 'campaign'(id), 'loanTaken'(loan), 'loanRepaid'(loan), 'bulkOrder'(info)
  */
 (function (KS) {
@@ -30,6 +30,14 @@
     s.stats.total = Object.assign({ revenue: 0, served: 0, lost: 0, tips: 0, days: 0 }, s.stats.total || {});
     s.stats.life = Object.assign({}, LIFE_DEFAULTS, s.stats.life || {});
     s.stats.sales = s.stats.sales || {};
+    if (!s.streak || typeof s.streak !== 'object') s.streak = { days: 0, best: 0, claimed: {}, lastDay: 0 };
+    else {
+      if (typeof s.streak.days !== 'number') s.streak.days = 0;
+      if (typeof s.streak.best !== 'number') s.streak.best = 0;
+      if (!s.streak.claimed || typeof s.streak.claimed !== 'object') s.streak.claimed = {};
+      if (typeof s.streak.lastDay !== 'number') s.streak.lastDay = 0;
+    }
+    if (s.week && typeof s.week !== 'object') s.week = null;
     const t = s.today;
     if (t) {
       t.meta = Object.assign({ fast: 0, combos: 0, drinks: 0, bulk: 0, vipHappy: 0, bulkCalls: 0 }, t.meta || {});
@@ -190,6 +198,119 @@
       if (p.cur >= g.target) completeGoal(g);
       else if (final) g.failed = true;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // HAFTALIK SÖZLEŞME
+  // Her 5 okul günü bir haftadır. Haftanın başında ciro hedefi belirlenir; hedef
+  // tutunca hafta içinde bir kez para + XP ödülü verilir. Hedef son güne kadar
+  // tutmazsa sözleşme yanar, yeni hafta yeni hedefle başlar.
+  // ---------------------------------------------------------------------------
+  const WEEK_LEN = 5;
+  const weekNo = day => Math.floor((Math.max(1, day) - 1) / WEEK_LEN) + 1;
+  function weeklyTarget(s, n) {
+    const avg = recentAvg('revenue', 3);
+    const base = avg > 0 ? avg * 1.05 : (420 + 130 * Math.max(0, (s.level || 1) - 1));
+    return Math.max(1000, Math.round(base * WEEK_LEN / 100) * 100);
+  }
+  function weeklyReward(target, n) {
+    return { money: Math.max(200, Math.round(target * 0.15 / 50) * 50), xp: 50 + 10 * n };
+  }
+  // Geçerli haftayı döndürür; gün ilerlediyse yeni hafta açar.
+  function ensureWeek() {
+    const s = S(); if (!s) return null;
+    const n = weekNo(s.day || 1);
+    if (!s.week || s.week.n !== n) {
+      const start = (n - 1) * WEEK_LEN + 1;
+      const target = weeklyTarget(s, n);
+      s.week = { n, start, target, reward: weeklyReward(target, n), done: false, paid: false, paidDay: 0, failed: false };
+    }
+    return s.week;
+  }
+  function weekRevenue(s) {
+    const w = ensureWeek(); if (!w) return 0;
+    let total = 0;
+    let lastDay = 0;
+    for (const h of s.history || []) {
+      if (h.day >= w.start && h.day < w.start + WEEK_LEN) total += h.revenue || 0;
+      if (h.day > lastDay) lastDay = h.day;
+    }
+    // Gün sonunda cari gün geçmişe çoktan yazılmış olur; iki kez saymayalım.
+    if (s.today && s.day >= w.start && s.day < w.start + WEEK_LEN && lastDay !== s.day) total += s.today.revenue || 0;
+    return total;
+  }
+  function weekInfo() {
+    const s = S(), w = ensureWeek(); if (!w) return null;
+    const revenue = weekRevenue(s);
+    const dayIndex = U().clamp((s.day || 1) - w.start + 1, 1, WEEK_LEN);
+    return Object.assign({}, w, {
+      revenue, ratio: U().clamp(revenue / Math.max(1, w.target), 0, 1),
+      dayIndex, daysLeft: Math.max(0, w.start + WEEK_LEN - (s.day || 1)),
+    });
+  }
+  // Gün sonunda çağrılır: hedef tuttuysa bir kez öde, son gün tutmadıysa yan.
+  function settleWeek() {
+    const s = S(), w = ensureWeek(); if (!w || w.paid || w.failed) return;
+    const total = weekRevenue(s);
+    if (total >= w.target) {
+      w.done = true; w.paid = true; w.paidDay = s.day || 0;
+      KS.bonus(w.reward.money, 800, 120);
+      KS.addXP(w.reward.xp);
+      KS.notify('📅 Haftalık sözleşme tuttu! +' + fmt(w.reward.money) + ', +' + w.reward.xp + ' XP', 'good');
+      KS.bus.emit('goalDone', { kind: 'week', text: 'Haftalık sözleşme', reward: w.reward });
+    } else if ((s.day || 1) >= w.start + WEEK_LEN - 1) {
+      w.failed = true;
+      KS.notify('📅 Haftalık sözleşme tutmadı: ' + fmt(total) + ' / ' + fmt(w.target) + '. Yeni hafta yeni hedef!', 'warn');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // KÂRLI GÜN SERİSİ
+  // Net kârı pozitif biten her gün seriyi büyütür. 3/5/10/20 günde bir kez
+  // para + XP ödülü verilir; zararlı gün seriyi sıfırlar ama rekor kalır.
+  // ---------------------------------------------------------------------------
+  const STREAK_REWARDS = [
+    { days: 3, money: 200, xp: 50 },
+    { days: 5, money: 400, xp: 100 },
+    { days: 10, money: 900, xp: 200 },
+    { days: 20, money: 2000, xp: 400 },
+  ];
+  function nextStreakReward(st) {
+    return STREAK_REWARDS.find(m => !st.claimed[m.days]) || null;
+  }
+  function streakInfo() {
+    ensure();
+    const st = S().streak;
+    const next = nextStreakReward(st);
+    return { days: st.days || 0, best: st.best || 0, claimed: Object.assign({}, st.claimed), next };
+  }
+  function updateStreak(report) {
+    ensure();
+    const s = S(), st = s.streak;
+    if (st.lastDay === report.day) return null;
+    const wasDays = st.days || 0;
+    st.lastDay = report.day;
+    const expenses = Object.values(today().expenses || {}).reduce((a, b) => a + b, 0);
+    const net = (report.revenue || 0) + (report.tips || 0) + (today().bonus || 0) - expenses;
+    const profitable = net > 0;
+    let milestone = null;
+    if (profitable) {
+      st.days = wasDays + 1;
+      st.best = Math.max(st.best || 0, st.days);
+      for (const m of STREAK_REWARDS) {
+        if (st.days >= m.days && !st.claimed[m.days]) {
+          st.claimed[m.days] = report.day;
+          KS.bonus(m.money, 800, 120);
+          KS.addXP(m.xp);
+          milestone = { days: m.days, money: m.money, xp: m.xp };
+          break;
+        }
+      }
+    } else {
+      st.days = 0;
+    }
+    const next = nextStreakReward(st);
+    return { days: st.days, best: st.best, profitable, net, lost: wasDays > 0 && !profitable ? wasDays : 0, milestone, next: next || null };
   }
 
   // ---------------------------------------------------------------------------
@@ -459,6 +580,7 @@
     ensure();
     payInstallments();
     checkGoals(true);
+    settleWeek();
   }
   function onDayEnd(report) {
     if (!report) return;
@@ -482,6 +604,10 @@
     // gün sonunda biriken başarımları hemen işle (rapora eklensin)
     while (achQueue.length) { achShowT = 0; flushAchievements(0); }
     report.achievements = ((today().meta || {}).ach || []).map(id => ACH_BY_ID[id]).filter(Boolean).map(a => ({ id: a.id, name: a.name, icon: a.icon }));
+    // haftalık sözleşme ve kârlı gün serisi rapora işlenir (seri ödülü nete dahil)
+    const wk = weekInfo();
+    report.week = wk && { n: wk.n, start: wk.start, target: wk.target, revenue: wk.revenue, reward: wk.reward, done: !!wk.done, paid: !!wk.paid, paidDay: wk.paidDay || 0, failed: !!wk.failed };
+    report.streak = updateStreak(report);
     // ödüller rapordaki neti ve kasayı güncellesin
     report.bonus = today().bonus || 0;
     const expenses = Object.values(today().expenses || {}).reduce((a, b) => a + b, 0);
@@ -547,6 +673,7 @@
     achievements: () => ACH.slice(), achProgress, isUnlocked,
     campaign, canCampaign, runCampaign,
     loans, loanOffer, canLoan, takeLoan, payOffLoan, debt, dailyInstallment,
+    week: weekInfo, weekRevenue, streak: streakInfo,
     lifeStats: () => life(),
     _planBulk: planBulk,
   };

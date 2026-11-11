@@ -868,6 +868,32 @@
         h('div', { class: 'pf-v' }, r.name),
         h('div', { class: 'pf-d' }, on ? 'Her servis +%25 ekstra bahşiş' : 'Menüde kapalı — 🍽️ Menü panelinden aç')));
   }
+  function weekBlock(compact) {
+    const M = KS.Meta; if (!M || !M.week) return null;
+    const w = call(M.week), st = call(M.streak);
+    if (!w) return null;
+    const left = Math.max(0, w.target - w.revenue);
+    const reached = w.revenue >= w.target;
+    const state = w.paid || w.done ? 'done' : w.failed ? 'failed' : reached ? 'reached' : '';
+    const pill = w.paid || w.done ? '✅ Tuttu' : w.failed ? '❌ Yan' : reached ? '✅ Hedefte' : 'Gün ' + w.dayIndex + '/5';
+    const fire = st && st.days > 0 ? '🔥 ' + st.days + ' gün seri' : '💤 Seri yok';
+    return h('div', { class: 'wk-row ' + state + (compact ? ' compact' : '') },
+      h('div', { class: 'wk-head' },
+        h('span', { class: 'wk-k' }, '📅 Hafta ' + w.n + ' sözleşmesi'),
+        h('span', { class: 'wk-val' }, fmt(w.revenue) + ' / ' + fmt(w.target)),
+        h('span', { class: 'wk-pill' }, pill)),
+      bar(w.ratio, state),
+      compact
+        ? h('div', { class: 'wk-sub' },
+          h('span', null, w.paid ? 'Ödül kasada' : w.failed ? 'Hedef tutmadı' : reached ? 'Hedef tuttu — gün sonunda ödenir' : 'Hedefe ' + fmt(left)),
+          h('span', { class: 'wk-rew' }, '+' + fmt(w.reward.money) + ' · +' + w.reward.xp + ' XP'),
+          h('span', { class: 'wk-fire' + (st && st.days > 0 ? ' hot' : '') }, fire))
+        : h('div', { class: 'wk-foot' },
+          h('span', { class: 'wk-fire' + (st && st.days > 0 ? ' hot' : '') },
+            fire + (st && st.best > 0 ? ' · rekor ' + st.best : '') +
+            (st && st.next ? ' · ' + st.next.days + ' günde +' + fmt(st.next.money) : ' · tüm ödüller alındı')),
+          h('span', { class: 'wk-rew' }, w.paid ? 'Ödül ödendi' : w.failed ? 'Hafta yandı' : reached ? 'Hedef tuttu — gün sonunda +' + fmt(w.reward.money) : 'Hedefe ' + fmt(left) + ' · ödül +' + fmt(w.reward.money) + ' +' + w.reward.xp + ' XP')));
+  }
   function prepGoalsBlock() {
     if (!KS.Meta) return null;
     const list = KS.Meta.goals(), c = KS.Meta.campaign(), debt = KS.Meta.debt();
@@ -875,7 +901,8 @@
       h('div', { class: 'pg-head' }, h('span', null, '🎯 GÜNÜN HEDEFLERİ'),
         h('span', { class: 'pg-camp' + (c ? ' on' : '') }, c ? c.icon + ' ' + c.name : '📣 Kampanya yok'),
         debt > 0 ? h('span', { class: 'pg-debt' }, '🏦 Taksit ' + fmt(KS.Meta.dailyInstallment()) + '/gün') : null),
-      list.length ? list.map(g => goalRow(g, true)) : h('div', { class: 'sm-empty' }, 'Hedefler hazırlanıyor…'));
+      list.length ? list.map(g => goalRow(g, true)) : h('div', { class: 'sm-empty' }, 'Hedefler hazırlanıyor…'),
+      weekBlock(true));
   }
   function refreshPrep() { if (S() && S().phase === 'prep' && E.prep && !E.prep.classList.contains('ks-hide')) buildPrepCard(); }
 
@@ -1320,6 +1347,8 @@
   }
   function hubGoals(p) {
     const list = M().goals();
+    const wk = weekBlock(false);
+    if (wk) p.body.appendChild(wk);
     p.body.appendChild(h('div', { class: 'mn-hint' }, '🎯 Her sabah 3 yeni hedef gelir. Tamamladığın anda ödül kasana eklenir. Toplam tamamlanan hedef: ', h('b', null, String(S().goalsDone || 0))));
     if (!list.length) { p.body.appendChild(h('div', { class: 'pn-empty' }, 'Bugünün hedefleri hazırlık aşamasında belirlenir.')); return; }
     p.body.appendChild(h('div', { class: 'gl-list' }, list.map(g => goalRow(g))));
@@ -1583,7 +1612,7 @@
         sec('📦', 'Stok & sipariş', '<b>Toptancı</b> ucuzdur ama açıkken ~60 dk\'da gelir; <b>bakkal</b> pahalı ama hızlıdır. <b>Telefonla</b> hazır yemek söyle — gün sonunda bozulur!'),
         sec('⭐', 'İtibar & seviye', 'Mutlu müşteri itibar ve XP getirir. Seviye atladıkça yeni tarifler, ürünler ve personel açılır.'),
         sec('🧽', 'Temizlik', 'Tezgah kirlenir; bezle sil. Müfettiş günü kirli kantine <b>ceza</b> keser.'),
-        sec('🎯', 'Hedefler & başarımlar', 'Her gün 3 <b>günlük hedef</b> gelir; tamamlayınca para ve XP kazanırsın. 📒 <b>Kantin Defteri</b>\'nde başarımlarını ve istatistiklerini takip et.'),
+        sec('🎯', 'Hedefler & başarımlar', 'Her gün 3 <b>günlük hedef</b> gelir; tamamlayınca para ve XP kazanırsın. Her 5 okul gününde bir <b>haftalık sözleşme</b> hedefi var; ciro hedefini tutturursan ek ödül alırsın. Üst üste <b>kârlı günler</b> serini büyütür, 3/5/10/20 günde ödül verir. 📒 <b>Kantin Defteri</b>\'nde hepsini takip et.'),
         sec('📣', 'Pazarlama & banka', 'Hazırlıkta <b>kampanya</b> başlatıp talebi arttır. Zor günde <b>banka kredisi</b> çekebilirsin; taksitler gün sonunda ödenir.'),
         sec('🫖', 'Toplu sipariş', 'Ders saatlerinde öğretmenler odası arayıp toplu sipariş verebilir. Görevli gelince hepsini eksiksiz ver — bahşiş bol!'),
         sec('💸', 'Giderler', 'Her gün sonunda kira, faturalar ve yevmiyeler ödenir. Kasa ' + fmt(D().costs.bankruptcy) + ' altına düşerse iflas edersin.')));
@@ -1640,7 +1669,7 @@
     };
     const income = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💰 Gelirler'),
       row('🧾 Satışlar', r.revenue || 0, 'inc'), row('🪙 Bahşiş', r.tips || 0, 'inc'),
-      (r.bonus || 0) > 0 ? row('🎯 Hedef & başarım ödülü', r.bonus, 'inc') : null);
+      (r.bonus || 0) > 0 ? row('🎯 Hedef, sözleşme & başarım', r.bonus, 'inc') : null);
     const exp = h('div', { class: 'sm-box' }, h('div', { class: 'sm-h' }, '💸 Giderler'),
       expRows.map(([k, label]) => row(label, -((r.expenses || {})[k] || 0), 'exp')),
       h('div', { class: 'sm-row total', style: { animationDelay: d.toFixed(2) + 's' } }, h('span', null, 'Toplam gider'), h('b', { class: 'exp' }, '−' + fmt(r.expenseTotal || 0))));
@@ -1699,11 +1728,18 @@
   function summaryMeta(r) {
     const goals = r.goals || [], ach = r.achievements || [], recs = r.records || [];
     const feat = r.featured ? (D().recipes[r.featured] || null) : null;
-    if (!goals.length && !ach.length && !recs.length && !feat) return null;
+    const wk = r.week, st = r.streak;
+    if (!goals.length && !ach.length && !recs.length && !feat && !wk && !st) return null;
     return h('div', { class: 'sm-box sm-meta' },
       feat ? h('div', { class: 'smg-feat' }, h('span', { class: 'smf-ico' }, '⭐'),
         h('span', { class: 'smf-t' }, 'Günün menüsü: ' + feat.name),
         h('b', null, (r.featServ || 0) > 0 ? (r.featServ + ' servis · +' + fmt(r.featTip || 0)) : 'hiç servis edilmedi')) : null,
+      wk ? h('div', { class: 'smg-row' + (wk.paid ? ' done' : wk.failed ? ' fail' : '') }, h('span', null, '📅'),
+        h('span', { class: 'smg-t' }, 'Hafta ' + wk.n + ' sözleşmesi · ' + fmt(wk.revenue || 0) + ' / ' + fmt(wk.target || 0)),
+        h('b', null, wk.paid ? (wk.paidDay === r.day ? '+' + fmt(wk.reward.money) : '✅ tamamlandı') : wk.failed ? 'tutmadı' : 'devam ediyor')) : null,
+      st ? h('div', { class: 'smg-row' + (st.profitable ? ' done' : ' fail') }, h('span', null, st.profitable ? '🔥' : '💤'),
+        h('span', { class: 'smg-t' }, st.profitable ? st.days + ' gün üst üste kârlı' : (st.lost ? 'Seri sıfırlandı (' + st.lost + ' gün)' : 'Kârlı gün serisi başlamadı')),
+        h('b', null, st.milestone ? '+' + fmt(st.milestone.money) : st.best ? 'rekor ' + st.best : '—')) : null,
       goals.length ? h('div', { class: 'sm-h' }, '🎯 Günün hedefleri · ' + goals.filter(g => g.done).length + '/' + goals.length) : null,
       goals.map(g => h('div', { class: 'smg-row' + (g.done ? ' done' : ' fail') }, h('span', null, g.done ? '✅' : '❌'), h('span', { class: 'smg-t' }, g.text),
         h('b', null, g.done ? '+' + fmt(g.reward.money) : '—'))),

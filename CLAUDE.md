@@ -69,6 +69,15 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 - Gün sonu raporu `featured/featServ/featTip` alanlarını taşır; hazırlık kartı (⭐ şerit), Menü paneli (rozet) ve gün sonu özeti bu alanlardan beslenir.
 - Duman testi menü seçimini, hazırlık şeridini, panel rozetini, gerçek servis→bahşiş akışını ve günler arası dönüşü doğrular.
 
+## Haftalık sözleşme ve kârlı gün serisi
+
+- `js/meta.js` → `ensure()` eski kayıtlara `state.week` ve `state.streak` alanlarını ekler. Hafta 5 okul günüdür; `ensureWeek()` gün ilerleyince yeni haftayı açar (`{n, start, target, reward, done, paid, paidDay, failed}`).
+- `weeklyTarget()` son 3 günün ortalama cirosundan (yoksa seviyeden) hedef üretir: ortalama × 5 × 1,05, en az 1.000 ₺, 100'er yuvarlanır. Ödül hedefin ~%15'i kadar para + XP.
+- `settleWeek()` `beforeDayEnd` sırasında çalışır: hedef tuttuysa bir kez `KS.bonus` + `KS.addXP`; haftanın son günü hâlâ tutmuyorsa `failed` işaretlenir.
+- `updateStreak(report)` `dayEnd` sırasında net kârı (ciro + bahşiş + bonus − gider) hesaplar; pozitifse seriyi büyütür, değilse sıfırlar. 3/5/10/20 günde bir kez para + XP ödülü verir (`state.streak.claimed`).
+- Gün sonu raporuna `week{n,start,target,revenue,reward,done,paid,paidDay,failed}` ve `streak{days,best,profitable,net,lost,milestone,next}` alanları eklenir. Hazırlık kartı `.wk-row`, Kantin Defteri haftalık kart, gün sonu özeti bu alanları gösterir.
+- `KS.Meta.week()` ve `KS.Meta.streak()` arayüz için canlı bilgi döndürür. Duman testi hedef/şerit varlığını, 3. gün ödülünün bir kez ödendiğini, serinin büyüdüğünü, zararlı günde sıfırlandığını ve son gün yanan sözleşmeyi doğrular.
+
 ## Kurallar
 
 - Modüller `KS.registerModule({name, order, init, update, draw})` ile kayıt olur; başka modülün API'sini çağırmadan önce varlığını kontrol et.

@@ -708,6 +708,26 @@
 .pg-camp, .pg-debt { font: 800 13px var(--f-body); letter-spacing: 0; padding: 3px 10px; border-radius: 10px; background: #efe2cf; color: var(--ink3); }
 .pg-camp.on { background: rgba(255, 154, 60, .25); color: #b8441a; }
 .pg-debt { background: rgba(90, 176, 255, .2); color: var(--blue2); }
+/* Haftalık sözleşme ve kârlı gün serisi */
+.wk-row { display: flex; flex-direction: column; gap: 4px; padding: 7px 10px; border-radius: 14px;
+  background: rgba(255, 246, 214, .8); box-shadow: inset 0 0 0 2px rgba(232, 198, 90, .35); }
+.wk-row:not(.compact) { padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 3px 0 #ead2ab, inset 0 0 0 2px rgba(232, 198, 90, .35); }
+.wk-row.done { background: linear-gradient(180deg, #eafbee, #d5f4de); box-shadow: inset 0 0 0 2px rgba(56, 170, 100, .3); }
+.wk-row.reached { box-shadow: inset 0 0 0 2px rgba(56, 170, 100, .4); }
+.wk-row.reached .wk-pill { color: #1f9d55; }
+.wk-row.failed { opacity: .72; }
+.wk-head { display: flex; align-items: baseline; gap: 8px; font: 800 13px var(--f-body); color: var(--ink2); }
+.wk-k { flex: 1; letter-spacing: .3px; }
+.wk-val { color: var(--ink); }
+.wk-pill { font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 8px; background: #fff; color: #9a6410; white-space: nowrap; }
+.wk-row.done .wk-pill { color: #1f9d55; }
+.wk-row.failed .wk-pill { color: #b23b2e; }
+.wk-row .hb-bar { height: 7px; }
+.wk-sub, .wk-foot { display: flex; align-items: center; gap: 8px; font: 700 11.5px var(--f-body); color: var(--ink3); }
+.wk-foot { font-size: 13px; color: var(--ink2); }
+.wk-sub .wk-rew, .wk-foot .wk-rew { margin-left: auto; color: #9a6410; white-space: nowrap; }
+.wk-fire { white-space: nowrap; }
+.wk-fire.hot { color: #c85a12; }
 .prep-actions { flex-wrap: wrap; }
 
 .ach-head { display: flex; align-items: center; gap: 16px; padding: 6px 4px 12px; }

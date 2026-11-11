@@ -1,0 +1,118 @@
+# KantinSim — APK yayını.
+#  • Ana dala her push'ta: APK derlenir, "Son sürüm (otomatik)" yayınındaki dosya güncellenir.
+#  • `v1.0.1` gibi etiket atılınca: kalıcı sürüm olarak GitHub Releases'a eklenir.
+#  • Elle çalıştırılınca (Run workflow): yalnız artifact olarak yüklenir.
+#
+# Gerekli depo Secret'ları (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  anahtar dosyasının base64'ü
+#   ANDROID_KEYSTORE_PASS    anahtar deposu şifresi
+#   ANDROID_KEY_ALIAS        anahtar takma adı
+#   (Anahtar şifresi depo şifresiyle aynı kabul edilir; ayrı bir ANDROID_KEY_PASS gerekmez.)
+name: Yayın APK'sı
+
+on:
+  push:
+    branches: [main, ccr-299ee556-k6f0la]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Aynı anda iki yayın "son-surum" etiketini yarıştırmasın.
+concurrency:
+  group: apk-yayin
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Sürümü belirle
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"; TUR=surum
+          elif [[ "$GITHUB_REF" == refs/heads/* && "$GITHUB_EVENT_NAME" == push ]]; then
+            VERSION="1.0.${GITHUB_RUN_NUMBER}"; TUR=son
+          else
+            VERSION="0.0.0-${GITHUB_SHA::7}"; TUR=elle
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TUR=$TUR" >> "$GITHUB_ENV"
+          # versionCode: çalıştırma numarası (her derlemede artar, güncelleme kurulabilsin)
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: İmza anahtarını hazırla
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 Secret'ı tanımlı değil (dosyanın başına bakın)."; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/ks"
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
+
+      - name: Secret'ları doğrula
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          for ad in KS_PASS KS_ALIAS; do
+            deger="${!ad}"
+            if [ -z "$deger" ]; then echo "::error::$ad (ANDROID_KEYSTORE_PASS / ANDROID_KEY_ALIAS) Secret'ı boş."; exit 1; fi
+            if printf '%s' "$deger" | LC_ALL=C grep -q '[^ -~]'; then
+              echo "::error::$ad Secret'ında ASCII olmayan karakter (Türkçe harf, görünmez boşluk vb.) var; yeniden yapıştırın."; exit 1
+            fi
+          done
+
+      - name: APK'yı derle
+        env:
+          KS_FILE: ${{ runner.temp }}/ks/release.jks
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: bash tools/android/build.sh
+
+      - name: Artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: KantinSim-${{ env.VERSION }}
+          path: dist/KantinSim-${{ env.VERSION }}.apk
+
+      # Kalıcı sürüm (v* etiketi)
+      - name: Sürümü Release'e ekle
+        if: env.TUR == 'surum'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/KantinSim-${{ env.VERSION }}.apk
+          generate_release_notes: true
+
+      # Her push'ta güncellenen "son sürüm": etiket yeni commit'e taşınır, dosya değiştirilir.
+      - name: Son sürüm etiketini taşı
+        if: env.TUR == 'son'
+        run: |
+          cp "dist/KantinSim-${VERSION}.apk" dist/KantinSim.apk
+          git tag -f son-surum
+          git push -f origin son-surum
+
+      - name: Son sürümü güncelle
+        if: env.TUR == 'son'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: son-surum
+          name: Son sürüm (otomatik)
+          prerelease: true
+          make_latest: 'false'
+          files: dist/KantinSim.apk
+          body: |
+            Ana dalın son halinden otomatik derlenen APK. Her güncellemede yenilenir.
+
+            Sürüm: ${{ env.VERSION }}
+            Commit: ${{ github.sha }}

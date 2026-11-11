@@ -4,6 +4,17 @@ Okul kantininin içindesin. Servis penceresine gelen öğrencilere, öğretmenle
 malzemelerden kendi elinle yemek hazırla, dışarıdan hazır döner / çiğ köfte / lahmacun sipariş edip vitrinde sat,
 stok, fiyat, temizlik ve itibar yöneterek kantinini büyüt.
 
+![KantinSim oyun ekranı](docs/screenshots/03-oyun.png)
+
+## Ekran görüntüleri
+
+| | |
+|---|---|
+| ![Ana menü](docs/screenshots/01-ana-menu.png) **Ana menü** | ![Günlük hazırlık](docs/screenshots/02-hazirlik.png) **Günlük hazırlık**: hava, olay, günün menüsü, hedefler |
+| ![Malzeme siparişi](docs/screenshots/04-malzeme.png) **Malzeme siparişi** | ![Menü ve fiyatlar](docs/screenshots/05-menu.png) **Menü & fiyatlar** |
+| ![Geliştirmeler](docs/screenshots/06-gelistirmeler.png) **Geliştirmeler** | ![Kantin Defteri](docs/screenshots/07-kantin-defteri.png) **Kantin Defteri** |
+| ![Tarifler](docs/screenshots/08-tarifler.png) **Tarifler** | |
+
 ## Nasıl oynanır?
 
 **Tarayıcıda oyna:** https://kimliksizpro.github.io/KantinSim/
@@ -121,15 +132,22 @@ tools/android/build.sh
 
 Gereken: Android SDK (build-tools + `platforms/android-35`) ve JDK 17+. Betik sırayla
 `aapt2` → `javac` → `d8` → `zipalign` → `apksigner` çalıştırır; Gradle kullanmaz.
-Çıktı: `dist/KantinSim-1.0.0.apk`. İmza anahtarı `~/.local/share/kantinsim/kantinsim-debug.jks`
-konumunda tutulur (ya da `KEYSTORE=/yol/anahtar.jks` ile başka bir anahtar verilir); yoksa
-üretilir. Anahtar derleme çıktısının dışında durduğu için yeni APK eskisinin üzerine
-`adb install -r` ile kurulabilir. Bu **geliştirme anahtarıdır**, mağazaya çıkmadan önce
-kendi anahtarınızla değiştirin.
+Çıktı: `dist/KantinSim-$VERSION.apk` (varsayılan `1.0.0`). Geliştirme imza anahtarı
+`~/.local/share/kantinsim/kantinsim-debug.jks` konumunda tutulur (yoksa üretilir); depo
+dışında durduğu için taze bir klonda da aynı kalır ve yeni APK eskisinin üzerine
+`adb install -r` ile kurulabilir. Yayın anahtarı `KS_FILE` / `KS_PASS` / `KS_ALIAS`
+(ve `VERSION`, `VERSION_CODE`) ortam değişkenleriyle verilir. Varsayılan anahtar bir
+**geliştirme anahtarıdır**, mağazaya çıkmadan önce kendi anahtarınızla değiştirin.
 
 APK davranışı: yatay yön kilidi, tam ekran (çubuklar gizli), ekran açık kalır,
 geri tuşu açık paneli kapatır (panel yoksa oyundan çıkar), otomatik kayıt WebView
 depolamasında tutulur.
+
+**Otomatik yayın** (`.github/workflows/release.yml`):
+- Ana dala her push'ta APK derlenir ve Releases'taki **"Son sürüm (otomatik)"** yayınındaki dosya yenilenir.
+- `v1.0.1` gibi bir etiket atılınca kalıcı bir sürüm olarak Releases'a eklenir.
+
+Depo Secret'larında `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASS` ve `ANDROID_KEY_ALIAS` tanımlı olmalı (anahtar şifresi depo şifresiyle aynı kabul edilir); böylece her APK aynı anahtarla imzalanır ve telefonda üstüne güncelleme kurulur.
 
 ## Lisans
 

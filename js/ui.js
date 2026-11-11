@@ -883,6 +883,8 @@
         h('div', null,
           h('div', { class: 'prep-day' }, 'Gün ' + s.day + ' — ' + (t.weekday || '')),
           h('div', { class: 'prep-sub' }, 'Hazırlık zamanı! Kantin ' + fmtT(D().OPEN_MIN) + "'de açılıyor."))),
+      // Orta bölüm uzun günlerde kayar; başlık ile "Kantini Aç" sabit kalır.
+      h('div', { class: 'prep-body' },
       h('div', { class: 'prep-tiles' },
         h('div', { class: 'prep-tile weather' },
           h('div', { class: 'pt-ico' }, w.icon),
@@ -914,7 +916,7 @@
         btn('⬆️ Geliştir', 'cream', () => openPanel('upgrades')),
         btn('👥 Personel', 'cream', () => openPanel('staff')),
         btn('📣 Pazarlama', 'cream', () => openPanel('kantin', 'market')),
-        btn('🏦 Banka', 'cream', () => openPanel('kantin', 'bank'))),
+        btn('🏦 Banka', 'cream', () => openPanel('kantin', 'bank')))),
       btn('🔔 Kantini Aç', 'green huge prep-open', () => {
         if (S().phase !== 'prep') return;
         call(KS.game.openShop);

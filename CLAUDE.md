@@ -56,7 +56,7 @@ Hızlı test için konsoldan: `KS.game.newGame(); KS.state.tutorialDone = true; 
 
 Oyun `android/` altındaki ince WebView kabuğuyla APK olarak kurulabilir.
 `tools/android/build.sh` aapt2 + javac + d8 + apksigner ile derler (Gradle yok).
-İmza anahtarı `~/.local/share/kantinsim/kantinsim-debug.jks` (ya da `KEYSTORE=...`) altında,
+İmza anahtarı `~/.local/share/kantinsim/kantinsim-debug.jks` (yayında `KS_FILE=...`) altında,
 derleme çıktısının dışında tutulur: aynı anahtar kaldığı için yeni APK eskisinin üzerine
 `adb install -r` ile kurulabilir.
 `android/src/.../MainActivity.java` tam ekran, yatay kilit, ekran açık ve geri tuşu

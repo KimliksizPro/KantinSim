@@ -21,6 +21,8 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Sıra**: ilk gün 2 gişe, ikinci gün 3, sonra 4 gişe açık. Fazla gelenler koridorda sıraya girer; başlarındaki nokta sabırlarını gösterir. Sıradaki müşterinin sabrı yavaş azalır, gişeye gelince baştan başlar.
 - **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
+- **Telefon/tablet**: oyun yatay modda oynanır; dikey tutulduğunda ekranı çevirme uyarısı çıkar. Üst çubuk küçük ekranda sahneyle birlikte küçülmez: düğmeler 44×44 dokunma hedefine çıkar, etiketler ikona döner, isteğe bağlı chip'ler gizlenir.
+- **Çevrimdışı / kurulabilir**: siteyi bir kez açtıktan sonra internet olmadan da oynanır. Chrome/Edge'de adres çubuğundaki "Yükle" ile uygulama gibi kurulabilir (PWA).
 
 ## Tarifler (elle yapılan)
 
@@ -53,7 +55,7 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 - **Fiyatlandırma**: menü fiyatlarını kendin belirle — pahalıysa talep düşer.
 - **Geliştirmeler**: tost makinesi, ızgara, fritöz, semaver, tezgah, sıcak dolap, çiğ köfte leğeni, buzdolabı, kasa, dekorasyon.
 - **Personel**: çaycı çırak, temizlikçi, kasiyer.
-- **Hava durumu & günlük olaylar**: yağmurda çay, sıcakta ayran; sağlık müfettişi denetimi, elektrik kesintisi, maç günü, veli toplantısı, sınav haftası, harçlık günü.
+- **Hava durumu & günlük olaylar**: yağmurda çay, sıcakta ayran; sağlık müfettişi denetimi, elektrik kesintisi, maç günü, veli toplantısı, sınav haftası, harçlık günü, sağlıklı beslenme haftası, bilim şenliği, karne günü.
 - **Temizlik**: tezgah kirlenir, müşteriler ve müfettiş fark eder.
 - **Seviye & kilitler**: XP ile yeni tarifler, restoranlar ve personel açılır. Oyun otomatik kaydedilir.
 
@@ -61,14 +63,14 @@ Müşteriler özel istekte bulunabilir: **"soğansız"**, **"+turşu"**, **"+pul
 
 - **Günlük hedefler**: her sabah 3 rastgele hedef (ör. "70 müşteriye servis yap", "5 adet Köfte Ekmek sat",
   "günü hiç kızgın müşteri olmadan bitir"). Tamamlanınca anında para + XP ödülü.
-- **Başarımlar**: 29 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
+- **Başarımlar**: 32 başarım (ilk müşteri, kusursuz gün, müdürün takdiri, temizlik belgesi, tam menü…), her biri XP / para ödüllü.
 - **İstatistik**: günlük net kâr, müşteri, ciro ve itibar grafikleri; rekorlar; tüm zamanların en çok satanları.
 - **Pazarlama**: hazırlıkta günlük kampanya — okul panosuna afiş, okul radyosu, sosyal medya, bedava çay ikramı, sadakat kartı.
 - **Banka**: esnaf / işletme / yatırım kredisi. Taksitler gün sonunda ödenir, erken kapamada faiz indirimi.
 - **Toplu sipariş**: ders saatlerinde öğretmenler odası, rehberlik servisi veya spor salonu arar; görevli gelince
   3 kalemlik siparişi eksiksiz ver — bahşiş ×1,8 ve ek XP.
 - **Usta Aşçı Nihat** *(Sv. 6 personel)*: ızgaradaki köfteyi zamanında çevirir, fritöz sepetini yanmadan kaldırır.
-- Yeni günlük olaylar: **Okul Gezisi**, **Öğretmenler Günü**, **Hayır Kermesi**.
+- Yeni günlük olaylar: **Okul Gezisi**, **Öğretmenler Günü**, **Hayır Kermesi**, **Sağlıklı Beslenme Haftası**, **Bilim Şenliği**, **Karne Günü**.
 
 ## Proje yapısı
 
@@ -76,6 +78,9 @@ Vanilla JS + HTML5 Canvas, build adımı yok, tüm grafikler ve sesler prosedür
 
 ```
 index.html
+manifest.webmanifest  kurulabilir uygulama tanımı (PWA)
+sw.js                 çevrimdışı önbellek (service worker)
+icons/                uygulama simgeleri (192/512/maskable/apple-touch)
 css/base.css, css/ui.css
 js/data.js            oyun verileri (malzeme, tarif, ürün, tedarikçi, geliştirme, zil programı, olaylar)
 js/core.js            motor: durum, kayıt, ekonomi, gün akışı, sürükle-bırak bölgeleri, efektler, döngü
@@ -87,6 +92,8 @@ js/stations_cook.js   tost makinesi, ızgara, fritöz, semaver
 js/customers.js       müşteri yapay zekâsı, sipariş, sabır, ödeme, müfettiş
 js/meta.js            günlük hedefler, başarımlar, rekorlar, kampanyalar, banka kredisi, toplu sipariş
 js/ui.js              HUD, paneller, gün sonu raporu, eğitim
+js/assist.js          tarif yardımcısı, klavye kısayolları, gün şeridi
+js/depth.js           güneş huzmeleri, yansıma, bokeh gibi derinlik efektleri
 CONTRACT.md           modüller arası arayüz sözleşmesi
 ```
 

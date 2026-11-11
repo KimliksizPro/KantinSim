@@ -10,6 +10,7 @@
   --blue: #5ab0ff; --blue2: #2a78d6;
   --gold: #ffcf3f; --gold2: #f0a20c;
   --shadow: 0 10px 30px rgba(40, 18, 6, 0.35), 0 2px 6px rgba(40, 18, 6, 0.25);
+  --hud-h: 56px;
   font-family: var(--f-body);
   color: var(--ink);
 }
@@ -76,7 +77,8 @@
 
 /* ---------------------------------------------------------------- HUD */
 #ks-hud {
-  position: absolute; left: 0; top: 0; width: 1600px; height: 56px; z-index: 20;
+  position: absolute; left: var(--hud-left, 0px); top: var(--hud-top, 0px); width: var(--hud-width, 1600px); height: var(--hud-h, 56px); z-index: 20;
+  transform: scale(var(--hud-inv, 1)); transform-origin: top left;
   display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 10px; gap: 8px;
   background: linear-gradient(180deg, rgba(74, 44, 28, .97), rgba(46, 26, 16, .97));
   box-shadow: 0 3px 0 rgba(255, 190, 120, .18), 0 6px 18px rgba(0, 0, 0, .35);
@@ -168,6 +170,41 @@
   font: 900 10.5px/17px var(--f-body); color: #fff; text-align: center; letter-spacing: .2px;
   background: linear-gradient(180deg, #ff7a6b, #d8362c); box-shadow: 0 0 0 2px #3a2316, 0 2px 4px rgba(0, 0, 0, .4); }
 .hb-badge.done { background: linear-gradient(180deg, #6fe39a, #20a257); }
+
+/* HUD native ölçek: sahne küçülse de yazı ve düğmeler okunur kalır */
+@media (max-width: 1599px) {
+  .hd-event { display: none; }
+}
+@media (max-width: 1499px), (pointer: coarse) {
+  #ui { --hud-h: 52px; }
+  #ks-hud { height: var(--hud-h); padding: 0 max(6px, env(safe-area-inset-left)) 0 max(6px, env(safe-area-inset-right)); gap: 4px; }
+  .hd-left { gap: 4px; }
+  .hd-day { width: 84px; padding-right: 0; }
+  .hd-dayline { font-size: 9px; letter-spacing: .3px; margin-bottom: 2px; }
+  .hd-clock { font-size: 18px; min-width: 46px; }
+  .hd-period, .hd-busy { display: none; }
+  .hd-weather, .hd-event, .hd-clean, .hd-deliv { display: none; }
+  .hd-power { width: 30px; height: 30px; padding: 0; justify-content: center; font-size: 0; }
+  .hd-power::before { content: '⚡'; font-size: 16px; }
+  .hd-money { min-width: 88px; height: 34px; padding: 0 8px 0 4px; gap: 4px; border-radius: 16px; }
+  .hd-coin { width: 24px; height: 24px; font-size: 13px; }
+  .hd-money-val { font-size: 16px; }
+  .hd-money-delta { top: 34px; font-size: 12px; }
+  .hd-rep { gap: 3px; }
+  .stars { font-size: 13px; letter-spacing: 0; }
+  .hd-rep-num { display: none; }
+  .hd-lv-badge { width: 28px; height: 28px; font-size: 15px; border-radius: 9px; }
+  .hd-xp { width: 42px; gap: 2px; }
+  .hd-xpbar { height: 7px; }
+  .hd-xp small { display: none; }
+  .hd-right { gap: 4px; }
+  .hud-group { gap: 2px; padding: 2px; border-radius: 12px; }
+  .hud-btn, .hud-btn.compact { width: 44px; height: 44px; border-radius: 9px; gap: 0; }
+  .hud-btn .hb-label { display: none !important; }
+  .hud-btn .hb-ico, .hud-btn svg { width: 22px; height: 22px; }
+  .hud-btn::after { left: 12px; right: 12px; bottom: 2px; }
+  .hb-badge { top: -5px; right: -3px; min-width: 18px; height: 15px; padding: 0 4px; font-size: 9px; line-height: 15px; }
+}
 
 /* ---------------------------------------------------------------- BİLDİRİMLER */
 #ks-notifs { position: absolute; right: 14px; top: 196px; width: 380px; z-index: 80; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -767,7 +804,8 @@
 .ach-hbar { flex: 1; max-width: 420px; display: flex; }
 
 /* ---------------------------------------------------------------- GÜN ŞERİDİ (zil programı) — js/assist.js */
-#ks-dayline { position: absolute; left: 0; top: 52px; width: 1600px; height: 6px; z-index: 21; background: #2a1810;
+#ks-dayline { position: absolute; left: var(--hud-left, 0px); top: calc(var(--hud-top, 0px) + var(--hud-h, 56px) * var(--hud-inv, 1));
+  width: var(--hud-width, 1600px); height: 6px; z-index: 21; transform: scale(var(--hud-inv, 1)); transform-origin: top left; background: #2a1810;
   box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(0, 0, 0, .5); }
 #ks-dayline .dl-seg { position: absolute; top: 0; height: 100%; box-shadow: inset -1px 0 0 rgba(20, 10, 4, .55); }
 #ks-dayline .dl-ders { background: linear-gradient(180deg, #7a5d48, #5a4232); }

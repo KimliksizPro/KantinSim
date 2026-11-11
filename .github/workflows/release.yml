@@ -7,7 +7,7 @@
 #   ANDROID_KEYSTORE_BASE64  anahtar dosyasının base64'ü
 #   ANDROID_KEYSTORE_PASS    anahtar deposu şifresi
 #   ANDROID_KEY_ALIAS        anahtar takma adı
-#   ANDROID_KEY_PASS         anahtar şifresi (depo şifresiyle aynıysa boş bırakılabilir)
+#   (Anahtar şifresi depo şifresiyle aynı kabul edilir; ayrı bir ANDROID_KEY_PASS gerekmez.)
 name: Yayın APK'sı
 
 on:
@@ -60,12 +60,24 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ks"
           echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
 
+      - name: Secret'ları doğrula
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          for ad in KS_PASS KS_ALIAS; do
+            deger="${!ad}"
+            if [ -z "$deger" ]; then echo "::error::$ad (ANDROID_KEYSTORE_PASS / ANDROID_KEY_ALIAS) Secret'ı boş."; exit 1; fi
+            if printf '%s' "$deger" | LC_ALL=C grep -q '[^ -~]'; then
+              echo "::error::$ad Secret'ında ASCII olmayan karakter (Türkçe harf, görünmez boşluk vb.) var; yeniden yapıştırın."; exit 1
+            fi
+          done
+
       - name: APK'yı derle
         env:
           KS_FILE: ${{ runner.temp }}/ks/release.jks
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
         run: bash tools/android/build.sh
 
       - name: Artifact olarak yükle

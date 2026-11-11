@@ -1017,7 +1017,9 @@
     ctx.save();
     ctx.globalAlpha *= alpha;
     if (silhouette) { try { ctx.filter = 'saturate(0.55) brightness(0.82)'; } catch (e) { /* desteklenmiyor */ } }
-    ctx.translate(c.x, base);
+    // derinlik: uzaktaki (kuyruk) figürler koridorla birlikte daha çok kayar, tezgahtakiler daha az
+    const PX = Art.parallax;
+    ctx.translate(c.x + (PX ? (PX.x - PX.cx) * (1 - prog) : 0), base);
     ctx.scale(sc, sc);
     if (Art.drawCustomer) { try { Art.drawCustomer(ctx, c, 0, 0, t); } catch (e) { /* Art hatası oyunu durdurmasın */ } }
     else fallbackFigure(ctx, c, t);
@@ -1061,6 +1063,12 @@
     for (const c of leaving) if (c.leaveKind !== 'queue') drawFigure(ctx, c, t, 1, false);
     for (const c of slots) if (c && c.state === 'enter') drawFigure(ctx, c, t, 1, false);
     for (const c of slots) if (c && c.state !== 'enter') drawFigure(ctx, c, t, 1, false);
+  }
+
+  // Yalnız tezgahtaki (slot) müşteriler: mermer tezgah yansıması için (depth.js)
+  function drawSlotFigures(ctx) {
+    const t = KS.time || 0;
+    for (const c of slots) if (c) drawFigure(ctx, c, t, 1, false);
   }
 
   // ---------------------------------------------------------------------------
@@ -1453,6 +1461,7 @@
     queueLength: () => queue.length,
     active: () => activeCustomers(),
     slotCustomer: i => slots[i] || null,
+    drawSlotFigures,
     serve: (i, item) => serve(i, item),
     canServe: (i, item) => canServe(i, item),
     spawn: opts => spawn(Object.assign({ force: true }, opts || {})),

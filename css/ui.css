@@ -222,12 +222,12 @@
 }
 
 /* ---------------------------------------------------------------- MODAL / PANEL */
-#ks-modal { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+#ks-modal { perspective: 1500px; position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
   background: radial-gradient(ellipse at center, rgba(30, 14, 6, .45), rgba(20, 8, 2, .72)); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 #ks-modal.anim { animation: ks-fade .2s ease-out; }
 #ks-modal.anim .ks-panel { animation: ks-pop .32s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes ks-fade { from { opacity: 0; } }
-@keyframes ks-pop { from { opacity: 0; transform: translateY(24px) scale(.94); } }
+@keyframes ks-pop { from { opacity: 0; transform: translateY(46px) rotateX(16deg) scale(.9); } }
 .ks-panel { position: relative; display: flex; flex-direction: column; max-height: 830px; border-radius: 26px; overflow: hidden;
   background: linear-gradient(180deg, var(--cream), var(--cream2)); box-shadow: 0 8px 0 #c79e6c, var(--shadow), inset 0 0 0 3px #fff; }
 .pn-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 20px; color: #fff;
@@ -763,3 +763,20 @@
 .smg-chip.rec { background: linear-gradient(180deg, #e6f2ff, #cfe4ff); color: #234a78; }
 .sm-debt { font: 700 14px var(--f-body); color: var(--blue2); }
 .ach-hbar { flex: 1; max-width: 420px; display: flex; }
+
+/* ---------------------------------------------------------------- GÜN ŞERİDİ (zil programı) — js/assist.js */
+#ks-dayline { position: absolute; left: 0; top: 52px; width: 1600px; height: 6px; z-index: 21; background: #2a1810;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(0, 0, 0, .5); }
+#ks-dayline .dl-seg { position: absolute; top: 0; height: 100%; box-shadow: inset -1px 0 0 rgba(20, 10, 4, .55); }
+#ks-dayline .dl-ders { background: linear-gradient(180deg, #7a5d48, #5a4232); }
+#ks-dayline .dl-sabah, #ks-dayline .dl-cikis { background: linear-gradient(180deg, #ffe08a, #e0a52a); }
+#ks-dayline .dl-teneffus { background: linear-gradient(180deg, #ffab5c, #f0622b); }
+#ks-dayline .dl-ogle { background: linear-gradient(180deg, #ff8a70, #e23a2e); }
+#ks-dayline .dl-aksam { background: linear-gradient(180deg, #8ea2de, #5468a8); }
+#ks-dayline .dl-past { position: absolute; left: 0; top: 0; height: 100%; background: rgba(18, 9, 4, .62); }
+#ks-dayline .dl-now { position: absolute; left: -5px; top: -3px; width: 10px; height: 12px; border-radius: 5px;
+  background: linear-gradient(180deg, #fff, #ffe9a8); box-shadow: 0 0 0 2px rgba(60, 30, 10, .8), 0 0 10px rgba(255, 230, 140, .95); }
+#ks-dayline .dl-tag { position: absolute; left: 0; top: 9px; white-space: nowrap; font: 800 11px/1 var(--f-body); color: #fff4e3;
+  padding: 3px 8px 4px; border-radius: 0 0 9px 9px; background: linear-gradient(180deg, rgba(46, 26, 16, .96), rgba(74, 44, 28, .92));
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .35), inset 0 -1px 0 rgba(255, 190, 120, .25); letter-spacing: .2px; }
+#ks-dayline.busy .dl-tag { background: linear-gradient(180deg, #e8532b, #c8321c); color: #fff; }

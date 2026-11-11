@@ -1467,7 +1467,10 @@
     ['🫖', 'Semaver', 'Demliğe tıkla: çay yaprağıyla demle. Demlenince bardağa doldur.'],
     ['🧽', 'Temizlik', 'Bezi al, tezgahtaki kirlerin üstünde gezdir. Kirli kantin itibar kaybettirir!'],
     ['🗑️', 'Çöp', 'Yanlış yaptığın yemeği çöpe at (malzeme boşa gider).'],
-    ['⏸', 'Duraklat', 'P veya Esc tuşu. Paneller açıkken de zaman durur.'],
+    ['⏸', 'Duraklat', 'Boşluk, P veya Esc tuşu. Paneller açıkken de zaman durur.'],
+    ['💡', 'Tarif yardımcısı', 'Elin boşken müşterinin üzerine gel: gereken kutular ve istasyonlar altın renkle yanar. H ile aç/kapat.'],
+    ['⌨️', 'Kısayollar', '1 / 2: oyun hızı · F: tam ekran · M Malzeme · T Telefon · N Menü · G Geliştir · E Personel · R Tarifler · K Hedefler.'],
+    ['🔔', 'Gün şeridi', 'Üst çubuğun altındaki şerit zil programıdır: turuncu bölümler teneffüs ve öğle arası. Yoğunluk gelmeden hazırlan!'],
   ];
   const recipeTab = { tab: 'recipes' };
   PANELS.recipes = {

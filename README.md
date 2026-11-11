@@ -13,7 +13,10 @@ Kurulum yok. `index.html` dosyasını bir tarayıcıda aç (veya klasörde `pyth
 - **Kısa dokun** = eşyayı ele al, tekrar dokun = bırak. **Sağ tık / Esc** = eldekini geri koy.
 - Köfteye **tıkla** = çevir · tost makinesinin **kapağına tıkla** · semaverde **demliğe tıkla** · fritöz **sepetine tıkla**.
 - Elinde **bez** varken kirlerin üzerinden geç = temizle.
-- **P / Esc** = duraklat.
+- **Boşluk / P / Esc** = duraklat. **1 / 2** = oyun hızı. **F** = tam ekran.
+- **Panel kısayolları**: M Malzeme · T Telefon · N Menü · G Geliştir · E Personel · R Tarifler · K Hedefler.
+- **Tarif yardımcısı** (H ile aç/kapat): elin boşken müşterinin üzerine gel, siparişi için gereken kutular ve istasyonlar altın renkle yanar.
+- **Gün şeridi**: üst çubuğun altındaki şerit zil programıdır; turuncu bölümler teneffüs ve öğle arası, etiket sıradaki yoğunluğa kalan süreyi gösterir.
 - **Ayarlar → Işık & derinlik efektleri**: gölge/ışık/parallax katmanı. Yavaş cihazda kapatabilirsin (FPS uzun süre düşük kalırsa oyun kendisi de kapatır).
 
 ## Tarifler (elle yapılan)

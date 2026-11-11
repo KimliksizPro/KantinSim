@@ -84,8 +84,8 @@
   box-shadow: 0 3px 0 rgba(255, 190, 120, .18), 0 6px 18px rgba(0, 0, 0, .35);
   color: #fff4e3; font-family: var(--f-body);
 }
-.hd-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.hd-right { display: flex; align-items: center; gap: 4px; }
+.hd-left { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.hd-right { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 .hd-day { display: flex; flex-direction: column; justify-content: center; width: 196px; line-height: 1; padding-right: 4px; }
 .hd-dayline { font: 800 12px var(--f-body); color: #e9c79e; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 3px; white-space: nowrap; }
 .hd-timeline { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -166,6 +166,20 @@
 .hud-btn.is-disabled:hover { color: #f1d9bd; background: linear-gradient(180deg, #6b4731 0%, #573925 55%, #4b3020 100%); transform: none; }
 .hud-btn.is-disabled:hover .hb-ico { color: inherit; transform: none; }
 .hud-btn.is-disabled::after { display: none; }
+/* HUD taşma menüsü: dar ekranda sığmayan panel düğmeleri (⋯) */
+.hud-btn.hb-more { display: none; }
+.hud-btn.hb-more.on { display: flex; }
+.hud-more { position: absolute; right: 6px; top: calc(100% + 6px); z-index: 24; display: none;
+  flex-direction: column; gap: 4px; min-width: 196px; padding: 6px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(74, 44, 28, .98), rgba(46, 26, 16, .98));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .5), inset 0 0 0 2px rgba(255, 190, 120, .22); }
+.hud-more.show { display: flex; }
+.hud-more-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px 0 8px; border: 0; border-radius: 10px;
+  cursor: pointer; background: rgba(255, 255, 255, .06); color: #f1d9bd; font: 800 15px var(--f-body); text-align: left; }
+.hud-more-item:hover, .hud-more-item:focus-visible { background: rgba(255, 255, 255, .16); color: #fff; outline: none; }
+.hud-more-item:focus-visible { box-shadow: inset 0 0 0 2px #ffd36a; }
+.hud-more-item .hb-ico { display: grid; place-items: center; flex: none; width: 22px; height: 22px; color: var(--orange2); }
+.hud-more-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hb-badge { position: absolute; top: -6px; right: -5px; min-width: 22px; height: 17px; padding: 0 5px; border-radius: 9px; pointer-events: none;
   font: 900 10.5px/17px var(--f-body); color: #fff; text-align: center; letter-spacing: .2px;
   background: linear-gradient(180deg, #ff7a6b, #d8362c); box-shadow: 0 0 0 2px #3a2316, 0 2px 4px rgba(0, 0, 0, .4); }
@@ -909,6 +923,8 @@
     content: ''; position: absolute; left: 50%; top: 8px; width: 20px; height: 4px; margin-left: -10px;
     border-radius: 2px; background: rgba(240, 197, 106, .6);
   }
+  /* Dikeyde oyun kapalı: HUD taşıp sayfayı yatay kaydırmasın. */
+  #ks-hud { display: none; }
 }
 @keyframes rh-turn {
   0%, 18% { transform: rotate(0deg); }
@@ -1031,4 +1047,35 @@
   .prep-card { max-width: 760px; }
   .prep-tiles { grid-template-columns: 1fr 1.4fr; }
   .prep-actions { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* Dar telefon (yatay): HUD'a yer aç. İtibar yıldız yerine sayıyla, XP çubuğu ve
+   ses düğmesi gizlenir (ses Ayarlar panelinde var); sığmayan paneller "⋯" menüsünde. */
+@media (max-width: 760px) {
+  .hd-dayline { font-size: 8px; letter-spacing: 0; }
+  .hd-rep .stars { display: none; }
+  .hd-rep .hd-rep-num { display: inline; font-size: 14px; letter-spacing: 0; }
+  .hd-xp { display: none; }
+  .hb-sound { display: none !important; }
+}
+/* Çok dar telefon: seviye ve itibar rozetleri de yer kaplamasın */
+@media (max-width: 620px) {
+  .hd-rep, .hd-level { display: none; }
+}
+
+/* Kısa ekran (telefon yatay): ana menünün beş düğmesi de tek ekrana sığsın.
+   Eski boyutlarda 390 px yükseklikte son düğme ekranın altında kalıyordu. */
+@media (max-height: 460px) {
+  #ks-mainmenu { padding: 6px 10px; }
+  .mm-box { gap: 6px; }
+  .mm-badge { display: none; }
+  .mm-title { font-size: 40px; letter-spacing: -1px; padding-top: 0; }
+  .mm-sub { font-size: 12px; letter-spacing: 1.5px; padding: 3px 12px 1px; margin-top: 2px; }
+  .mm-btns { width: min(340px, 100%); gap: 5px; }
+  .mm-btns .ks-btn { font-size: 14px; padding: 6px 10px; min-height: 44px; }
+  .mm-btns .ks-btn.big { flex-direction: row; gap: 8px; align-items: center; }
+  .mm-saveinfo { font-size: 11px; }
+  .mm-tgs { gap: 6px; }
+  .mm-tg { font-size: 12px; padding: 5px 10px; }
+  .mm-foot { margin-top: 0; font-size: 11px; }
 }

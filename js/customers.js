@@ -819,7 +819,9 @@
         break;
       }
       case 'wait': {
-        c.patience -= dt * lateDrain;
+        // ilk gün eğitimi açıkken oyuncu ipucunu okuyor: tezgahtaki müşterinin sabrı azalmaz
+        const tutorial = !!(KS.ui && KS.ui.tutorialActive && KS.ui.tutorialActive());
+        if (!tutorial) c.patience -= dt * lateDrain;
         if (!c.holdState) setAnim(c, ratio < 0.25 ? 'angry' : 'idle');
         if (ratio < 0.25 && !c.warnedLow) { c.warnedLow = true; if (!c.say) say(c, U().pick(['Hâlâ bekliyorum!', 'Ne oldu siparişim?', 'Hadi ama!']), '#b3261e', 2.0); }
         if (c.patience <= 0) { c.patience = 0; angryLeave(c); return; }

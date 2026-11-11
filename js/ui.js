@@ -1944,6 +1944,7 @@
     isOpen: id => (id ? !!(curPanel && curPanel.id === id) : !!curPanel),
     refresh: () => { try { updateHUD(); rerenderPanel(); refreshPrep(); } catch (e) { /* */ } },
     banner, popup, confetti,
+    tutorialActive: () => !!tut.active,
     showMainMenu: () => toMainMenu(),
     startTutorial: () => { if (S()) { S().tutorialDone = false; startTutorial(); } },
   });

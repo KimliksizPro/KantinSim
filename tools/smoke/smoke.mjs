@@ -163,14 +163,20 @@ try {
   await mpage.goto(base, { waitUntil: 'load' });
   await mpage.waitForTimeout(1000);
   const menuGeo = await mpage.evaluate(() => {
-    const screen = document.querySelector('#ks-mainmenu');
     const title = document.querySelector('.mm-title').getBoundingClientRect();
-    const btns = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => Math.round(b.getBoundingClientRect().height));
-    return { titleTop: title.top, titleRight: title.right, btns, scrollW: document.documentElement.scrollWidth, vw: innerWidth };
+    const rects = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => b.getBoundingClientRect());
+    const btns = rects.map(r => Math.round(r.height));
+    return {
+      titleTop: title.top, titleRight: title.right, btns,
+      btnMaxBottom: Math.max(...rects.map(r => r.bottom)),
+      scrollW: document.documentElement.scrollWidth, vw: innerWidth, vh: innerHeight,
+    };
   });
   check('mobil ana menü ekrana sığıyor',
     menuGeo.scrollW <= menuGeo.vw && menuGeo.titleTop >= 0 && menuGeo.titleRight <= menuGeo.vw, menuGeo);
   check('mobil ana menü düğmeleri en az 44 px', menuGeo.btns.length >= 3 && menuGeo.btns.every(h => h >= 44), menuGeo.btns);
+  check('mobil ana menünün son düğmesi ekran içinde kalıyor',
+    menuGeo.btnMaxBottom <= menuGeo.vh, { btnMaxBottom: menuGeo.btnMaxBottom, vh: menuGeo.vh });
 
   await mpage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; });
   await mpage.waitForTimeout(500);
@@ -194,7 +200,9 @@ try {
     const rect = el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right, bottom: r.bottom }; };
     const hud = document.querySelector('#ks-hud');
     const bar = document.querySelector('#ks-dayline');
-    const btns = [...document.querySelectorAll('.hud-btn')].map(b => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), t: (b.title || '').slice(0, 14) }; });
+    const btns = [...document.querySelectorAll('.hud-btn')]
+      .filter(b => getComputedStyle(b).display !== 'none')
+      .map(b => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), t: (b.title || '').slice(0, 14) }; });
     const disp = sel => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'yok'; };
     return {
       scale: window.KS.scale, hud: rect(hud), bar: bar ? rect(bar) : null, btns,
@@ -255,6 +263,69 @@ try {
   check('mobil paneller ekrana sığıyor, kapatma 44 px, yatay taşma yok', panelBad.length === 0, panelBad.slice(0, 3));
   check('mobil panel gövdesi dokunmayla kayıyor', panelScrolled);
   await mctx.close();
+
+  console.log('Küçük telefon (667×375, 568×320)');
+  for (const [w, h] of [[667, 375], [568, 320]]) {
+    const sctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const spage = await sctx.newPage();
+    spage.on('pageerror', e => errors.push('küçük telefon pageerror: ' + e.message));
+    await spage.goto(base, { waitUntil: 'load' });
+    await spage.waitForTimeout(900);
+    const menuFit = await spage.evaluate(() => {
+      const rects = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => b.getBoundingClientRect());
+      return { maxBottom: Math.max(...rects.map(r => r.bottom)), minH: Math.min(...rects.map(r => r.height)), vh: innerHeight };
+    });
+    check(w + '×' + h + ' ana menü düğmeleri ekranda', menuFit.maxBottom <= menuFit.vh && menuFit.minH >= 43.5, menuFit);
+
+    await spage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; window.KS.state.level = 5; window.KS.ui.close(); });
+    await spage.waitForTimeout(500);
+    const g = await spage.evaluate(() => {
+      const shown = id => { const el = document.querySelector('.hb-' + id); if (!el) return false; const r = el.getBoundingClientRect(); return getComputedStyle(el).display !== 'none' && r.width >= 44 && r.height >= 44; };
+      const right = document.querySelector('.hd-right').getBoundingClientRect();
+      return {
+        scrollW: document.documentElement.scrollWidth, vw: innerWidth, right: right.right, more: shown('more'),
+        hidden: [...document.querySelectorAll('.hud-group .hud-btn')]
+          .filter(b => !b.classList.contains('hb-more') && !b.classList.contains('hb-sound') && getComputedStyle(b).display === 'none')
+          .map(b => b.querySelector('.hb-label').textContent),
+      };
+    });
+    check(w + '×' + h + ' HUD yatay taşmıyor', g.scrollW <= g.vw && g.right <= g.vw + 1, g);
+    if (g.more) {
+      const menu = await spage.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        document.querySelector('.hb-more').click();
+        await wait(120);
+        const box = document.querySelector('.hud-more');
+        const items = [...box.querySelectorAll('.hud-more-item')].map(b => b.textContent.trim());
+        const opened = box.classList.contains('show');
+        box.querySelector('.hud-more-item').click();
+        await wait(250);
+        return { items, opened, panel: window.KS.ui.panel, closed: !box.classList.contains('show') };
+      });
+      check(w + '×' + h + ' ⋯ menüsü gizlenen panelleri açıyor',
+        menu.opened && g.hidden.length > 0 && menu.items.join('|') === g.hidden.join('|') && !!menu.panel && menu.closed, menu);
+      await spage.evaluate(() => window.KS.ui.close());
+    } else {
+      check(w + '×' + h + ' ⋯ menüsü gizlenen panel yoksa görünmüyor', g.hidden.length === 0, g);
+    }
+    await sctx.close();
+  }
+
+  console.log('Dikey telefon (390×844)');
+  const pctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const ppage = await pctx.newPage();
+  await ppage.goto(base, { waitUntil: 'load' });
+  await ppage.waitForTimeout(900);
+  const pgeo = await ppage.evaluate(() => {
+    const hs = getComputedStyle(document.querySelector('#rotate-hint'));
+    return { hint: hs.display !== 'none' && hs.position === 'fixed', scrollW: document.documentElement.scrollWidth, vw: innerWidth };
+  });
+  await ppage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; });
+  await ppage.waitForTimeout(500);
+  const pgeo2 = await ppage.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, vw: innerWidth, hud: getComputedStyle(document.querySelector('#ks-hud')).display }));
+  check('dikey telefonda çevir uyarısı var, HUD taşmıyor',
+    pgeo.hint && pgeo2.scrollW <= pgeo2.vw && pgeo2.hud === 'none', Object.assign({}, pgeo, pgeo2));
+  await pctx.close();
 
   check('konsolda hata yok', errors.length === 0, errors.slice(0, 5));
   await ctx.close();

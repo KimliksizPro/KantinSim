@@ -395,13 +395,14 @@
   const PANEL_ALIASES = {
     malzeme: 'supply', siparis: 'supply', toptanci: 'supply', bakkal: 'supply',
     telefon: 'phone', restoran: 'phone', fiyat: 'menu', menu: 'menu', gelistir: 'upgrades', gelistirme: 'upgrades',
-    personel: 'staff', hedef: 'kantin', hedefler: 'kantin', basarim: 'kantin', banka: 'kantin', istatistik: 'kantin', pazarlama: 'kantin', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
+    personel: 'staff', hedef: 'kantin', hedefler: 'kantin', basarim: 'kantin', banka: 'kantin', istatistik: 'kantin', stats: 'kantin', pazarlama: 'kantin', tarifler: 'recipes', tarif: 'recipes', ayarlar: 'settings', yardim: 'help', nasil: 'help',
   };
   const PANELS = {};   // id -> {title, icon, width, cls, build(p)}
 
   function openPanel(id, arg) {
     id = PANELS[id] ? id : PANEL_ALIASES[id];
     const cfg = PANELS[id]; if (!cfg) return false;
+    closeHudMore();
     if (curPanel) closePanel(true);
     if (E.popup) E.popup.classList.remove('show');
     unlockAudio();
@@ -512,6 +513,7 @@
     speed: '<path d="M3.5 6.8v10.4l7.6-5.2z" fill="currentColor"/><path d="M12.4 6.8v10.4L20 12z" fill="currentColor"/>',
     sound: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="M15.4 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.4a7.8 7.8 0 0 1 0 11.2"/>',
     mute: '<path d="M4 9.4h3.4L12 5.6v12.8l-4.6-3.8H4z" fill="currentColor"/><path d="m15.8 9.6 4.8 4.8M20.6 9.6l-4.8 4.8"/>',
+    more: '<circle cx="5" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.9" fill="currentColor" stroke="none"/>',
   };
   const svgIco = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (HUD_ICONS[name] || '') + '</svg>';
   const HUD_BTNS = [
@@ -522,6 +524,7 @@
     { id: 'staff', label: 'Personel', acc: '#c9adff', title: 'Personel işe al / çıkar' },
     { id: 'recipes', label: 'Tarifler', acc: '#ffa48f', title: 'Tarif defteri ve kontroller' },
     { id: 'kantin', label: 'Hedefler', acc: '#ff7b7b', title: 'Kantin defteri: günlük hedefler, başarımlar, istatistik, pazarlama, banka' },
+    { id: 'more', label: '', acc: '#ffd36a', title: 'Diğer paneller' },
     { id: 'pause', label: '', acc: '#ffd36a', title: 'Duraklat (P / Esc)', group: 2 },
     { id: 'speed', label: '1x', acc: '#7fd4ff', title: 'Oyun hızı (1x / 2x)', group: 2 },
     { id: 'sound', label: '', acc: '#8ff0a8', title: 'Sesi aç / kapat', group: 2 },
@@ -564,16 +567,79 @@
       q.btns[b.id] = el; groups[b.group || 1].appendChild(el);
     }
     right.appendChild(groups[1]); right.appendChild(groups[2]);
+    q.moreMenu = h('div', { class: 'hud-more', role: 'menu', 'aria-label': 'Diğer paneller' });
+    q.btns.more.setAttribute('aria-haspopup', 'true');
+    q.btns.more.setAttribute('aria-expanded', 'false');
     const left = h('div', { class: 'hd-left' },
       h('div', { class: 'hd-day' }, q.dayLine, h('div', { class: 'hd-timeline' }, q.clock, q.period, q.busy)),
       q.weather, q.event, q.power, q.money, q.rep, q.level, q.clean, q.deliv);
-    E.hud = h('div', { id: 'ks-hud', class: 'ks-hide' }, left, right);
+    E.hud = h('div', { id: 'ks-hud', class: 'ks-hide' }, left, right, q.moreMenu);
+    q.left = left; q.g1 = groups[1]; q.ctl = groups[2];
     E.hudQ = q;
     return E.hud;
   }
 
+  // ---------------------------------------------------------------------------
+  // HUD TAŞMA MENÜSÜ
+  // Telefon yatay tutulduğunda bütün panel düğmeleri tek satıra sığmıyor.
+  // Sığmayanlar "⋯" düğmesinin altında toplanır: önem sırasına göre görünen
+  // düğme sayısı azalır, hiçbir panel erişilmez kalmaz.
+  // ---------------------------------------------------------------------------
+  const HUD_PRIORITY = ['supply', 'phone', 'menu', 'kantin', 'recipes', 'upgrades', 'staff'];
+  function hudFitsRow() {
+    const q = E.hudQ, hud = E.hud;
+    if (!q || !hud || !hud.offsetWidth) return true;
+    const cs = getComputedStyle(hud);
+    const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const gap = parseFloat(cs.gap) || 0;
+    const right = q.g1.parentElement;
+    return q.left.offsetWidth + right.offsetWidth + gap <= hud.clientWidth - pad + 0.5;
+  }
+  function layoutHUD() {
+    const q = E.hudQ;
+    if (!q || !E.hud || !E.hud.offsetWidth) return;
+    if (q.moreMenu.classList.contains('show')) closeHudMore();
+    const showN = n => HUD_PRIORITY.forEach((id, i) => { q.btns[id].style.display = i < n ? '' : 'none'; });
+    showN(HUD_PRIORITY.length);
+    q.btns.more.classList.remove('on');
+    if (!hudFitsRow()) {
+      q.btns.more.classList.add('on');
+      let n = HUD_PRIORITY.length - 1;
+      showN(n);
+      while (n > 1 && !hudFitsRow()) { n--; showN(n); }
+    }
+  }
+  function openHudMore() {
+    const q = E.hudQ; if (!q || !q.moreMenu) return;
+    clear(q.moreMenu);
+    const hidden = HUD_BTNS.filter(b => b.group !== 2 && b.id !== 'more' && q.btns[b.id].style.display === 'none');
+    if (!hidden.length) return;
+    for (const b of hidden) {
+      const item = h('button', { class: 'hud-more-item', type: 'button', role: 'menuitem' },
+        h('span', { class: 'hb-ico', html: svgIco(b.id) }),
+        h('span', { class: 'hm-label' }, b.label));
+      item.addEventListener('click', safe(() => { closeHudMore(); unlockAudio(); sfx('click'); hudAction(b.id, q.btns[b.id]); }));
+      q.moreMenu.appendChild(item);
+    }
+    q.moreMenu.classList.add('show');
+    q.btns.more.setAttribute('aria-expanded', 'true');
+    const first = q.moreMenu.querySelector('button'); if (first) first.focus();
+  }
+  function closeHudMore() {
+    const q = E.hudQ; if (!q || !q.moreMenu) return;
+    q.moreMenu.classList.remove('show');
+    q.btns.more.setAttribute('aria-expanded', 'false');
+  }
+
   function hudAction(id, el) {
     const s = S();
+    if (id === 'more') {
+      unlockAudio(); sfx('click');
+      const q = E.hudQ;
+      if (q && q.moreMenu && q.moreMenu.classList.contains('show')) closeHudMore();
+      else openHudMore();
+      return;
+    }
     if (id === 'pause') {
       if (s.phase !== 'open' && s.phase !== 'closing') { sfx('error'); notify('Kantin açıkken duraklatabilirsin.', 'info'); return; }
       sfx('click'); call(KS.game.togglePause); return;
@@ -1877,6 +1943,7 @@
     if (ph === lastPhase && !force) return;
     const prev = lastPhase; lastPhase = ph;
     show(E.hud, ph !== 'menu');
+    if (ph !== 'menu') layoutHUD();
     show(E.prep, ph === 'prep');
     if (ph === 'menu') { closePanel(true); hideTutorial(); tut.active = false; showScreen('mainmenu'); }
     else if (ph === 'prep') { if (screen) hideScreen(); buildPrepCard(); }
@@ -1976,7 +2043,18 @@
     add(root, [E.prep, buildTutorial(), buildHUD(), E.banner, buildMainMenu(), E.summary, buildPause(), E.modal, E.popup, E.ach, E.notifs, E.fx]);
     // klavye: paneller için kısayollar yok; Esc çekirdekte
     window.addEventListener('pointerdown', () => unlockAudio(), { once: true });
-    window.addEventListener('resize', () => placeTutorial());
+    window.addEventListener('resize', () => { placeTutorial(); requestAnimationFrame(layoutHUD); });
+    // Açık taşma menüsü dışına dokununca / Esc ile kapanır.
+    document.addEventListener('pointerdown', ev => {
+      const q = E.hudQ; if (!q || !q.moreMenu.classList.contains('show')) return;
+      if (q.moreMenu.contains(ev.target) || q.btns.more.contains(ev.target)) return;
+      closeHudMore();
+    }, true);
+    document.addEventListener('keydown', ev => {
+      if (ev.key !== 'Escape') return;
+      const q = E.hudQ; if (!q || !q.moreMenu.classList.contains('show')) return;
+      closeHudMore(); q.btns.more.focus();
+    });
     wireBus();
     applySettings(false);
     lastPhase = null;

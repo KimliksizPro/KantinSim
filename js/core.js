@@ -826,6 +826,7 @@ window.KS = window.KS || {};
     ds.setProperty('--hud-width', (hudNative ? vw : W) + 'px');
     ds.setProperty('--hud-left', (hudNative ? -offx * hudInv : 0) + 'px');
     ds.setProperty('--hud-top', (hudNative ? -offy * hudInv : 0) + 'px');
+    ds.setProperty('--hud-vh', vh + 'px');
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * scale * dpr);
     canvas.height = Math.round(H * scale * dpr);

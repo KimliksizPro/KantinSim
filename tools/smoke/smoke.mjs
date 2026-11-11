@@ -156,15 +156,36 @@ try {
   await offline.close();
   await ctx.setOffline(false);
 
-  console.log('Mobil HUD (844×390)');
+  console.log('Mobil ekranlar (844×390)');
   const mctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const mpage = await mctx.newPage();
   mpage.on('pageerror', e => errors.push('mobil pageerror: ' + e.message));
   await mpage.goto(base, { waitUntil: 'load' });
   await mpage.waitForTimeout(1000);
+  const menuGeo = await mpage.evaluate(() => {
+    const screen = document.querySelector('#ks-mainmenu');
+    const title = document.querySelector('.mm-title').getBoundingClientRect();
+    const btns = [...document.querySelectorAll('.mm-btns .ks-btn')].map(b => Math.round(b.getBoundingClientRect().height));
+    return { titleTop: title.top, titleRight: title.right, btns, scrollW: document.documentElement.scrollWidth, vw: innerWidth };
+  });
+  check('mobil ana menü ekrana sığıyor',
+    menuGeo.scrollW <= menuGeo.vw && menuGeo.titleTop >= 0 && menuGeo.titleRight <= menuGeo.vw, menuGeo);
+  check('mobil ana menü düğmeleri en az 44 px', menuGeo.btns.length >= 3 && menuGeo.btns.every(h => h >= 44), menuGeo.btns);
+
+  await mpage.evaluate(() => { window.KS.game.newGame(); window.KS.state.tutorialDone = true; });
+  await mpage.waitForTimeout(500);
+  const prepGeo = await mpage.evaluate(() => {
+    const card = document.querySelector('.prep-card').getBoundingClientRect();
+    const open = document.querySelector('.prep-open').getBoundingClientRect();
+    const acts = [...document.querySelectorAll('.prep-actions .ks-btn')].map(b => Math.round(b.getBoundingClientRect().height));
+    return { card: [Math.round(card.y), Math.round(card.bottom)], open: [Math.round(open.y), Math.round(open.bottom), Math.round(open.height)], acts, vh: innerHeight };
+  });
+  check('mobil hazırlık kartı ekranda ve "Kantini Aç" görünür',
+    prepGeo.card[0] >= 0 && prepGeo.card[1] <= prepGeo.vh && prepGeo.open[0] >= 0 && prepGeo.open[1] <= prepGeo.vh && prepGeo.open[2] >= 44, prepGeo);
+  check('mobil hazırlık düğmeleri en az 44 px', prepGeo.acts.length >= 5 && prepGeo.acts.every(h => h >= 44), prepGeo.acts);
+
   await mpage.evaluate(() => {
-    window.KS.game.newGame();
-    window.KS.state.tutorialDone = true;
+    window.KS.state.tutorialDone = false;
     window.KS.state.today.event = 'saglik';
     window.KS.game.openShop();
   });
@@ -193,6 +214,46 @@ try {
   check('gün şeridi HUD\'un altında, yatay taşma yok',
     hudGeo.barVisible && Math.abs(hudGeo.bar.y - hudGeo.hud.bottom) < 1 && hudGeo.scrollW <= hudGeo.vw,
     { barY: hudGeo.bar && hudGeo.bar.y, hudBottom: hudGeo.hud.bottom, scrollW: hudGeo.scrollW, vw: hudGeo.vw });
+
+  const tutGeo = await mpage.evaluate(() => {
+    const b = document.querySelector('.tut-bubble');
+    const r = b.getBoundingClientRect();
+    return { font: parseFloat(getComputedStyle(b.querySelector('.tut-text')).fontSize), x: r.x, y: r.y, right: r.right, bottom: r.bottom, vw: innerWidth, vh: innerHeight };
+  });
+  check('mobil eğitim balonu okunur ve ekranda',
+    tutGeo.font >= 15 && tutGeo.x >= 0 && tutGeo.right <= tutGeo.vw && tutGeo.bottom <= tutGeo.vh && tutGeo.y >= 0, tutGeo);
+
+  console.log('Mobil paneller (844×390)');
+  await mpage.evaluate(() => { window.KS.state.tutorialDone = true; window.KS.state.paused = true; });
+  const panelIds = ['supply', 'phone', 'menu', 'upgrades', 'staff', 'kantin', 'recipes', 'settings', 'help'];
+  const panelBad = [];
+  let panelScrolled = false;
+  for (const pid of panelIds) {
+    await mpage.evaluate(p => window.KS.ui.open(p), pid);
+    await mpage.waitForTimeout(420);
+    const g = await mpage.evaluate(() => {
+      const p = document.querySelector('#ks-modal .ks-panel');
+      if (!p) return { err: 'panel yok' };
+      const b = p.querySelector('.pn-body');
+      const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+      const x = p.querySelector('.pn-x').getBoundingClientRect();
+      const over = [...b.querySelectorAll('*')].filter(el => el.getBoundingClientRect().right > br.right + 2).length;
+      b.scrollTop = 120;
+      const moved = b.scrollTop > 0;
+      b.scrollTop = 0;
+      return {
+        inside: pr.x >= -1 && pr.y >= -1 && pr.right <= innerWidth + 1 && pr.bottom <= innerHeight + 1,
+        close: [x.width, x.height], over, head: parseFloat(getComputedStyle(p.querySelector('.pn-head h2')).fontSize),
+        scrollable: b.scrollHeight > b.clientHeight + 1, moved, vw: innerWidth, vh: innerHeight,
+      };
+    });
+    if (!g.inside || g.close[0] < 43.5 || g.close[1] < 43.5 || g.over > 0 || g.head < 20) panelBad.push({ pid, ...g });
+    if (g.scrollable && g.moved) panelScrolled = true;
+    await mpage.evaluate(() => window.KS.ui.close());
+    await mpage.waitForTimeout(180);
+  }
+  check('mobil paneller ekrana sığıyor, kapatma 44 px, yatay taşma yok', panelBad.length === 0, panelBad.slice(0, 3));
+  check('mobil panel gövdesi dokunmayla kayıyor', panelScrolled);
   await mctx.close();
 
   check('konsolda hata yok', errors.length === 0, errors.slice(0, 5));

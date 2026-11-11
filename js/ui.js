@@ -697,8 +697,8 @@
       h('div', { class: 'mm-btns' },
         E.mmContinue, E.mmNew,
         btn('❓ Nasıl Oynanır?', 'blue', () => openPanel('help')),
-        btn('⚙️ Ayarlar', 'ghost light', () => openPanel('settings')),
-        btn('👋 Hakkımda', 'ghost light', () => openPanel('about'))),
+        btn('👋 Hakkımda', 'purple', () => openPanel('about')),
+        btn('⚙️ Ayarlar', 'ghost light', () => openPanel('settings'))),
       h('div', { class: 'mm-tgs' }, E.mmSound, E.mmMusic));
     E.mainmenu = h('div', { id: 'ks-mainmenu', class: 'ks-screen ks-hide' }, deco, box,
       h('div', { class: 'mm-foot' }, 'Teneffüs zili çalmadan tostlar hazır olsun! 🔔'));

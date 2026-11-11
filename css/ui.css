@@ -39,6 +39,8 @@
 .ks-btn.red:active { box-shadow: 0 1px 0 #8f1d1d; }
 .ks-btn.blue { background: linear-gradient(180deg, #86c6ff, var(--blue2)); box-shadow: 0 4px 0 #1b5296, 0 6px 14px rgba(20, 60, 120, .3), inset 0 1px 0 rgba(255, 255, 255, .45); }
 .ks-btn.blue:active { box-shadow: 0 1px 0 #1b5296; }
+.ks-btn.purple { background: linear-gradient(180deg, #c3a2ff, #8a5ce6); box-shadow: 0 4px 0 #5a35a8, 0 6px 14px rgba(60, 30, 120, .3), inset 0 1px 0 rgba(255, 255, 255, .45); }
+.ks-btn.purple:active { box-shadow: 0 1px 0 #5a35a8; }
 .ks-btn.cream { color: var(--ink); text-shadow: none; background: linear-gradient(180deg, #fffdf7, #f4dfbd); box-shadow: 0 4px 0 #c9a77d, 0 6px 12px rgba(80, 40, 10, .18), inset 0 1px 0 #fff; }
 .ks-btn.cream:active { box-shadow: 0 1px 0 #c9a77d; }
 .ks-btn.ghost { color: var(--ink2); text-shadow: none; background: rgba(122, 82, 54, .1); box-shadow: inset 0 0 0 2px rgba(122, 82, 54, .25); }

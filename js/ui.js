@@ -1574,9 +1574,7 @@
         h('div', { class: 'ab-links' },
           ext('https://github.com/KimliksizPro', 'ab-gh', [h('span', { class: 'ab-gh-ico', html: AB_GH_LOGO }), h('span', null, 'GitHub: KimliksizPro')]),
           ext('https://github.com/KimliksizPro/KantinSim', 'ab-src', [h('span', null, 'Kaynak kodu'), h('small', null, 'github.com/KimliksizPro/KantinSim')])),
-        h('p', { class: 'ab-lic' }, '© 2026 Semih Topak · ',
-          h('a', { href: 'https://github.com/KimliksizPro/KantinSim/blob/ccr-299ee556-k6f0la/LICENSE.md', target: '_blank', rel: 'noopener noreferrer' }, 'PolyForm Noncommercial 1.0.0'),
-          ' lisansı. Kişisel ve eğitim amaçlı kullanım serbest; ticari kullanım izin gerektirir.'),
+        h('p', { class: 'ab-lic' }, '© 2026 Semih Topak'),
         h('p', { class: 'ab-note' }, 'Geri bildirim ve öneriler için GitHub\'dan ulaşabilirsin. İyi oyunlar! 🥪')));
     },
   };
